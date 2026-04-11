@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --gold:     #D4A017;
+  --gold-lt:  #F0C842;
+  --gold-dk:  #9A7010;
+  --green:    #1A5C2A;
+  --green-lt: #2E8B44;
+  --green-dk: #0D3318;
+  --blue:     #1A3C6E;
+  --blue-lt:  #2B5FA8;
+  --cream:    #FAF6EC;
+  --warm:     #F5EDD8;
+  --text:     #1C1C1C;
+  --muted:    #5A5240;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.playfair { font-family: 'Playfair Display', serif !important; }
+.sourceserif { font-family: 'Source Serif 4', serif !important; }
+
+em { color: inherit; }
