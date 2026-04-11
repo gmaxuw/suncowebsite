@@ -15,34 +15,39 @@ export default function Home() {
         padding: "0 2.5rem", height: "64px"
       }}>
         <a href="#" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: "50%",
-            border: "2.5px solid var(--gold)", background: "var(--green)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "'Playfair Display', serif", fontSize: 13,
-            fontWeight: 900, color: "var(--gold-lt)"
-          }}>SC</div>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>SUNCO</span>
-        </a>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}>
-          {["#about","#programs","#membership","#officers","#news"].map((href, i) => (
-            <a key={i} href={href} style={{
-              color: "rgba(255,255,255,0.75)", textDecoration: "none",
-              fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em",
-              textTransform: "uppercase", padding: "0 0.9rem", height: "64px",
-              display: "flex", alignItems: "center", transition: "color 0.2s"
-            }}>
-              {["About","Programs","Membership","Officers","News"][i]}
-            </a>
-          ))}
-          <a href="#contact" style={{
-            background: "var(--gold)", color: "var(--green-dk)",
-            padding: "0.45rem 1.2rem", borderRadius: 4,
-            fontSize: "0.78rem", fontWeight: 500,
-            letterSpacing: "0.06em", textTransform: "uppercase",
-            textDecoration: "none", marginLeft: "0.5rem"
-          }}>Join Now</a>
-        </div>
+ <img
+  src="/images/sunco-logo.png"
+  alt="SUNCO Seal"
+  style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "contain" }}
+/>
+<span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>SUNCO</span>
+
+       </a>
+       <div style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}>
+  {["#about","#programs","#membership","#officers","#news"].map((href, i) => (
+    <a key={i} href={href} style={{
+      color: "rgba(255,255,255,0.75)", textDecoration: "none",
+      fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em",
+      textTransform: "uppercase", padding: "0 0.9rem", height: "64px",
+      display: "flex", alignItems: "center", transition: "color 0.2s"
+    }}>
+      {["About","Programs","Membership","Officers","News"][i]}
+    </a>
+  ))}
+  <a href="/login" style={{
+    color: "rgba(255,255,255,0.75)", textDecoration: "none",
+    fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em",
+    textTransform: "uppercase", padding: "0 0.9rem", height: "64px",
+    display: "flex", alignItems: "center"
+  }}>Login</a>
+  <a href="#contact" style={{
+    background: "var(--gold)", color: "var(--green-dk)",
+    padding: "0.45rem 1.2rem", borderRadius: 4,
+    fontSize: "0.78rem", fontWeight: 500,
+    letterSpacing: "0.06em", textTransform: "uppercase",
+    textDecoration: "none", marginLeft: "0.5rem"
+  }}>Join Now</a>
+</div>
       </nav>
 
       {/* HERO */}
