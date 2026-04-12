@@ -22,54 +22,97 @@ export default function RegisterPage() {
 
   const totalFee = 200 + 100 + (form.include_mas ? 740 : 0);
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setError("");
+ const handleSubmit = async () => {
+  setLoading(true);
+  setError("");
 
-    if (form.password !== form.confirm_password) {
-      setError("Passwords do not match.");
-      setLoading(false);
-      return;
-    }
+  if (form.password !== form.confirm_password) {
+    setError("Passwords do not match.");
+    setLoading(false);
+    return;
+  }
 
-    // 1. Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-    });
+  if (!form.first_name || !form.last_name) {
+    setError("First name and last name are required.");
+    setLoading(false);
+    return;
+  }
 
-    if (authError) { setError(authError.message); setLoading(false); return; }
+  // 1. Create auth user
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+  });
 
-    const userId = authData.user?.id;
-    if (!userId) { setError("Something went wrong. Please try again."); setLoading(false); return; }
+  if (authError) { setError(authError.message); setLoading(false); return; }
 
-    // 2. Create member record
-    const { error: memberError } = await supabase.from("members").insert({
-      user_id: userId,
-      first_name: form.first_name,
-      middle_name: form.middle_name,
-      last_name: form.last_name,
-      birthdate: form.birthdate || null,
-      mobile: form.mobile,
-      contact_number: form.mobile,
-      email: form.email,
-      address: form.address,
-      beneficiary_name: form.beneficiary_name,
-      beneficiary_relation: form.beneficiary_relation,
-      status: "active",
-      date_joined: new Date().toISOString().split("T")[0],
-    });
+  const userId = authData.user?.id;
+  if (!userId) { setError("Something went wrong. Please try again."); setLoading(false); return; }
 
-    if (memberError) { setError(memberError.message); setLoading(false); return; }
+  // 2. Create member record as PENDING
+  const { error: memberError } = await supabase.from("members").insert({
+    user_id: userId,
+    first_name: form.first_name,
+    middle_name: form.middle_name,
+    last_name: form.last_name,
+    birthdate: form.birthdate || null,
+    mobile: form.mobile,
+    contact_number: form.mobile,
+    email: form.email,
+    address: form.address,
+    beneficiary_name: form.beneficiary_name,
+    beneficiary_relation: form.beneficiary_relation,
+    status: "pending",
+    approval_status: "pending",
+    date_joined: new Date().toISOString().split("T")[0],
+  });
 
-    // 3. Create member role
-    await supabase.from("user_roles").insert({
-      user_id: userId,
-      role: "member",
-    });
+  if (memberError) { setError(memberError.message); setLoading(false); return; }
 
-    router.push("/dashboard");
-  };
+  // 3. Create pending role
+  await supabase.from("user_roles").insert({
+    user_id: userId,
+    role: "member",
+  });
+
+  // 4. Show success screen
+  setStep(4);
+  setLoading(false);
+};
+
+
+
+{step === 4 && (
+  <div style={{ textAlign: "center", padding: "1rem 0" }}>
+    <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(212,160,23,0.15)", border: "2px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.2rem", fontSize: "2rem" }}>⏳</div>
+    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.3rem", fontWeight: 700, color: "white", marginBottom: "0.8rem" }}>
+      Application Submitted!
+    </h2>
+    <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: "0.5rem" }}>
+      Thank you, <strong style={{ color: "var(--gold-lt)" }}>{form.first_name}</strong>!
+    </p>
+    <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.8, marginBottom: "1.5rem" }}>
+      Your membership application is now <strong style={{ color: "var(--gold)" }}>pending review</strong> by SUNCO officers. You will be notified once your application is approved.
+    </p>
+    <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "1rem 1.2rem", marginBottom: "1.5rem", textAlign: "left" }}>
+      {[
+        ["Full Name", `${form.first_name} ${form.last_name}`],
+        ["Email", form.email],
+        ["Status", "Pending Approval"],
+      ].map(([label, value]) => (
+        <div key={label} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: "0.4rem" }}>
+          <span style={{ color: "rgba(255,255,255,0.4)" }}>{label}</span>
+          <span style={{ color: label === "Status" ? "var(--gold)" : "white", fontWeight: 500 }}>{value}</span>
+        </div>
+      ))}
+    </div>
+    <a href="/login" style={{ display: "block", background: "var(--gold)", color: "var(--green-dk)", padding: "0.85rem", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, textDecoration: "none", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+      Go to Login
+    </a>
+  </div>
+)}
+
+
 
   const inputStyle = {
     width: "100%", padding: "0.8rem 1rem",
