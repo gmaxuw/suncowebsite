@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight } from "lucide-react";
+import SettingsTab from "./_components/SettingsTab";
+import OfficersTab from "./_components/OfficersTab";
 
 // ── Tab Components ──
 import MembersTab from "./_components/MembersTab";
@@ -76,14 +78,16 @@ export default function AdminPage() {
   };
 
   // ── Nav tabs — filtered by role ──
-  const navItems = [
-    { id: "dashboard", icon: <Home size={16} />, label: "Dashboard", show: true },
-    { id: "members", icon: <Users size={16} />, label: "Members", show: canCRUD },
-    { id: "payments", icon: <CreditCard size={16} />, label: "Payments", show: canCRUD },
-    { id: "cms", icon: <FileText size={16} />, label: "CMS", show: canCRUD },
-    { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
-    { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
-  ].filter(item => item.show);
+const navItems = [
+  { id: "dashboard", icon: <Home size={16} />, label: "Dashboard", show: true },
+  { id: "members", icon: <Users size={16} />, label: "Members", show: canCRUD },
+  { id: "payments", icon: <CreditCard size={16} />, label: "Payments", show: canCRUD },
+  { id: "cms", icon: <FileText size={16} />, label: "CMS", show: canCRUD },
+  { id: "officers_mgmt", icon: <Users size={16} />, label: "Officers", show: canCRUD },
+  { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
+  { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
+  { id: "settings", icon: <Settings size={16} />, label: "Settings", show: role === "admin" },
+].filter(item => item.show);
 
   // ── Loading screen ──
   if (loading) return (
@@ -209,6 +213,13 @@ export default function AdminPage() {
 
         {/* ROLES TAB — admin only */}
         {activeTab === "roles" && role === "admin" && <RolesTab supabase={supabase} />}
+
+        {/* OFFICERS MANAGEMENT TAB */}
+        {activeTab === "officers_mgmt" && <OfficersTab canCRUD={canCRUD} supabase={supabase} />}
+
+        {/* SETTINGS TAB */}
+        {activeTab === "settings" && <SettingsTab supabase={supabase} />}
+
 
       </div>
     </main>
