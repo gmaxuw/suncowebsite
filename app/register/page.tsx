@@ -22,7 +22,15 @@ export default function RegisterPage() {
 
   const totalFee = 200 + 100 + (form.include_mas ? 740 : 0);
 
- const handleSubmit = async () => {
+
+
+
+
+
+
+const handleSubmit = async () => {
+  if (loading) return;
+
   setLoading(true);
   setError("");
 
@@ -38,18 +46,36 @@ export default function RegisterPage() {
     return;
   }
 
-  // 1. Create auth user
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email: form.email,
     password: form.password,
   });
 
-  if (authError) { setError(authError.message); setLoading(false); return; }
+  if (authError) {
+    setError(authError.message);
+    setLoading(false);
+    return;
+  }
 
   const userId = authData.user?.id;
-  if (!userId) { setError("Something went wrong. Please try again."); setLoading(false); return; }
+  if (!userId) {
+    setError("Something went wrong. Please try again.");
+    setLoading(false);
+    return;
+  }
 
-  // 2. Create member record as PENDING
+  const { data: existing } = await supabase
+    .from("members")
+    .select("id")
+    .eq("email", form.email)
+    .maybeSingle();
+
+  if (existing) {
+    setError("You are already registered.");
+    setLoading(false);
+    return;
+  }
+
   const { error: memberError } = await supabase.from("members").insert({
     user_id: userId,
     first_name: form.first_name,
@@ -67,18 +93,31 @@ export default function RegisterPage() {
     date_joined: new Date().toISOString().split("T")[0],
   });
 
-  if (memberError) { setError(memberError.message); setLoading(false); return; }
+  if (memberError) {
+    if (memberError.message.includes("duplicate")) {
+      setError("You are already registered.");
+    } else {
+      console.error(memberError);
+      setError("Something went wrong while saving your data.");
+    }
+    setLoading(false);
+    return;
+  }
 
-  // 3. Create pending role
   await supabase.from("user_roles").insert({
     user_id: userId,
     role: "member",
   });
 
-  // 4. Show success screen
   setStep(4);
   setLoading(false);
 };
+
+
+
+
+
+
 
 
 
