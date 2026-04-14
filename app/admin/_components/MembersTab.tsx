@@ -15,7 +15,7 @@ interface Props {
 
 export default function MembersTab({ canCRUD, supabase }: Props) {
   const [members, setMembers] = useState<any[]>([]);
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<any>(null);
