@@ -51,11 +51,11 @@ const handleSubmit = async () => {
     password: form.password,
   });
 
-  if (authError) {
-    setError(authError.message);
-    setLoading(false);
-    return;
-  }
+if (authError && !authData?.user) {
+  setError(authError.message);
+  setLoading(false);
+  return;
+}
 
   const userId = authData.user?.id;
   if (!userId) {
@@ -111,6 +111,7 @@ const handleSubmit = async () => {
 
   setStep(4);
   setLoading(false);
+  setError("");
 };
 
 
@@ -315,7 +316,7 @@ const handleSubmit = async () => {
           )}
 
           {/* Error */}
-          {error && (
+{error && step !== 4 && (
             <div style={{ background: "rgba(192,57,43,0.2)", border: "1px solid rgba(192,57,43,0.4)", borderRadius: 6, padding: "0.7rem 1rem", marginTop: "1rem", fontSize: "0.82rem", color: "#ff6b6b" }}>
               {error}
             </div>
@@ -337,10 +338,11 @@ const handleSubmit = async () => {
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading } 
                 style={{ flex: 1, background: loading ? "var(--gold-dk)" : "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem", borderRadius: 6, cursor: loading ? "not-allowed" : "pointer", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}
               >{loading ? "Submitting..." : "Submit Application ✓"}</button>
-            )}
+        
+        )}
           </div>
         </div>
 
