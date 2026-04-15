@@ -41,6 +41,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      // ── VALIDATION ──
       if (form.password !== form.confirm_password) {
         setError("Passwords do not match.");
         setLoading(false);
@@ -57,6 +58,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // ── CHECK IF ALREADY REGISTERED ──
       const { data: existing } = await supabase
         .from("members")
         .select("id")
@@ -69,6 +71,7 @@ export default function RegisterPage() {
         return;
       }
 
+      // ── CREATE AUTH USER ──
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -87,22 +90,27 @@ export default function RegisterPage() {
         return;
       }
 
-      const { error: memberError } = await supabase.from("members").insert({
-        user_id: userId,
-        first_name: form.first_name,
-        middle_name: form.middle_name,
-        last_name: form.last_name,
-        birthdate: form.birthdate || null,
-        mobile: form.mobile,
-        contact_number: form.mobile,
-        email: form.email,
-        address: form.address,
-        beneficiary_name: form.beneficiary_name,
-        beneficiary_relation: form.beneficiary_relation,
-        status: "non-active",
-        approval_status: "pending",
-        date_joined: new Date().toISOString().split("T")[0],
-      });
+      // ── INSERT MEMBER (capture the returned id) ──
+      const { data: memberData, error: memberError } = await supabase
+        .from("members")
+        .insert({
+          user_id: userId,
+          first_name: form.first_name,
+          middle_name: form.middle_name,
+          last_name: form.last_name,
+          birthdate: form.birthdate || null,
+          mobile: form.mobile,
+          contact_number: form.mobile,
+          email: form.email,
+          address: form.address,
+          beneficiary_name: form.beneficiary_name,
+          beneficiary_relation: form.beneficiary_relation,
+          status: "non-active",
+          approval_status: "pending",
+          date_joined: new Date().toISOString().split("T")[0],
+        })
+        .select("id")
+        .single();
 
       if (memberError) {
         console.error("MEMBER INSERT ERROR:", memberError);
@@ -111,18 +119,38 @@ export default function RegisterPage() {
         return;
       }
 
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: userId,
-        role: "member",
-      });
+      const memberId = memberData.id;
+
+      // ── INSERT ROLE ──
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: "member" });
 
       if (roleError) {
-        console.error(roleError);
-        setError("Account created but role assignment failed.");
-        setLoading(false);
-        return;
+        console.error("ROLE INSERT ERROR:", roleError);
+        // Non-blocking, continue
       }
 
+      // ── INSERT PAYMENT RECORDS ──
+      const currentYear = new Date().getFullYear();
+      const paymentRows: any[] = [
+        { member_id: memberId, year: currentYear, type: "lifetime", amount: 200 },
+        { member_id: memberId, year: currentYear, type: "aof", amount: 100 },
+      ];
+      if (form.include_mas) {
+        paymentRows.push({ member_id: memberId, year: currentYear, type: "mas", amount: 740 });
+      }
+
+      const { error: paymentError } = await supabase
+        .from("payments")
+        .insert(paymentRows);
+
+      if (paymentError) {
+        console.error("PAYMENT INSERT ERROR:", paymentError);
+        // Non-blocking — member is already created, just log it
+      }
+
+      // ── SUCCESS ──
       setSubmittedName(form.first_name);
       setStep(4);
       setLoading(false);
@@ -134,7 +162,7 @@ export default function RegisterPage() {
     }
   };
 
-  // ── Styles ──
+  // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "0.8rem 1rem",
@@ -158,12 +186,7 @@ export default function RegisterPage() {
     marginBottom: "0.4rem",
   };
 
-  const fieldGroup = (
-    label: string,
-    field: string,
-    type = "text",
-    placeholder = ""
-  ) => (
+  const fieldGroup = (label: string, field: string, type = "text", placeholder = "") => (
     <div style={{ marginBottom: "1rem" }}>
       <label style={labelStyle}>{label}</label>
       <input
@@ -176,7 +199,6 @@ export default function RegisterPage() {
     </div>
   );
 
-  // Password field with show/hide eye toggle
   const passwordField = (
     label: string,
     field: "password" | "confirm_password",
@@ -197,20 +219,14 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={() => setShow(!show)}
-          style={{
-            position: "absolute",
-            right: "0.9rem",
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "rgba(255,255,255,0.4)",
-            display: "flex",
-            alignItems: "center",
-            padding: 0,
-          }}
           tabIndex={-1}
+          style={{
+            position: "absolute", right: "0.9rem", top: "50%",
+            transform: "translateY(-50%)", background: "none",
+            border: "none", cursor: "pointer",
+            color: "rgba(255,255,255,0.4)",
+            display: "flex", alignItems: "center", padding: 0,
+          }}
         >
           {show ? <EyeOff size={17} /> : <Eye size={17} />}
         </button>
@@ -219,17 +235,9 @@ export default function RegisterPage() {
   );
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "var(--green-dk)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem",
-      }}
-    >
-      {/* bg decorative circles */}
+    <main style={{ minHeight: "100vh", background: "var(--green-dk)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+
+      {/* Background decorative circles */}
       <div style={{ position: "fixed", width: 600, height: 600, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.07)", top: -150, right: -150, pointerEvents: "none" }} />
       <div style={{ position: "fixed", width: 400, height: 400, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.05)", bottom: -100, left: -100, pointerEvents: "none" }} />
 
@@ -242,7 +250,7 @@ export default function RegisterPage() {
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Membership Registration</p>
         </div>
 
-        {/* Step indicator — hide on success screen */}
+        {/* Step indicator — hidden on success */}
         {step < 4 && (
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
@@ -354,17 +362,9 @@ export default function RegisterPage() {
           {/* ── STEP 4 — SUCCESS SCREEN ── */}
           {step === 4 && (
             <div style={{ textAlign: "center", padding: "1rem 0" }}>
-              {/* Animated checkmark circle */}
-              <div style={{
-                width: 80, height: 80, borderRadius: "50%",
-                background: "rgba(46,139,68,0.15)",
-                border: "2px solid #2E8B44",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 1.5rem",
-              }}>
+              <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(46,139,68,0.15)", border: "2px solid #2E8B44", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
                 <CheckCircle2 size={40} color="#2E8B44" />
               </div>
-
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: "white", marginBottom: "0.5rem" }}>
                 Application Submitted!
               </h2>
@@ -372,10 +372,8 @@ export default function RegisterPage() {
                 Thank you, <strong style={{ color: "var(--gold-lt)" }}>{submittedName}</strong>!
               </p>
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.8, marginBottom: "1.5rem" }}>
-                Your membership application is now <strong style={{ color: "var(--gold)" }}>pending review</strong> by SUNCO officers. You will be notified once your application has been approved.
+                Your membership application is now <strong style={{ color: "var(--gold)" }}>pending review</strong> by SUNCO officers. You will be notified once approved.
               </p>
-
-              {/* Summary card */}
               <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "1rem 1.2rem", marginBottom: "1.5rem", textAlign: "left" }}>
                 {[
                   ["Full Name", `${form.first_name} ${form.last_name}`],
@@ -384,19 +382,13 @@ export default function RegisterPage() {
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
                     <span style={{ color: "rgba(255,255,255,0.4)" }}>{label}</span>
-                    <span style={{
-                      color: label === "Status" ? "var(--gold)" : "white",
-                      fontWeight: 500,
-                      display: "flex", alignItems: "center", gap: 5,
-                    }}>
+                    <span style={{ color: label === "Status" ? "var(--gold)" : "white", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
                       {label === "Status" && <Clock size={12} />}
                       {value}
                     </span>
                   </div>
                 ))}
               </div>
-
-              {/* What happens next */}
               <div style={{ background: "rgba(46,139,68,0.08)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 8, padding: "1rem 1.2rem", marginBottom: "1.5rem", textAlign: "left" }}>
                 <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#2E8B44", marginBottom: "0.6rem" }}>What happens next?</p>
                 {[
@@ -410,7 +402,6 @@ export default function RegisterPage() {
                   </div>
                 ))}
               </div>
-
               <a href="/login" style={{ display: "block", background: "var(--gold)", color: "var(--green-dk)", padding: "0.9rem", borderRadius: 6, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 Go to Login →
               </a>
@@ -424,7 +415,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Navigation buttons — hide on success screen */}
+          {/* Navigation buttons — hidden on success */}
           {step !== 4 && (
             <div style={{ display: "flex", gap: "0.8rem", marginTop: "1.5rem" }}>
               {step > 1 && (
@@ -445,7 +436,7 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {/* Footer links — hide on success */}
+        {/* Footer links — hidden on success */}
         {step !== 4 && (
           <>
             <div style={{ textAlign: "center", marginTop: "1.2rem" }}>
