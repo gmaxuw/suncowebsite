@@ -88,8 +88,8 @@ if (authError && !authData?.user) {
     address: form.address,
     beneficiary_name: form.beneficiary_name,
     beneficiary_relation: form.beneficiary_relation,
-    status: "pending",
-    approval_status: "pending",
+  status: "non-active",
+approval_status: "pending",
     date_joined: new Date().toISOString().split("T")[0],
   });
 
