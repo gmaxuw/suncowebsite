@@ -93,8 +93,9 @@ if (authError && !authData?.user) {
     date_joined: new Date().toISOString().split("T")[0],
   });
 
-  if (memberError) {
-    if (memberError.message.includes("duplicate")) {
+ if (memberError) {
+  console.error("MEMBER INSERT ERROR:", JSON.stringify(memberError));
+  if (memberError.message.includes("duplicate") || memberError.code === "23505") {
       setError("You are already registered.");
     } else {
       console.error(memberError);

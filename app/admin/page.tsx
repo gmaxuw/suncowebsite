@@ -49,8 +49,8 @@ export default function AdminPage() {
       const { data: members } = await supabase
         .from("members").select("status, approval_status");
       if (members) {
-        setStats({
-          total: members.filter(m => m.approval_status === "approved").length,
+setStats({
+  total: members.length,
           active: members.filter(m => m.status === "active").length,
           nonactive: members.filter(m => m.status === "non-active").length,
           dropped: members.filter(m => m.status === "dropped").length,
@@ -58,9 +58,17 @@ export default function AdminPage() {
         });
       }
 
-      const { data: recent } = await supabase
-        .from("members").select("*")
-        .order("created_at", { ascending: false }).limit(5);
+const { data: recent } = await supabase
+  .from("members").select("*")
+  .order("created_at", { ascending: false })
+  .limit(10);
+// Show pending first, then others
+const sorted = (recent || []).sort((a: any, b: any) => {
+  if (a.approval_status === "pending" && b.approval_status !== "pending") return -1;
+  if (b.approval_status === "pending" && a.approval_status !== "pending") return 1;
+  return 0;
+});
+setRecentMembers(sorted.slice(0, 5));
       setRecentMembers(recent || []);
       setLoading(false);
     };
