@@ -55,7 +55,7 @@ export default async function HomePage() {
     supabase.from("site_settings").select("key, value"),
     supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
     supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
-    supabase.from("articles").select("*").eq("published", true).order("created_at", { ascending: false }).limit(3),
+    supabase.from("articles").select("id, title, excerpt, body, category, thumbnail_url, created_at").eq("published", true).order("created_at", { ascending: false }).limit(6),
   ]);
 
   // Build settings map

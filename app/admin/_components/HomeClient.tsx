@@ -373,30 +373,53 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           <h2 className="playfair" style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 700, color: "white", lineHeight: 1.15, marginBottom: "2.5rem" }}>
             News & <em style={{ fontStyle: "italic", color: "var(--gold-lt)" }}>Announcements</em>
           </h2>
-          {articles.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: articles.length === 1 ? "1fr" : articles.length === 2 ? "1fr 1fr" : "1.4fr 1fr 1fr", gap: "1.5rem" }}>
-              {articles.map((article, i) => (
-                <div key={article.id} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden" }}>
-                  <div style={{ height: i === 0 ? 240 : 180, background: "linear-gradient(135deg,#1A3C6E,#2E8B44)", display: "flex", alignItems: "flex-end", padding: "1rem" }}>
-                    <span style={{ background: "var(--gold)", color: "var(--green-dk)", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 3 }}>
-                      {article.category?.replace("-"," ")}
-                    </span>
-                  </div>
-                  <div style={{ padding: "1.3rem" }}>
-                    <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.4rem" }}>
-                      {new Date(article.created_at).toLocaleDateString("en-PH", { month: "long", year: "numeric" })}
-                    </div>
-                    <h3 className="sourceserif" style={{ fontSize: "1rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>{article.title}</h3>
-                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                      {article.body?.substring(0, 150)}...
-                    </p>
-                    <a href={`/news/${article.id}`} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--gold)", textDecoration: "none", marginTop: "0.8rem", fontWeight: 500 }}>
-                      Read more <ChevronRight size={12} />
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
+                                                  {articles.length > 0 ? (
+                                                    <div style={{ display: "grid", gridTemplateColumns: articles.length === 1 ? "1fr" : articles.length === 2 ? "1fr 1fr" : "1.4fr 1fr 1fr", gap: "1.5rem" }}>
+                                                      {articles.map((article, i) => (
+                                                        <a key={article.id} href={`/news/${article.id}`} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden", display: "block", transition: "border-color 0.2s" }}
+                                                          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.5)")}
+                                                          onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.15)")}>
+
+                                                          {/* Thumbnail */}
+                                                          <div style={{ height: i === 0 ? 260 : 180, position: "relative", overflow: "hidden" }}>
+                                                            {article.thumbnail_url ? (
+                                                              <img
+                                                                src={article.thumbnail_url}
+                                                                alt={article.title}
+                                                                loading="lazy"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
+                                                                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
+                                                                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                                                              />
+                                                            ) : (
+                                                              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#1A3C6E,#2E8B44)" }} />
+                                                            )}
+                                                            {/* Category badge overlay */}
+                                                            <div style={{ position: "absolute", bottom: 10, left: 10 }}>
+                                                              <span style={{ background: "var(--gold)", color: "var(--green-dk)", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 3 }}>
+                                                                {article.category?.replace("-", " ")}
+                                                              </span>
+                                                            </div>
+                                                          </div>
+
+                                                          {/* Content */}
+                                                          <div style={{ padding: "1.3rem" }}>
+                                                            <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
+                                                              {new Date(article.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
+                                                            </div>
+                                                            <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
+                                                              {article.title}
+                                                            </h3>
+                                                            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: i === 0 ? 4 : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                                              {article.excerpt || article.body?.substring(0, 150)}
+                                                            </p>
+                                                            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--gold)", marginTop: "0.8rem", fontWeight: 500 }}>
+                                                              Read more <ChevronRight size={12} />
+                                                            </div>
+                                                          </div>
+                                                        </a>
+                                                      ))}
+                                                    </div>
           ) : (
             <div style={{ textAlign: "center", padding: "3rem", color: "rgba(255,255,255,0.4)" }}>
               <p style={{ fontSize: "0.9rem" }}>No articles published yet. Check back soon.</p>
