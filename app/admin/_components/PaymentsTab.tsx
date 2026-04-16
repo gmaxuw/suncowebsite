@@ -406,21 +406,62 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
                 )}
               </div>
 
-              {/* ── STEP 2: Payment Year ── */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={labelStyle}>
-                  <span style={{ background: "var(--gold)", color: "var(--green-dk)", borderRadius: "50%", width: 18, height: 18, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: 700, marginRight: 6 }}>2</span>
-                  Payment Year *
-                </label>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {[2022, 2023, 2024, 2025, 2026].map(y => (
-                    <button key={y} onClick={() => setYear(y)}
-                      style={{ padding: "0.5rem 1.2rem", borderRadius: 6, border: `1.5px solid ${year === y ? "var(--gold)" : "rgba(26,92,42,0.15)"}`, background: year === y ? "var(--gold)" : "white", color: year === y ? "var(--green-dk)" : "var(--muted)", fontSize: "0.85rem", fontWeight: year === y ? 600 : 400, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                      {y}
-                    </button>
-                  ))}
-                </div>
-              </div>
+{/* ── STEP 2: Payment Year ── */}
+{(() => {
+  const currentYear = new Date().getFullYear();
+  const startYear = currentYear - 20;
+  const endYear = currentYear + 10;
+
+  const years = Array.from(
+    { length: endYear - startYear + 1 },
+    (_, i) => startYear + i
+  );
+
+  return (
+    <div style={{ marginBottom: "1.5rem" }}>
+      <label style={labelStyle}>
+        <span style={{
+          background: "var(--gold)",
+          color: "var(--green-dk)",
+          borderRadius: "50%",
+          width: 18,
+          height: 18,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "0.65rem",
+          fontWeight: 700,
+          marginRight: 6
+        }}>
+          2
+        </span>
+        Payment Year *
+      </label>
+
+      <select
+        value={year || ""}
+        onChange={(e) => setYear(Number(e.target.value))}
+        style={{
+          width: "100%",
+          padding: "0.6rem",
+          borderRadius: 6,
+          border: "1.5px solid rgba(26,92,42,0.15)",
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: "0.9rem",
+          color: "var(--green-dk)"
+        }}
+      >
+        <option value="" disabled>Select Year</option>
+
+        {years.map(y => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+})()}
 
               {/* ── STEP 3: Payment Types ── */}
               <div style={{ marginBottom: "1.5rem" }}>
