@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .from("articles")
     .select("title, excerpt, thumbnail_url")
     .eq("id", params.id)
-    .single();
+    .maybeSingle();
 
   if (!article) return { title: "Article Not Found | SUNCO" };
 
@@ -44,7 +44,7 @@ export default async function ArticlePage({ params }: Props) {
     .select("*")
     .eq("id", params.id)
     .eq("published", true)
-    .single();
+    .maybeSingle();
 
   if (!article) notFound();
 
