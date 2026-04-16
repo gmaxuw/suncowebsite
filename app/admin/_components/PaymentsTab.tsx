@@ -154,17 +154,15 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
       return;
     }
 
-    // Insert one record per payment type
-    const inserts = selectedTypes.map((type, index) => ({
-      member_id: selectedMember.id,
-      year: type === "lifetime" ? new Date().getFullYear() : year,
-      type,
-      amount: PAYMENT_TYPES.find(p => p.type === type)?.amount || 0,
-      date_paid: datePaid,
-      receipt_number: selectedTypes.length > 1
-        ? `${orNumber.trim()}-${index + 1}`  // OR-2025-00001-1, OR-2025-00001-2
-        : orNumber.trim(),
-    }));
+// Insert one record per payment type — all share the SAME OR number
+const inserts = selectedTypes.map((type) => ({
+  member_id: selectedMember.id,
+  year: type === "lifetime" ? new Date().getFullYear() : year,
+  type,
+  amount: PAYMENT_TYPES.find(p => p.type === type)?.amount || 0,
+  date_paid: datePaid,
+  receipt_number: orNumber.trim(), // Same OR for all — breakdown is in separate rows
+}));
 
     const { error } = await supabase.from("payments").insert(inserts);
 
@@ -564,9 +562,7 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
                       <span style={{ fontSize: "0.88rem", fontWeight: 500, color: "white" }}>Total Amount</span>
                       {orNumber && (
                         <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
-                          OR: {selectedTypes.length > 1
-                            ? selectedTypes.map((_, i) => `${orNumber}-${i + 1}`).join(", ")
-                            : orNumber}
+                        OR No.: {orNumber}
                         </div>
                       )}
                     </div>
