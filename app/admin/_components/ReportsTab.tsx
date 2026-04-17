@@ -221,9 +221,14 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   // ── Payment cell component ──
   const PaymentCell = ({ memberId, year, type }: { memberId: string; year: number; type: string }) => {
     const memberData = members.find(m => m.id === memberId);
-    const joinYear = memberData?.date_joined
-      ? new Date(memberData.date_joined).getFullYear()
-      : currentYear;
+const memberEarliestPayment = payments
+  .filter(p => p.member_id === memberId)
+  .map(p => p.year)
+  .sort()[0];
+
+const joinYear = memberData?.date_joined
+  ? new Date(memberData.date_joined).getFullYear()
+  : memberEarliestPayment || currentYear;
 
     // Not a member yet this year
     if (year < joinYear) {
