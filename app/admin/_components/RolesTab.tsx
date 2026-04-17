@@ -21,7 +21,7 @@ export default function RolesTab({ supabase }: Props) {
     setLoading(true);
     const { data } = await supabase
       .from("user_roles")
-      .select("*, members(first_name, last_name, email, member_id_code)")
+      .select("*, members!user_roles_user_id_fkey(first_name, last_name, email, member_id_code)")
       .order("role");
     setUserRoles(data || []);
     setLoading(false);
