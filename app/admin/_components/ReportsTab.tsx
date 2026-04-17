@@ -60,39 +60,41 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   // ── Calculate delinquency smartly ──
   // Only counts years AFTER member joined
   // January rule: if current month >= 1 (always true), current year is due
-  const getDelinquency = (member: any) => {
-    const joinYear = member.date_joined
-      ? new Date(member.date_joined).getFullYear()
-      : currentYear;
+const getDelinquency = (member: any) => {
+  const memberPayments = payments.filter(p => p.member_id === member.id);
 
-    const memberPayments = payments.filter(p => p.member_id === member.id);
-    let consecutiveMas = 0;
-    let consecutiveAof = 0;
-    let maxConsecutive = 0;
-    let delinquentYears: number[] = [];
+  // Get the true join year — earliest of: date_joined, or earliest payment year
+  const paymentYears = memberPayments.map(p => p.year).filter(Boolean);
+  const earliestPaymentYear = paymentYears.length > 0 ? Math.min(...paymentYears) : null;
+  const dateJoinedYear = member.date_joined
+    ? new Date(member.date_joined).getFullYear()
+    : null;
 
-    for (const year of displayYears) {
-      if (year < joinYear) continue; // not a member yet
+  const joinYear = Math.min(
+    ...[dateJoinedYear, earliestPaymentYear, currentYear].filter(Boolean) as number[]
+  );
 
-      const hasMas = memberPayments.some(p => p.year === year && p.type === "mas");
-      const hasAof = memberPayments.some(p => p.year === year && p.type === "aof");
+  // Count ALL years from join year to current year
+  let consecutive = 0;
+  let maxConsecutive = 0;
+  const delinquentYears: number[] = [];
 
-      // Both MAS and AOF must be paid for the year to be considered "paid"
-      const fullyPaid = hasMas && hasAof;
+  for (let year = joinYear; year <= currentYear; year++) {
+    const hasMas = memberPayments.some(p => p.year === year && p.type === "mas");
+    const hasAof = memberPayments.some(p => p.year === year && p.type === "aof");
+    const fullyPaid = hasMas && hasAof;
 
-      if (!fullyPaid) {
-        consecutiveMas = hasMas ? 0 : consecutiveMas + 1;
-        consecutiveAof = hasAof ? 0 : consecutiveAof + 1;
-        delinquentYears.push(year);
-        maxConsecutive = Math.max(maxConsecutive, consecutiveMas, consecutiveAof);
-      } else {
-        consecutiveMas = 0;
-        consecutiveAof = 0;
-      }
+    if (!fullyPaid) {
+      consecutive++;
+      maxConsecutive = Math.max(maxConsecutive, consecutive);
+      delinquentYears.push(year);
+    } else {
+      consecutive = 0;
     }
+  }
 
-    return { count: maxConsecutive, years: delinquentYears };
-  };
+  return { count: maxConsecutive, years: delinquentYears, joinYear };
+};
 
   // ── Build records for export ──
   const buildRecords = () => {
@@ -219,67 +221,70 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   const totalLifetime = payments.filter(p => p.type === "lifetime").reduce((s, p) => s + Number(p.amount), 0);
 
   // ── Payment cell component ──
-  const PaymentCell = ({ memberId, year, type }: { memberId: string; year: number; type: string }) => {
-    const memberData = members.find(m => m.id === memberId);
-const memberEarliestPayment = payments
-  .filter(p => p.member_id === memberId)
-  .map(p => p.year)
-  .sort()[0];
+const PaymentCell = ({ memberId, year, type }: { memberId: string; year: number; type: string }) => {
+  const memberData = members.find(m => m.id === memberId);
+  const memberPayments = payments.filter(p => p.member_id === memberId);
 
-const joinYear = memberData?.date_joined
-  ? new Date(memberData.date_joined).getFullYear()
-  : memberEarliestPayment || currentYear;
+  // Get true join year same way as getDelinquency
+  const paymentYears = memberPayments.map(p => p.year).filter(Boolean);
+  const earliestPaymentYear = paymentYears.length > 0 ? Math.min(...paymentYears) : null;
+  const dateJoinedYear = memberData?.date_joined
+    ? new Date(memberData.date_joined).getFullYear()
+    : null;
+  const joinYear = Math.min(
+    ...[dateJoinedYear, earliestPaymentYear, currentYear].filter(Boolean) as number[]
+  );
 
-    // Not a member yet this year
-    if (year < joinYear) {
-      return (
-        <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.75rem", textAlign: "center", color: "rgba(150,150,150,0.5)" }}>
-          N/A
-        </td>
-      );
-    }
-
-    const cellPayments = getMemberPayment(memberId, year, type);
-    const paid = cellPayments.length > 0;
-    const amount = cellPayments.reduce((s, p) => s + Number(p.amount), 0);
-
+  // Not a member yet this year
+  if (year < joinYear) {
     return (
-      <td
-        style={{
-          padding: "0.7rem 0.8rem",
-          fontSize: "0.8rem",
-          textAlign: "center",
-          background: paid ? "transparent" : "rgba(255,220,0,0.2)",
-          cursor: paid ? "pointer" : "default",
-        }}
-        onClick={() => {
-          if (paid && cellPayments.length > 0) {
-            setReceiptModal({
-              member: memberData,
-              payments: cellPayments,
-              year,
-              type,
-              total: amount,
-            });
-          }
-        }}
-      >
-        {paid ? (
-          <span style={{
-            color: "#2E8B44",
-            fontWeight: 600,
-            textDecoration: "underline",
-            textDecorationStyle: "dotted",
-            cursor: "pointer",
-          }}>
-            ₱{amount.toLocaleString()}
-          </span>
-        ) : (
-          <span style={{ color: "#C0392B", fontSize: "0.72rem", fontWeight: 500 }}>—</span>
-        )}
+      <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.75rem", textAlign: "center", color: "rgba(150,150,150,0.4)", background: "rgba(240,240,240,0.3)" }}>
+        N/A
       </td>
     );
-  };
+  }
+
+  const cellPayments = getMemberPayment(memberId, year, type);
+  const paid = cellPayments.length > 0;
+  const amount = cellPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+  return (
+    <td
+      style={{
+        padding: "0.7rem 0.8rem",
+        fontSize: "0.8rem",
+        textAlign: "center",
+        background: paid ? "transparent" : "rgba(255,220,0,0.2)",
+        cursor: paid ? "pointer" : "default",
+      }}
+      onClick={() => {
+        if (paid && cellPayments.length > 0) {
+          setReceiptModal({
+            member: memberData,
+            payments: cellPayments,
+            year,
+            type,
+            total: amount,
+          });
+        }
+      }}
+    >
+      {paid ? (
+        <span style={{
+          color: "#2E8B44",
+          fontWeight: 600,
+          textDecoration: "underline",
+          textDecorationStyle: "dotted",
+          cursor: "pointer",
+        }}>
+          ₱{amount.toLocaleString()}
+        </span>
+      ) : (
+        <span style={{ color: "#C0392B", fontSize: "0.72rem", fontWeight: 500 }}>—</span>
+      )}
+    </td>
+  );
+};
 
   if (loading) return (
     <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>Loading records...</div>
@@ -503,9 +508,18 @@ const joinYear = memberData?.date_joined
                         {m.status}
                       </span>
                     </td>
-                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
-                      {m.date_joined ? new Date(m.date_joined).getFullYear() : "—"}
-                    </td>
+                              <td style={{ padding: "0.7rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                                {(() => {
+                                  const memberPayments = payments.filter(p => p.member_id === m.id);
+                                  const paymentYears = memberPayments.map(p => p.year).filter(Boolean);
+                                  const earliestPaymentYear = paymentYears.length > 0 ? Math.min(...paymentYears) : null;
+                                  const dateJoinedYear = m.date_joined ? new Date(m.date_joined).getFullYear() : null;
+                                  const joinYear = Math.min(
+                                    ...[dateJoinedYear, earliestPaymentYear, currentYear].filter(Boolean) as number[]
+                                  );
+                                  return joinYear || "—";
+                                })()}
+                              </td>
 
                     {/* Dynamic year payment cells */}
                     {displayYears.map(year => (
