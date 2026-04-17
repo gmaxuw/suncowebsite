@@ -157,7 +157,7 @@ const { data: existingOR } = await supabase
 // Insert one record per payment type — all share the SAME OR number
 const inserts = selectedTypes.map((type) => ({
   member_id: selectedMember.id,
-  year: type === "lifetime" ? new Date().getFullYear() : year,
+  year: year,
   type,
   amount: PAYMENT_TYPES.find(p => p.type === type)?.amount || 0,
   date_paid: datePaid,
