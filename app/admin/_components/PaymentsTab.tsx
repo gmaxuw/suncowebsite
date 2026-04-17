@@ -118,7 +118,7 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
 
   // ── Toggle payment type selection ──
   const toggleType = (type: PaymentType) => {
-    if (isAlreadyPaid(type)) return; // Can't select already paid
+  if (!selectedMember || isAlreadyPaid(type)) return; // Can't select if no member or already paid
 
     setSelectedTypes(prev =>
       prev.includes(type)
@@ -473,8 +473,8 @@ const inserts = selectedTypes.map((type) => ({
                     const isSelected = selectedTypes.includes(type);
 
                     return (
-                      <button key={type} onClick={() => toggleType(type)} disabled={alreadyPaid}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.9rem 1.1rem", borderRadius: 8, border: `1.5px solid ${isSelected ? "var(--green-lt)" : alreadyPaid ? "rgba(26,92,42,0.08)" : "rgba(26,92,42,0.15)"}`, background: isSelected ? "rgba(46,139,68,0.08)" : alreadyPaid ? "rgba(26,92,42,0.03)" : "white", cursor: alreadyPaid ? "not-allowed" : "pointer", opacity: alreadyPaid ? 0.5 : 1, textAlign: "left", width: "100%", fontFamily: "'DM Sans',sans-serif" }}>
+                      <button key={type} onClick={() => toggleType(type)} disabled={!selectedMember || alreadyPaid}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.9rem 1.1rem", borderRadius: 8, border: `1.5px solid ${isSelected ? "var(--green-lt)" : alreadyPaid ? "rgba(26,92,42,0.08)" : "rgba(26,92,42,0.15)"}`, background: isSelected ? "rgba(46,139,68,0.08)" : alreadyPaid ? "rgba(26,92,42,0.03)" : "white", cursor: !selectedMember || alreadyPaid ? "not-allowed" : "pointer", opacity: !selectedMember || alreadyPaid ? 0.5 : 1, textAlign: "left", width: "100%", fontFamily: "'DM Sans',sans-serif" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${isSelected ? "var(--green-lt)" : "rgba(26,92,42,0.2)"}`, background: isSelected ? "var(--green-lt)" : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             {isSelected && <Check size={12} color="white" />}
