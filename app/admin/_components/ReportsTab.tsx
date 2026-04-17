@@ -122,6 +122,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                         let currentStreak = 0;
                         const delinquentYears: number[] = [];
 
+                        // Walk backwards from currentYear
                         for (let year = currentYear; year >= joinYear; year--) {
                           const hasMas = memberPayments.some(
                             (p) => p.year === year && p.type === "mas"
@@ -130,28 +131,13 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                             (p) => p.year === year && p.type === "aof"
                           );
 
-                        const fullyPaid = hasMas && hasAof;
-
+                          const fullyPaid = hasMas && hasAof;
 
                           if (!fullyPaid) {
                             currentStreak++;
                             delinquentYears.unshift(year);
                           } else {
-                            for (let year = currentYear; year >= joinYear; year--) {
-  const hasMas = memberPayments.some(
-    (p) => p.year === year && p.type === "mas"
-  );
-  const hasAof = memberPayments.some(
-    (p) => p.year === year && p.type === "aof"
-  );
-
-  const fullyPaid = hasMas && hasAof;
-
-  if (!fullyPaid) {
-    currentStreak++;
-    delinquentYears.unshift(year);
-  }
-}
+                            break;
                           }
                         }
 
