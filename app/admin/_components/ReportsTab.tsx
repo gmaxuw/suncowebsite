@@ -57,7 +57,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
 
     members.forEach(async (m) => {
       // Never overwrite deceased or dropped — those are manual/permanent
-      if (m.status === "deceased" || m.status === "dropped") return;
+      if (m.status === "deceased") return;
 
       const { derivedStatus } = getDelinquency(m);
       if (derivedStatus !== m.status) {
@@ -149,7 +149,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
 
                                               // ── Derive status from CONSECUTIVE streak (never override deceased/dropped-manual) ──
                                               let derivedStatus: string = member.status;
-                                              if (member.status !== "deceased" && member.status !== "dropped") {
+                                              if (member.status !== "deceased") {
                                                 if (consecutiveStreak >= 3) {
                                                   derivedStatus = "dropped";
                                                 } else if (consecutiveStreak >= 2) {
