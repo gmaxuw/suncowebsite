@@ -1,13 +1,14 @@
 "use client";
 // ─────────────────────────────────────────────
 // ReportsTab.tsx
-// Handles: export Excel/CSV/PDF, import from Excel,
-//          full records table with delinquency
-// Accessible by: all officers and BOD (view)
-//               admin/president/treasurer/secretary (import)
+// Dynamic year columns (5 years back from today)
+// Smart delinquency — only counts from date_joined
+// Payment type sorter (MAS, AOF, Lifetime)
+// Clickable amounts show receipt modal
+// Export: Excel, CSV, PDF
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
-import { BarChart2 } from "lucide-react";
+import { X } from "lucide-react";
 
 interface Props {
   canCRUD: boolean;
@@ -22,11 +23,25 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   const [importing, setImporting] = useState(false);
   const [importLog, setImportLog] = useState<string[]>([]);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "mas" | "aof" | "lifetime">("all");
+  const [receiptModal, setReceiptModal] = useState<any>(null);
+
+  // ── Dynamic years: 5 years back from current year ──
+  const currentYear = new Date().getFullYear();
+  const displayYears = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i);
+  // e.g. 2026 → [2022, 2023, 2024, 2025, 2026]
 
   useEffect(() => {
     const load = async () => {
-      const { data: m } = await supabase.from("members").select("*").order("last_name");
-      const { data: p } = await supabase.from("payments").select("*");
+      const { data: m } = await supabase
+        .from("members")
+        .select("*")
+        .eq("approval_status", "approved")
+        .order("last_name");
+      const { data: p } = await supabase
+        .from("payments")
+        .select("*")
+        .order("date_paid", { ascending: false });
       setMembers(m || []);
       setPayments(p || []);
       setLoading(false);
@@ -34,17 +49,56 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     load();
   }, []);
 
+  // ── Get payments for a member, year, and type ──
+  const getMemberPayment = (memberId: string, year: number, type: string) =>
+    payments.filter(p =>
+      p.member_id === memberId &&
+      p.year === year &&
+      p.type === type
+    );
+
+  // ── Calculate delinquency smartly ──
+  // Only counts years AFTER member joined
+  // January rule: if current month >= 1 (always true), current year is due
+  const getDelinquency = (member: any) => {
+    const joinYear = member.date_joined
+      ? new Date(member.date_joined).getFullYear()
+      : currentYear;
+
+    const memberPayments = payments.filter(p => p.member_id === member.id);
+    let consecutiveMas = 0;
+    let consecutiveAof = 0;
+    let maxConsecutive = 0;
+    let delinquentYears: number[] = [];
+
+    for (const year of displayYears) {
+      if (year < joinYear) continue; // not a member yet
+
+      const hasMas = memberPayments.some(p => p.year === year && p.type === "mas");
+      const hasAof = memberPayments.some(p => p.year === year && p.type === "aof");
+
+      // Both MAS and AOF must be paid for the year to be considered "paid"
+      const fullyPaid = hasMas && hasAof;
+
+      if (!fullyPaid) {
+        consecutiveMas = hasMas ? 0 : consecutiveMas + 1;
+        consecutiveAof = hasAof ? 0 : consecutiveAof + 1;
+        delinquentYears.push(year);
+        maxConsecutive = Math.max(maxConsecutive, consecutiveMas, consecutiveAof);
+      } else {
+        consecutiveMas = 0;
+        consecutiveAof = 0;
+      }
+    }
+
+    return { count: maxConsecutive, years: delinquentYears };
+  };
+
+  // ── Build records for export ──
   const buildRecords = () => {
     return members.map((m, i) => {
       const memberPayments = payments.filter(p => p.member_id === m.id);
-      const currentYear = new Date().getFullYear();
-      let consecutive = 0;
-      let delinquentYears = 0;
-      for (let y = 2022; y <= currentYear; y++) {
-        const paid = memberPayments.some(p => p.year === y);
-        if (!paid) { consecutive++; delinquentYears = Math.max(delinquentYears, consecutive); }
-        else consecutive = 0;
-      }
+      const delinquency = getDelinquency(m);
       return {
         no: i + 1,
         name: `${m.last_name}, ${m.first_name}${m.middle_name ? " " + m.middle_name[0] + "." : ""}`,
@@ -56,8 +110,9 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
           date: p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-PH") : "—",
           amount: Number(p.amount),
           receipt: p.receipt_number || "—",
+          type: p.type,
         })),
-        years_delinquent: delinquentYears,
+        years_delinquent: delinquency.count,
         total_amount: memberPayments.reduce((s, p) => s + Number(p.amount), 0),
       };
     });
@@ -159,37 +214,111 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   };
 
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const totalMas = payments.filter(p => p.type === "mas").reduce((s, p) => s + Number(p.amount), 0);
+  const totalAof = payments.filter(p => p.type === "aof").reduce((s, p) => s + Number(p.amount), 0);
+  const totalLifetime = payments.filter(p => p.type === "lifetime").reduce((s, p) => s + Number(p.amount), 0);
+
+  // ── Payment cell component ──
+  const PaymentCell = ({ memberId, year, type }: { memberId: string; year: number; type: string }) => {
+    const memberData = members.find(m => m.id === memberId);
+    const joinYear = memberData?.date_joined
+      ? new Date(memberData.date_joined).getFullYear()
+      : currentYear;
+
+    // Not a member yet this year
+    if (year < joinYear) {
+      return (
+        <td style={{ padding: "0.7rem 0.8rem", fontSize: "0.75rem", textAlign: "center", color: "rgba(150,150,150,0.5)" }}>
+          N/A
+        </td>
+      );
+    }
+
+    const cellPayments = getMemberPayment(memberId, year, type);
+    const paid = cellPayments.length > 0;
+    const amount = cellPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+    return (
+      <td
+        style={{
+          padding: "0.7rem 0.8rem",
+          fontSize: "0.8rem",
+          textAlign: "center",
+          background: paid ? "transparent" : "rgba(255,220,0,0.2)",
+          cursor: paid ? "pointer" : "default",
+        }}
+        onClick={() => {
+          if (paid && cellPayments.length > 0) {
+            setReceiptModal({
+              member: memberData,
+              payments: cellPayments,
+              year,
+              type,
+              total: amount,
+            });
+          }
+        }}
+      >
+        {paid ? (
+          <span style={{
+            color: "#2E8B44",
+            fontWeight: 600,
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+            cursor: "pointer",
+          }}>
+            ₱{amount.toLocaleString()}
+          </span>
+        ) : (
+          <span style={{ color: "#C0392B", fontSize: "0.72rem", fontWeight: 500 }}>—</span>
+        )}
+      </td>
+    );
+  };
 
   if (loading) return (
     <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>Loading records...</div>
   );
+
+  // ── Filter visible members based on activeFilter ──
+  const filteredMembers = activeFilter === "all" ? members : members.filter(m => {
+    if (activeFilter === "lifetime") {
+      return payments.some(p => p.member_id === m.id && p.type === "lifetime");
+    }
+    // For MAS/AOF — show all members (to see who is delinquent)
+    return true;
+  });
 
   return (
     <div>
       {/* ── Header ── */}
       <div style={{ marginBottom: "2rem" }}>
         <p style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Admin Panel</p>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>Reports & Records</h1>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
+          Reports & Records
+          <span style={{ marginLeft: 10, fontSize: "0.9rem", color: "var(--muted)", fontFamily: "'DM Sans', sans-serif", fontWeight: 400 }}>
+            as of {new Date().toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
+          </span>
+        </h1>
       </div>
 
       {/* ── Summary Cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1.2rem", marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem", marginBottom: "2rem" }}>
         {[
           { label: "Total Collected", value: `₱${totalCollected.toLocaleString()}`, color: "var(--gold)" },
-          { label: "Active Members", value: members.filter(m => m.status === "active").length, color: "#2E8B44" },
-          { label: "Delinquent", value: members.filter(m => m.status === "non-active").length, color: "#D4A017" },
+          { label: "MAS Collected", value: `₱${totalMas.toLocaleString()}`, color: "#2E8B44" },
+          { label: "AOF Collected", value: `₱${totalAof.toLocaleString()}`, color: "#2B5FA8" },
+          { label: "Lifetime Fees", value: `₱${totalLifetime.toLocaleString()}`, color: "#6B3FA0" },
         ].map(({ label, value, color }) => (
-          <div key={label} style={{ background: "white", borderRadius: 10, padding: "1.3rem 1.5rem", border: "1px solid rgba(26,92,42,0.08)", borderLeft: `4px solid ${color}` }}>
-            <p style={{ fontSize: "0.7rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.4rem" }}>{label}</p>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color }}>{value}</p>
+          <div key={label} style={{ background: "white", borderRadius: 10, padding: "1.2rem 1.5rem", border: "1px solid rgba(26,92,42,0.08)", borderLeft: `4px solid ${color}` }}>
+            <p style={{ fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.4rem" }}>{label}</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 700, color }}>{value}</p>
           </div>
         ))}
       </div>
 
       {/* ── Export & Import ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
-
-        {/* Export */}
         <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
           <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", background: "var(--warm)" }}>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>Export Records</h2>
@@ -213,7 +342,6 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
           </div>
         </div>
 
-        {/* Import */}
         {canCRUD && (
           <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
             <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", background: "var(--warm)" }}>
@@ -251,14 +379,41 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
         )}
       </div>
 
-      {/* ── Full Records Table ── */}
+      {/* ── All Records Table ── */}
       <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
-        <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+        {/* Table Header with filters + export */}
+        <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.8rem", background: "var(--warm)" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>
-            All Records — {members.length} Members
+            All Records — {filteredMembers.length} Members
           </h2>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["excel","csv","pdf"].map(type => (
+
+          {/* ── CENTER: Payment type sorter ── */}
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            {[
+              { id: "all", label: "All Payments", color: "var(--green-dk)" },
+              { id: "mas", label: "MAS Only", color: "#2E8B44" },
+              { id: "aof", label: "Operating Fund", color: "#2B5FA8" },
+              { id: "lifetime", label: "Lifetime", color: "#6B3FA0" },
+            ].map(({ id, label, color }) => (
+              <button key={id}
+                onClick={() => setActiveFilter(id as any)}
+                style={{
+                  padding: "0.35rem 0.9rem", borderRadius: 20,
+                  border: `1.5px solid ${activeFilter === id ? color : "rgba(26,92,42,0.15)"}`,
+                  background: activeFilter === id ? color : "white",
+                  color: activeFilter === id ? "white" : "var(--muted)",
+                  fontSize: "0.72rem", fontWeight: 500, cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* RIGHT: Export buttons */}
+          <div style={{ display: "flex", gap: "0.4rem" }}>
+            {["excel", "csv", "pdf"].map(type => (
               <button key={type} onClick={() => handleExport(type)}
                 style={{ background: "none", border: "1px solid rgba(26,92,42,0.2)", color: "var(--green-dk)", padding: "0.3rem 0.8rem", borderRadius: 4, fontSize: "0.72rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {type.toUpperCase()}
@@ -266,42 +421,229 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
             ))}
           </div>
         </div>
+
+        {/* ── Legend ── */}
+        <div style={{ padding: "0.6rem 1.5rem", background: "rgba(255,255,255,0.8)", borderBottom: "1px solid rgba(26,92,42,0.06)", display: "flex", gap: "1.5rem", alignItems: "center" }}>
+          <span style={{ fontSize: "0.68rem", color: "var(--muted)", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" }}>Legend:</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 12, height: 12, borderRadius: 2, background: "rgba(255,220,0,0.35)", border: "1px solid rgba(200,180,0,0.4)" }} />
+            <span style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Delinquent / Not paid</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: "0.72rem", color: "#2E8B44", fontWeight: 600, textDecoration: "underline", textDecorationStyle: "dotted" }}>₱740</span>
+            <span style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Paid — click to view receipt</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: "0.72rem", color: "rgba(150,150,150,0.7)" }}>N/A</span>
+            <span style={{ fontSize: "0.72rem", color: "var(--muted)" }}>Not yet a member this year</span>
+          </div>
+        </div>
+
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
             <thead>
               <tr style={{ background: "var(--green-dk)" }}>
-                {["No.", "Name", "Status", "Member ID", "2022", "2023", "2024", "2025", "Delinquent", "Total"].map(h => (
-                  <th key={h} style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>{h}</th>
+                <th style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>No.</th>
+                <th style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>Name</th>
+                <th style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>Joined</th>
+
+                {/* Dynamic year columns */}
+                {displayYears.map(year => (
+                  activeFilter === "all" ? (
+                    // Show 2 sub-columns per year: MAS + AOF
+                    <th key={year} colSpan={2} style={{ padding: "0.8rem 0.5rem", textAlign: "center", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: year === currentYear ? "var(--gold-lt)" : "rgba(255,255,255,0.8)", whiteSpace: "nowrap", borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
+                      {year}{year === currentYear && " ★"}
+                    </th>
+                  ) : (
+                    <th key={year} style={{ padding: "0.8rem 0.8rem", textAlign: "center", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: year === currentYear ? "var(--gold-lt)" : "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+                      {year}{year === currentYear && " ★"}
+                    </th>
+                  )
                 ))}
+
+                <th style={{ padding: "0.8rem 1rem", textAlign: "center", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>Delinquent</th>
+                <th style={{ padding: "0.8rem 1rem", textAlign: "right", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>Total</th>
               </tr>
-            </thead>
-            <tbody>
-              {buildRecords().map((m, i) => (
-                <tr key={i} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
-                  <td style={{ padding: "0.8rem 1rem", fontSize: "0.8rem", color: "var(--muted)" }}>{m.no}</td>
-                  <td style={{ padding: "0.8rem 1rem", fontSize: "0.88rem", fontWeight: 500, color: "var(--green-dk)", whiteSpace: "nowrap" }}>{m.name}</td>
-                  <td style={{ padding: "0.8rem 1rem" }}>
-                    <span style={{ background: `${statusColor[m.status] || "#95A5A6"}22`, color: statusColor[m.status] || "#95A5A6", fontSize: "0.7rem", fontWeight: 500, padding: "2px 8px", borderRadius: 20, textTransform: "capitalize" }}>{m.status}</span>
-                  </td>
-                  <td style={{ padding: "0.8rem 1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "monospace" }}>{m.member_id_code}</td>
-                  {[2022, 2023, 2024, 2025].map(year => {
-                    const p = m.payments.find(p => p.year === year);
-                    return (
-                      <td key={year} style={{ padding: "0.8rem 1rem", fontSize: "0.8rem", background: !p ? "rgba(255,255,0,0.3)" : "transparent" }}>
-                        {p ? <span style={{ color: "#2E8B44", fontWeight: 500 }}>₱{p.amount.toFixed(2)}</span> : <span style={{ color: "#C0392B", fontSize: "0.72rem" }}>—</span>}
-                      </td>
-                    );
-                  })}
-                  <td style={{ padding: "0.8rem 1rem", fontSize: "0.78rem", color: m.years_delinquent > 0 ? "#C0392B" : "var(--muted)", fontWeight: m.years_delinquent > 0 ? 500 : 400 }}>
-                    {m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "—"}
-                  </td>
-                  <td style={{ padding: "0.8rem 1rem", fontSize: "0.88rem", fontWeight: 500, color: "var(--green-dk)" }}>₱{m.total_amount.toFixed(2)}</td>
+
+              {/* Sub-header for year columns when showing all */}
+              {activeFilter === "all" && (
+                <tr style={{ background: "rgba(13,51,24,0.9)" }}>
+                  <th colSpan={4} />
+                  {displayYears.map(year => (
+                    <>
+                      <th key={`${year}-mas`} style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(212,160,23,0.7)", fontWeight: 500, letterSpacing: "0.06em", borderLeft: "1px solid rgba(255,255,255,0.1)" }}>MAS</th>
+                      <th key={`${year}-aof`} style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(100,150,255,0.7)", fontWeight: 500, letterSpacing: "0.06em" }}>AOF</th>
+                    </>
+                  ))}
+                  <th colSpan={2} />
                 </tr>
-              ))}
+              )}
+            </thead>
+
+            <tbody>
+              {filteredMembers.map((m, i) => {
+                const memberPayments = payments.filter(p => p.member_id === m.id);
+                const delinquency = getDelinquency(m);
+                const total = memberPayments.reduce((s, p) => s + Number(p.amount), 0);
+
+                return (
+                  <tr key={m.id} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", color: "var(--muted)" }}>{i + 1}</td>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.85rem", fontWeight: 500, color: "var(--green-dk)", whiteSpace: "nowrap" }}>
+                      {m.last_name}, {m.first_name}{m.middle_name ? ` ${m.middle_name[0]}.` : ""}
+                    </td>
+                    <td style={{ padding: "0.7rem 1rem" }}>
+                      <span style={{ background: `${statusColor[m.status] || "#95A5A6"}22`, color: statusColor[m.status] || "#95A5A6", fontSize: "0.68rem", fontWeight: 500, padding: "2px 8px", borderRadius: 20, textTransform: "capitalize" }}>
+                        {m.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: "0.7rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
+                      {m.date_joined ? new Date(m.date_joined).getFullYear() : "—"}
+                    </td>
+
+                    {/* Dynamic year payment cells */}
+                    {displayYears.map(year => (
+                      activeFilter === "all" ? (
+                        <>
+                          <PaymentCell key={`${m.id}-${year}-mas`} memberId={m.id} year={year} type="mas" />
+                          <PaymentCell key={`${m.id}-${year}-aof`} memberId={m.id} year={year} type="aof" />
+                        </>
+                      ) : activeFilter === "lifetime" ? (
+                        year === displayYears[0] ? (
+                          <td key={`${m.id}-lifetime`} colSpan={displayYears.length} style={{ padding: "0.7rem 1rem", textAlign: "center" }}>
+                            {memberPayments.some(p => p.type === "lifetime") ? (
+                              <span
+                                style={{ color: "#2E8B44", fontWeight: 600, textDecoration: "underline", textDecorationStyle: "dotted", cursor: "pointer" }}
+                                onClick={() => {
+                                  const lp = memberPayments.filter(p => p.type === "lifetime");
+                                  setReceiptModal({ member: m, payments: lp, year: lp[0]?.year, type: "lifetime", total: lp.reduce((s, p) => s + Number(p.amount), 0) });
+                                }}>
+                                ₱{memberPayments.filter(p => p.type === "lifetime").reduce((s, p) => s + Number(p.amount), 0).toLocaleString()} ✓
+                              </span>
+                            ) : (
+                              <span style={{ color: "#C0392B", fontSize: "0.75rem" }}>Not paid</span>
+                            )}
+                          </td>
+                        ) : null
+                      ) : (
+                        <PaymentCell key={`${m.id}-${year}-${activeFilter}`} memberId={m.id} year={year} type={activeFilter} />
+                      )
+                    ))}
+
+                    {/* Delinquent */}
+                    <td style={{ padding: "0.7rem 1rem", textAlign: "center" }}>
+                      {delinquency.count > 0 ? (
+                        <span style={{ background: "rgba(192,57,43,0.1)", color: "#C0392B", fontSize: "0.72rem", fontWeight: 600, padding: "3px 8px", borderRadius: 20 }}>
+                          {delinquency.count} yr{delinquency.count > 1 ? "s" : ""}
+                        </span>
+                      ) : (
+                        <span style={{ color: "#2E8B44", fontSize: "0.72rem", fontWeight: 500 }}>✓ Current</span>
+                      )}
+                    </td>
+
+                    {/* Total */}
+                    <td style={{ padding: "0.7rem 1rem", textAlign: "right", fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)" }}>
+                      ₱{total.toLocaleString()}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* ── RECEIPT MODAL ── */}
+      {receiptModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+          <div style={{ background: "white", borderRadius: 12, padding: 0, maxWidth: 460, width: "100%", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+
+            {/* Receipt header */}
+            <div style={{ background: "var(--green-dk)", padding: "1.5rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "0.2rem" }}>Official Receipt</p>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--gold-lt)" }}>Payment Details</h2>
+              </div>
+              <button onClick={() => setReceiptModal(null)}
+                style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ padding: "1.5rem 2rem" }}>
+              {/* Member info */}
+              <div style={{ background: "var(--warm)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
+                <p style={{ fontSize: "0.7rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.3rem" }}>Member</p>
+                <p style={{ fontSize: "1rem", fontWeight: 600, color: "var(--green-dk)" }}>
+                  {receiptModal.member?.first_name} {receiptModal.member?.last_name}
+                </p>
+                <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: 2 }}>
+                  {receiptModal.member?.member_id_code || "No ID"} · Joined {receiptModal.member?.date_joined ? new Date(receiptModal.member.date_joined).getFullYear() : "—"}
+                </p>
+              </div>
+
+              {/* Payment records */}
+              {receiptModal.payments.map((p: any, i: number) => (
+                <div key={p.id || i} style={{ borderBottom: "1px solid rgba(26,92,42,0.08)", paddingBottom: "0.8rem", marginBottom: "0.8rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                    <div>
+                      <p style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--green-dk)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        {p.type === "mas" ? "Mortuary Assistance (MAS)" : p.type === "aof" ? "Annual Operating Fund" : "Lifetime Membership"}
+                      </p>
+                      <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 2 }}>Year: {p.year}</p>
+                      {p.receipt_number && (
+                        <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 1 }}>
+                          OR No.: <strong style={{ color: "var(--green-dk)", fontFamily: "monospace" }}>{p.receipt_number}</strong>
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: "var(--green-dk)" }}>
+                        ₱{Number(p.amount).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Timestamps */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.6rem" }}>
+                    <div style={{ background: "var(--cream)", borderRadius: 4, padding: "0.4rem 0.6rem" }}>
+                      <p style={{ fontSize: "0.62rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.1rem" }}>Date Paid</p>
+                      <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text)" }}>
+                        {p.date_paid
+                          ? new Date(p.date_paid).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+                          : "—"}
+                      </p>
+                    </div>
+                    <div style={{ background: "var(--cream)", borderRadius: 4, padding: "0.4rem 0.6rem" }}>
+                      <p style={{ fontSize: "0.62rem", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.1rem" }}>Recorded</p>
+                      <p style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--text)" }}>
+                        {p.created_at
+                          ? new Date(p.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) + " " +
+                            new Date(p.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Total */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.8rem 0", borderTop: "2px solid var(--gold)" }}>
+                <span style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--green-dk)" }}>Total</span>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: "var(--green-dk)" }}>
+                  ₱{Number(receiptModal.total).toLocaleString()}
+                </span>
+              </div>
+
+              <button onClick={() => setReceiptModal(null)}
+                style={{ width: "100%", background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.8rem", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: "0.5rem" }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
