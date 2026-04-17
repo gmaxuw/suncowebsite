@@ -52,29 +52,41 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
 
   // ── Auto-sync derived status back to Supabase when data loads ──
   // Skips deceased and manually-dropped members
-  useEffect(() => {
-    if (!members.length || !payments.length) return;
+                                                        useEffect(() => {
+                                                        if (!members.length || !payments.length) return;
 
-    members.forEach(async (m) => {
-      // Never overwrite deceased or dropped — those are manual/permanent
-      if (m.status === "deceased" || m.status === "dropped") return;
+                                                        const sync = async () => {
+                                                          const updates: any[] = [];
 
-      const { derivedStatus } = getDelinquency(m);
-      if (derivedStatus !== m.status) {
-        await supabase
-          .from("members")
-          .update({ status: derivedStatus })
-          .eq("id", m.id);
+                                                          for (const m of members) {
+                                                            if (m.status === "deceased" || m.status === "dropped") continue;
 
-        // Update local state too so UI reflects immediately
-        setMembers((prev) =>
-          prev.map((mem) =>
-            mem.id === m.id ? { ...mem, status: derivedStatus } : mem
-          )
-        );
-      }
-    });
-  }, [members.length, payments.length]);
+                                                            const { derivedStatus } = getDelinquency(m);
+
+                                                            if (derivedStatus !== m.status) {
+                                                              updates.push({ id: m.id, status: derivedStatus });
+                                                            }
+                                                          }
+
+                                                          if (updates.length === 0) return;
+
+                                                          for (const u of updates) {
+                                                            await supabase
+                                                              .from("members")
+                                                              .update({ status: u.status })
+                                                              .eq("id", u.id);
+                                                          }
+
+                                                          setMembers((prev) =>
+                                                            prev.map((m) => {
+                                                              const found = updates.find((u) => u.id === m.id);
+                                                              return found ? { ...m, status: found.status } : m;
+                                                            })
+                                                          );
+                                                        };
+
+                                                        sync();
+                                                      }, [members.length, payments.length]);
 
   // ── Get payments for a member, year, and type ──
   const getMemberPayment = (memberId: string, year: number, type: string) =>
@@ -88,59 +100,87 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   //   0–1 yrs trailing → active
   //   2 yrs trailing   → non-active
   //   3+ yrs trailing  → dropped
-  const getDelinquency = (member: any) => {
-    const memberPayments = payments.filter((p) => p.member_id === member.id);
 
-    // Determine the earliest year the member could owe dues
-    const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
-    const earliestPaymentYear =
-      paymentYears.length > 0 ? Math.min(...paymentYears) : null;
-    const dateJoinedYear = member.date_joined
-      ? new Date(member.date_joined).getFullYear()
-      : null;
 
-    const joinYear = Math.min(
-      ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-        Boolean
-      ) as number[])
-    );
 
-    // Walk BACKWARDS from currentYear — stop as soon as we hit a fully-paid year
-    let currentStreak = 0;
-    const delinquentYears: number[] = [];
 
-    for (let year = currentYear; year >= joinYear; year--) {
-      const hasMas = memberPayments.some(
-        (p) => p.year === year && p.type === "mas"
-      );
-      const hasAof = memberPayments.some(
-        (p) => p.year === year && p.type === "aof"
-      );
-      const fullyPaid = hasMas && hasAof;
+                      const getDelinquency = (member: any) => {
+                        const memberPayments = payments.filter((p) => p.member_id === member.id);
 
-      if (!fullyPaid) {
-        currentStreak++;
-        delinquentYears.unshift(year); // keep years in ascending order
-      } else {
-        break; // stop counting — streak is broken
-      }
-    }
+                        const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
+                        const earliestPaymentYear =
+                          paymentYears.length > 0 ? Math.min(...paymentYears) : null;
 
-    // Derive status from current trailing streak
-    // Never override deceased or dropped
-    let derivedStatus: string = member.status;
-    if (member.status !== "deceased" && member.status !== "dropped") {
-      if (currentStreak >= 3) {
-        derivedStatus = "dropped";
-      } else if (currentStreak >= 2) {
-        derivedStatus = "non-active";
-      } else {
-        derivedStatus = "active";
-      }
-    }
+                        const dateJoinedYear = member.date_joined
+                          ? new Date(member.date_joined).getFullYear()
+                          : null;
 
-    return { count: currentStreak, years: delinquentYears, joinYear, derivedStatus };
-  };
+                        const joinYear = Math.max(
+                          ...( [dateJoinedYear, earliestPaymentYear].filter(Boolean) as number[] )
+                        );
+
+                        let currentStreak = 0;
+                        const delinquentYears: number[] = [];
+
+                        for (let year = currentYear; year >= joinYear; year--) {
+                          const hasMas = memberPayments.some(
+                            (p) => p.year === year && p.type === "mas"
+                          );
+                          const hasAof = memberPayments.some(
+                            (p) => p.year === year && p.type === "aof"
+                          );
+
+                        const fullyPaid = hasMas && hasAof;
+
+
+                          if (!fullyPaid) {
+                            currentStreak++;
+                            delinquentYears.unshift(year);
+                          } else {
+                            for (let year = currentYear; year >= joinYear; year--) {
+  const hasMas = memberPayments.some(
+    (p) => p.year === year && p.type === "mas"
+  );
+  const hasAof = memberPayments.some(
+    (p) => p.year === year && p.type === "aof"
+  );
+
+  const fullyPaid = hasMas && hasAof;
+
+  if (!fullyPaid) {
+    currentStreak++;
+    delinquentYears.unshift(year);
+  }
+}
+                          }
+                        }
+
+                        let derivedStatus = member.status;
+
+                        if (member.status !== "deceased" && member.status !== "dropped") {
+                          if (currentStreak >= 3) derivedStatus = "dropped";
+                          else if (currentStreak === 2) derivedStatus = "non-active";
+                          else derivedStatus = "active";
+                        }
+
+                        return {
+                          count: currentStreak,
+                          years: delinquentYears,
+                          joinYear,
+                          derivedStatus,
+                        };
+                      };
+
+
+
+
+
+
+
+
+
+
+
 
   // ── Build records for export ──
   const buildRecords = () => {
@@ -346,10 +386,8 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     const dateJoinedYear = memberData?.date_joined
       ? new Date(memberData.date_joined).getFullYear()
       : null;
-    const joinYear = Math.min(
-      ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-        Boolean
-      ) as number[])
+    const joinYear = Math.max(
+      ...( [dateJoinedYear, earliestPaymentYear].filter(Boolean) as number[] )
     );
 
     // Not a member yet this year
