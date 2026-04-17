@@ -52,6 +52,7 @@ export default function MembersTab({ canCRUD, supabase }: Props) {
     await supabase.from("members").update({
       approval_status: "approved",
       status: "active",
+      date_joined: new Date().toISOString().split("T")[0], 
     }).eq("id", member.id);
     await loadMembers();
     setSelected(null);

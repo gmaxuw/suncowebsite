@@ -107,7 +107,7 @@ export default function RegisterPage() {
           beneficiary_relation: form.beneficiary_relation,
           status: "non-active",
           approval_status: "pending",
-          date_joined: new Date().toISOString().split("T")[0],
+          date_joined: null,
         })
         .select("id")
         .single();
@@ -133,22 +133,7 @@ export default function RegisterPage() {
 
       // ── INSERT PAYMENT RECORDS ──
       const currentYear = new Date().getFullYear();
-      const paymentRows: any[] = [
-        { member_id: memberId, year: currentYear, type: "lifetime", amount: 200 },
-        { member_id: memberId, year: currentYear, type: "aof", amount: 100 },
-      ];
-      if (form.include_mas) {
-        paymentRows.push({ member_id: memberId, year: currentYear, type: "mas", amount: 740 });
-      }
 
-      const { error: paymentError } = await supabase
-        .from("payments")
-        .insert(paymentRows);
-
-      if (paymentError) {
-        console.error("PAYMENT INSERT ERROR:", paymentError);
-        // Non-blocking — member is already created, just log it
-      }
 
       // ── SUCCESS ──
       setSubmittedName(form.first_name);
