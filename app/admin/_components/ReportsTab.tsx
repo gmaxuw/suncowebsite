@@ -115,10 +115,8 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                           ? new Date(member.date_joined).getFullYear()
                           : null;
 
-                        const joinYear = Math.min(
-                          ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-                            Boolean
-                          ) as number[])
+                        const joinYear = Math.max(
+                          ...( [dateJoinedYear, earliestPaymentYear].filter(Boolean) as number[] )
                         );
 
                         let currentStreak = 0;
@@ -131,11 +129,9 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                           const hasAof = memberPayments.some(
                             (p) => p.year === year && p.type === "aof"
                           );
-                          const hasLifetime = memberPayments.some(
-                            (p) => p.type === "lifetime"
-                          );
 
-                          const fullyPaid = hasLifetime || (hasMas && hasAof);
+                        const fullyPaid = hasMas && hasAof;
+
 
                           if (!fullyPaid) {
                             currentStreak++;
@@ -376,10 +372,8 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     const dateJoinedYear = memberData?.date_joined
       ? new Date(memberData.date_joined).getFullYear()
       : null;
-    const joinYear = Math.min(
-      ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-        Boolean
-      ) as number[])
+    const joinYear = Math.max(
+      ...( [dateJoinedYear, earliestPaymentYear].filter(Boolean) as number[] )
     );
 
     // Not a member yet this year
