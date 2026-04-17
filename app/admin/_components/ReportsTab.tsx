@@ -88,65 +88,85 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   //   0–1 yrs trailing → active
   //   2 yrs trailing   → non-active
   //   3+ yrs trailing  → dropped
- const getDelinquency = (member: any) => {
-  const memberPayments = payments.filter((p) => p.member_id === member.id);
+                                            const getDelinquency = (member: any) => {
+                                              const memberPayments = payments.filter((p) => p.member_id === member.id);
 
-  // Determine the earliest year the member could owe dues
-  const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
-  const earliestPaymentYear =
-    paymentYears.length > 0 ? Math.min(...paymentYears) : null;
-  const dateJoinedYear = member.date_joined
-    ? new Date(member.date_joined).getFullYear()
-    : null;
+                                              // Determine the earliest year the member could owe dues
+                                              const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
+                                              const earliestPaymentYear =
+                                                paymentYears.length > 0 ? Math.min(...paymentYears) : null;
+                                              const dateJoinedYear = member.date_joined
+                                                ? new Date(member.date_joined).getFullYear()
+                                                : null;
 
-  const joinYear = Math.min(
-    ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-      Boolean
-    ) as number[])
-  );
+                                              const joinYear = Math.min(
+                                                ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
+                                                  Boolean
+                                                ) as number[])
+                                              );
 
-  // ── COUNT ALL UNPAID YEARS (not just trailing streak) ──
-  // Walk forward from joinYear to currentYear.
-  // Count every year that is missing BOTH MAS and AOF.
-                                                let totalDelinquent = 0;
-                                                const delinquentYears: number[] = [];
+                                              // ── CALCULATION 1: TOTAL unpaid years (for the Delinquent column) ──
+                                              // Counts every year with missing payment, regardless of gaps
+                                              let totalDelinquent = 0;
+                                              const delinquentYears: number[] = [];
 
-                                                for (let year = joinYear; year <= currentYear; year++) {
-                                                  const hasMas = memberPayments.some(
-                                                    (p) => p.year === year && p.type === "mas"
-                                                  );
-                                                  const hasAof = memberPayments.some(
-                                                    (p) => p.year === year && p.type === "aof"
-                                                  );
-                                                  const fullyPaid = hasMas && hasAof;
-
-                                                  if (!fullyPaid) {
-                                                    totalDelinquent++;
-                                                    delinquentYears.push(year);
-                                                  }
+                                              for (let year = joinYear; year <= currentYear; year++) {
+                                                const hasMas = memberPayments.some(
+                                                  (p) => p.year === year && p.type === "mas"
+                                                );
+                                                const hasAof = memberPayments.some(
+                                                  (p) => p.year === year && p.type === "aof"
+                                                );
+                                                if (!hasMas || !hasAof) {
+                                                  totalDelinquent++;
+                                                  delinquentYears.push(year);
                                                 }
+                                              }
 
-                                                // Derive status from TOTAL delinquent years
-                                                // Never override deceased or dropped
-                                                let derivedStatus: string = member.status;
-                                                if (member.status !== "deceased" && member.status !== "dropped") {
-                                                  if (totalDelinquent >= 3) {
-                                                    derivedStatus = "dropped";
-                                                  } else if (totalDelinquent >= 2) {
-                                                    derivedStatus = "non-active";
-                                                  } else {
-                                                    derivedStatus = "active";
-                                                  }
+                                              // ── CALCULATION 2: CONSECUTIVE trailing streak (for Status only) ──
+                                              // Walks BACKWARDS from currentYear, stops at the first fully-paid year.
+                                              // This matches the membership rules:
+                                              //   0–1 consecutive → active
+                                              //   2 consecutive   → non-active
+                                              //   3+ consecutive  → dropped
+                                              let consecutiveStreak = 0;
+
+                                              for (let year = currentYear; year >= joinYear; year--) {
+                                                const hasMas = memberPayments.some(
+                                                  (p) => p.year === year && p.type === "mas"
+                                                );
+                                                const hasAof = memberPayments.some(
+                                                  (p) => p.year === year && p.type === "aof"
+                                                );
+                                                const fullyPaid = hasMas && hasAof;
+
+                                                if (!fullyPaid) {
+                                                  consecutiveStreak++;
+                                                } else {
+                                                  break; // streak broken — stop counting
                                                 }
+                                              }
 
-                                                return {
-                                                  count: totalDelinquent,
-                                                  years: delinquentYears,
-                                                  joinYear,
-                                                  derivedStatus,
-                                                };
+                                              // ── Derive status from CONSECUTIVE streak (never override deceased/dropped-manual) ──
+                                              let derivedStatus: string = member.status;
+                                              if (member.status !== "deceased" && member.status !== "dropped") {
+                                                if (consecutiveStreak >= 3) {
+                                                  derivedStatus = "dropped";
+                                                } else if (consecutiveStreak >= 2) {
+                                                  derivedStatus = "non-active";
+                                                } else {
+                                                  derivedStatus = "active";
+                                                }
+                                              }
+
+                                              return {
+                                                count: totalDelinquent,       // shown in the Delinquent column
+                                                streak: consecutiveStreak,    // used for status derivation
+                                                years: delinquentYears,
+                                                joinYear,
+                                                derivedStatus,
                                               };
-
+                                            };
   // ── Build records for export ──
   const buildRecords = () => {
     return members.map((m, i) => {
