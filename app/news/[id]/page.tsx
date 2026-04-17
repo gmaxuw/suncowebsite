@@ -10,17 +10,18 @@ import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 
 interface Props {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const { data: article } = await supabase
     .from("articles")
     .select("title, excerpt, thumbnail_url")
-    .eq("id", params.id)
-    .maybeSingle();
+    .eq("id", id)
+    .single();
 
   if (!article) return { title: "Article Not Found | SUNCO" };
 
@@ -36,25 +37,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ArticlePage({ params }: Props) {
+  const { id } = await params;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const { data: article } = await supabase
     .from("articles")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("published", true)
-    .maybeSingle();
+    .single();
 
   if (!article) notFound();
 
-  // Get related articles
   const { data: related } = await supabase
     .from("articles")
     .select("id, title, excerpt, thumbnail_url, category, created_at")
     .eq("published", true)
     .eq("category", article.category)
-    .neq("id", params.id)
+    .neq("id", id)
     .limit(3);
 
   const categoryColor: Record<string, string> = {
