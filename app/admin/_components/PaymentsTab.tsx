@@ -142,11 +142,11 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
     setSaving(true);
 
     // Check for duplicate OR number
-    const { data: existingOR } = await supabase
-      .from("payments")
-      .select("id")
-      .eq("receipt_number", orNumber.trim())
-      .single();
+const { data: existingOR } = await supabase
+  .from("payments")
+  .select("id")
+  .eq("receipt_number", orNumber.trim())
+  .maybeSingle();
 
     if (existingOR) {
       alert(`OR number ${orNumber} is already recorded in the system. Please check.`);
@@ -161,7 +161,9 @@ const inserts = selectedTypes.map((type) => ({
   type,
   amount: PAYMENT_TYPES.find(p => p.type === type)?.amount || 0,
   date_paid: datePaid,
-  receipt_number: orNumber.trim(), // Same OR for all — breakdown is in separate rows
+  receipt_number: selectedTypes.length > 1 
+  ? `${orNumber.trim()}-${type.toUpperCase()}` 
+  : orNumber.trim(), // Same OR for all — breakdown is in separate rows
 }));
 
     const { error } = await supabase.from("payments").insert(inserts);
