@@ -107,11 +107,14 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
 
 const isAlreadyPaid = (type: PaymentType) => {
   if (type === "lifetime") {
-    return memberExistingPayments.some(p => p.type === "lifetime");
+    return memberExistingPayments.some(p =>
+      p.type?.toLowerCase().trim() === "lifetime"
+    );
   }
 
   return memberExistingPayments.some(p =>
-    p.type === type && Number(p.year) === Number(year)
+    p.type?.toLowerCase().trim() === type &&
+    Number(p.year) === Number(year)
   );
 };
   };
