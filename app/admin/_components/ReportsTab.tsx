@@ -88,59 +88,64 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
   //   0–1 yrs trailing → active
   //   2 yrs trailing   → non-active
   //   3+ yrs trailing  → dropped
-  const getDelinquency = (member: any) => {
-    const memberPayments = payments.filter((p) => p.member_id === member.id);
+ const getDelinquency = (member: any) => {
+  const memberPayments = payments.filter((p) => p.member_id === member.id);
 
-    // Determine the earliest year the member could owe dues
-    const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
-    const earliestPaymentYear =
-      paymentYears.length > 0 ? Math.min(...paymentYears) : null;
-    const dateJoinedYear = member.date_joined
-      ? new Date(member.date_joined).getFullYear()
-      : null;
+  // Determine the earliest year the member could owe dues
+  const paymentYears = memberPayments.map((p) => p.year).filter(Boolean);
+  const earliestPaymentYear =
+    paymentYears.length > 0 ? Math.min(...paymentYears) : null;
+  const dateJoinedYear = member.date_joined
+    ? new Date(member.date_joined).getFullYear()
+    : null;
 
-    const joinYear = Math.min(
-      ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
-        Boolean
-      ) as number[])
-    );
+  const joinYear = Math.min(
+    ...([dateJoinedYear, earliestPaymentYear, currentYear].filter(
+      Boolean
+    ) as number[])
+  );
 
-    // Walk BACKWARDS from currentYear — stop as soon as we hit a fully-paid year
-    let currentStreak = 0;
-    const delinquentYears: number[] = [];
+  // ── COUNT ALL UNPAID YEARS (not just trailing streak) ──
+  // Walk forward from joinYear to currentYear.
+  // Count every year that is missing BOTH MAS and AOF.
+                                                let totalDelinquent = 0;
+                                                const delinquentYears: number[] = [];
 
-    for (let year = currentYear; year >= joinYear; year--) {
-      const hasMas = memberPayments.some(
-        (p) => p.year === year && p.type === "mas"
-      );
-      const hasAof = memberPayments.some(
-        (p) => p.year === year && p.type === "aof"
-      );
-      const fullyPaid = hasMas && hasAof;
+                                                for (let year = joinYear; year <= currentYear; year++) {
+                                                  const hasMas = memberPayments.some(
+                                                    (p) => p.year === year && p.type === "mas"
+                                                  );
+                                                  const hasAof = memberPayments.some(
+                                                    (p) => p.year === year && p.type === "aof"
+                                                  );
+                                                  const fullyPaid = hasMas && hasAof;
 
-      if (!fullyPaid) {
-        currentStreak++;
-        delinquentYears.unshift(year); // keep years in ascending order
-      } else {
-        break; // stop counting — streak is broken
-      }
-    }
+                                                  if (!fullyPaid) {
+                                                    totalDelinquent++;
+                                                    delinquentYears.push(year);
+                                                  }
+                                                }
 
-    // Derive status from current trailing streak
-    // Never override deceased or dropped
-    let derivedStatus: string = member.status;
-    if (member.status !== "deceased" && member.status !== "dropped") {
-      if (currentStreak >= 3) {
-        derivedStatus = "dropped";
-      } else if (currentStreak >= 2) {
-        derivedStatus = "non-active";
-      } else {
-        derivedStatus = "active";
-      }
-    }
+                                                // Derive status from TOTAL delinquent years
+                                                // Never override deceased or dropped
+                                                let derivedStatus: string = member.status;
+                                                if (member.status !== "deceased" && member.status !== "dropped") {
+                                                  if (totalDelinquent >= 3) {
+                                                    derivedStatus = "dropped";
+                                                  } else if (totalDelinquent >= 2) {
+                                                    derivedStatus = "non-active";
+                                                  } else {
+                                                    derivedStatus = "active";
+                                                  }
+                                                }
 
-    return { count: currentStreak, years: delinquentYears, joinYear, derivedStatus };
-  };
+                                                return {
+                                                  count: totalDelinquent,
+                                                  years: delinquentYears,
+                                                  joinYear,
+                                                  derivedStatus,
+                                                };
+                                              };
 
   // ── Build records for export ──
   const buildRecords = () => {
@@ -1274,45 +1279,48 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                     )}
 
                     {/* Delinquent — shows current trailing streak */}
-                    <td
-                      style={{ padding: "0.7rem 1rem", textAlign: "center" }}
-                    >
-                      {delinquency.count > 0 ? (
-                        <span
-                          style={{
-                            background:
-                              delinquency.count >= 3
-                                ? "rgba(192,57,43,0.15)"
-                                : delinquency.count >= 2
-                                ? "rgba(212,160,23,0.15)"
-                                : "rgba(192,57,43,0.08)",
-                            color:
-                              delinquency.count >= 3
-                                ? "#C0392B"
-                                : delinquency.count >= 2
-                                ? "#B8860B"
-                                : "#C0392B",
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            padding: "3px 8px",
-                            borderRadius: 20,
-                          }}
-                        >
-                          {delinquency.count} yr
-                          {delinquency.count > 1 ? "s" : ""}
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            color: "#2E8B44",
-                            fontSize: "0.72rem",
-                            fontWeight: 500,
-                          }}
-                        >
-                          ✓ Current
-                        </span>
-                      )}
-                    </td>
+{/* Delinquent — hidden for lifetime tab */}
+                                                                  <td
+                                                                    style={{ padding: "0.7rem 1rem", textAlign: "center" }}
+                                                                  >
+                                                                    {activeFilter === "lifetime" ? (
+                                                                      <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>—</span>
+                                                                    ) : delinquency.count > 0 ? (
+                                                                      <span
+                                                                        style={{
+                                                                          background:
+                                                                            delinquency.count >= 3
+                                                                              ? "rgba(192,57,43,0.15)"
+                                                                              : delinquency.count >= 2
+                                                                              ? "rgba(212,160,23,0.15)"
+                                                                              : "rgba(192,57,43,0.08)",
+                                                                          color:
+                                                                            delinquency.count >= 3
+                                                                              ? "#C0392B"
+                                                                              : delinquency.count >= 2
+                                                                              ? "#B8860B"
+                                                                              : "#C0392B",
+                                                                          fontSize: "0.72rem",
+                                                                          fontWeight: 600,
+                                                                          padding: "3px 8px",
+                                                                          borderRadius: 20,
+                                                                        }}
+                                                                      >
+                                                                        {delinquency.count} yr
+                                                                        {delinquency.count > 1 ? "s" : ""}
+                                                                      </span>
+                                                                    ) : (
+                                                                      <span
+                                                                        style={{
+                                                                          color: "#2E8B44",
+                                                                          fontSize: "0.72rem",
+                                                                          fontWeight: 500,
+                                                                        }}
+                                                                      >
+                                                                        ✓ Current
+                                                                      </span>
+                                                                    )}
+                                                                  </td>
 
                     {/* Total */}
                     <td
