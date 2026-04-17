@@ -105,16 +105,28 @@ export default function PaymentsTab({ canCRUD, supabase }: Props) {
       .eq("member_id", member.id)
       .order("year", { ascending: false });
 
-    setMemberExistingPayments(existing || []);
+const isAlreadyPaid = (type: PaymentType) => {
+  if (type === "lifetime") {
+    return memberExistingPayments.some(p => p.type === "lifetime");
+  }
+
+  return memberExistingPayments.some(p =>
+    p.type === type && Number(p.year) === Number(year)
+  );
+};
   };
 
   // ── Check if a payment type is already paid ──
-  const isAlreadyPaid = (type: PaymentType) => {
-    if (type === "lifetime") {
-      return memberExistingPayments.some(p => p.type === "lifetime");
-    }
-    return memberExistingPayments.some(p => p.type === type && p.year === year);
-  };
+const isAlreadyPaid = (type: PaymentType) => {
+  if (type === "lifetime") {
+    return memberExistingPayments.some(p => p.type === "lifetime");
+  }
+
+  // AOF & MAS should be checked PER YEAR
+  return memberExistingPayments.some(p => {
+    return p.type === type && Number(p.year) === Number(year);
+  });
+};
 
   // ── Toggle payment type selection ──
   const toggleType = (type: PaymentType) => {
