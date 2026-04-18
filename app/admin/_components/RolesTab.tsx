@@ -17,17 +17,20 @@ export default function RolesTab({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const loadRoles = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from("user_roles")
-      .select("*, members(first_name, last_name, email, member_id_code)")
-      .order("role");
-    setUserRoles(data || []);
-    setLoading(false);
-  };
+                        const loadRoles = async () => {
+                          setLoading(true);
 
-  useEffect(() => { loadRoles(); }, []);
+                          const { data, error } = await supabase
+                            .from("user_roles")
+                            .select("*, members(first_name, last_name, email, member_id_code)")
+                            .order("role");
+
+                          console.log("DATA:", JSON.stringify(data, null, 2));
+                          console.log("ERROR:", error);
+
+                          setUserRoles(data || []);
+                          setLoading(false);
+                        };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(userId);
