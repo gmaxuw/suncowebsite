@@ -20,7 +20,7 @@ function buildPeriodOptions() {
     { label: "This Month", value: "month" },
   ];
   const now = new Date();
-  for (let y = now.getFullYear(); y >= now.getFullYear() - 4; y--) {
+  for (let y = now.getFullYear(); y >= 2010; y--) {
     for (let m = 11; m >= 0; m--) {
       if (y === now.getFullYear() && m > now.getMonth()) continue;
       const date = new Date(y, m, 1);
