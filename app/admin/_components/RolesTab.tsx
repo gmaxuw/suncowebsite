@@ -17,30 +17,30 @@ export default function RolesTab({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const loadRoles = async () => {
-    setLoading(true);
+                          const loadRoles = async () => {
+                            setLoading(true);
 
-    // Fetch user_roles and members separately to avoid FK join issues
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("*")
-      .order("role");
+                            const { data: roles } = await supabase
+                              .from("user_roles")
+                              .select("*")
+                              .order("role");
 
-    const { data: members } = await supabase
-      .from("members")
-      .select("user_id, first_name, last_name, email, member_id_code");
+                            const { data: members, error: membersError } = await supabase
+                              .from("members")
+                              .select("user_id, first_name, last_name, email, member_id_code");
 
-    // Manually merge: match user_roles.user_id → members.user_id
-    const merged = (roles || []).map((ur: any) => ({
-      ...ur,
-      members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
-    }));
+                            console.log("ROLES:", JSON.stringify(roles, null, 2));
+                            console.log("MEMBERS:", JSON.stringify(members, null, 2));
+                            console.log("MEMBERS ERROR:", membersError);
 
-    setUserRoles(merged);
-    setLoading(false);
-  };
+                            const merged = (roles || []).map((ur: any) => ({
+                              ...ur,
+                              members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
+                            }));
 
-  useEffect(() => { loadRoles(); }, []);
+                            setUserRoles(merged);
+                            setLoading(false);
+                          };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(userId);
