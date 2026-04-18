@@ -5,12 +5,11 @@
 // tab routing, and top navigation
 // Each tab is a separate component in _components/
 // ─────────────────────────────────────────────
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight } from "lucide-react";
 import SettingsTab from "./_components/SettingsTab";
-
 import OfficersTab from "./_components/OfficersTab";
 
 // ── Tab Components ──
@@ -20,21 +19,22 @@ import CmsTab from "./_components/CmsTab";
 import ReportsTab from "./_components/ReportsTab";
 import RolesTab from "./_components/RolesTab";
 
-export default function AdminPage() {
+// ── Inner component that uses useSearchParams ──
+function AdminPageInner() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>("");
   const [stats, setStats] = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
   const [recentMembers, setRecentMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-                  const router = useRouter();
-                  const searchParams = useSearchParams();
-                  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "dashboard");
-
-                  const setTab = (tab: string) => {
-                    setActiveTab(tab);
-                    router.replace(`/admin?tab=${tab}`, { scroll: false });
-                  };
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "dashboard");
   const supabase = createClient();
+
+  const setTab = (tab: string) => {
+    setActiveTab(tab);
+    router.replace(`/admin?tab=${tab}`, { scroll: false });
+  };
 
   // ── Permission helpers ──
   const canCRUD = ["admin", "president", "treasurer", "secretary"].includes(role);
@@ -56,8 +56,8 @@ export default function AdminPage() {
       const { data: members } = await supabase
         .from("members").select("status, approval_status");
       if (members) {
-setStats({
-  total: members.length,
+        setStats({
+          total: members.length,
           active: members.filter(m => m.status === "active").length,
           nonactive: members.filter(m => m.status === "non-active").length,
           dropped: members.filter(m => m.status === "dropped").length,
@@ -65,18 +65,17 @@ setStats({
         });
       }
 
-const { data: recent } = await supabase
-  .from("members").select("*")
-  .order("created_at", { ascending: false })
-  .limit(10);
-// Show pending first, then others
-const sorted = (recent || []).sort((a: any, b: any) => {
-  if (a.approval_status === "pending" && b.approval_status !== "pending") return -1;
-  if (b.approval_status === "pending" && a.approval_status !== "pending") return 1;
-  return 0;
-});
-setRecentMembers(sorted.slice(0, 5));
-      setRecentMembers(recent || []);
+      const { data: recent } = await supabase
+        .from("members").select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const sorted = (recent || []).sort((a: any, b: any) => {
+        if (a.approval_status === "pending" && b.approval_status !== "pending") return -1;
+        if (b.approval_status === "pending" && a.approval_status !== "pending") return 1;
+        return 0;
+      });
+      setRecentMembers(sorted.slice(0, 5));
       setLoading(false);
     };
     load();
@@ -93,16 +92,16 @@ setRecentMembers(sorted.slice(0, 5));
   };
 
   // ── Nav tabs — filtered by role ──
-const navItems = [
-  { id: "dashboard", icon: <Home size={16} />, label: "Dashboard", show: true },
-  { id: "members", icon: <Users size={16} />, label: "Members", show: canCRUD },
-  { id: "payments", icon: <CreditCard size={16} />, label: "Payments", show: canCRUD },
-  { id: "cms", icon: <FileText size={16} />, label: "CMS", show: canCRUD },
-  { id: "officers_mgmt", icon: <Users size={16} />, label: "Officers", show: canCRUD },
-  { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
-  { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
-  { id: "settings", icon: <Settings size={16} />, label: "Settings", show: role === "admin" },
-].filter(item => item.show);
+  const navItems = [
+    { id: "dashboard", icon: <Home size={16} />, label: "Dashboard", show: true },
+    { id: "members", icon: <Users size={16} />, label: "Members", show: canCRUD },
+    { id: "payments", icon: <CreditCard size={16} />, label: "Payments", show: canCRUD },
+    { id: "cms", icon: <FileText size={16} />, label: "CMS", show: canCRUD },
+    { id: "officers_mgmt", icon: <Users size={16} />, label: "Officers", show: canCRUD },
+    { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
+    { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
+    { id: "settings", icon: <Settings size={16} />, label: "Settings", show: role === "admin" },
+  ].filter(item => item.show);
 
   // ── Loading screen ──
   if (loading) return (
@@ -130,7 +129,7 @@ const navItems = [
         {/* Tab Navigation */}
         <div style={{ display: "flex", alignItems: "center", height: 60 }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)}
+            <button key={item.id} onClick={() => setTab(item.id)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 1.1rem", height: 60, border: "none", background: "transparent", cursor: "pointer", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif", color: activeTab === item.id ? "var(--gold-lt)" : "rgba(255,255,255,0.5)", borderBottom: activeTab === item.id ? "3px solid var(--gold)" : "3px solid transparent", marginBottom: "-3px", transition: "all 0.2s", position: "relative" }}>
               {item.icon} {item.label}
               {item.id === "members" && stats.pending > 0 && (
@@ -172,7 +171,7 @@ const navItems = [
                 { label: "Dropped", value: stats.dropped, color: "#C0392B" },
                 { label: "Pending Approval", value: stats.pending, color: "#2B5FA8" },
               ].map(({ label, value, color }) => (
-                <div key={label} onClick={() => label === "Pending Approval" && setActiveTab("members")}
+                <div key={label} onClick={() => label === "Pending Approval" && setTab("members")}
                   style={{ background: "white", borderRadius: 10, padding: "1.3rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}`, cursor: label === "Pending Approval" ? "pointer" : "default" }}>
                   <p style={{ fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>{label}</p>
                   <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "2rem", fontWeight: 700, color }}>{value}</p>
@@ -182,7 +181,7 @@ const navItems = [
             <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
               <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>Recent Registrations</h2>
-                <button onClick={() => setActiveTab("members")} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: "var(--gold)", cursor: "pointer", fontSize: "0.78rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
+                <button onClick={() => setTab("members")} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: "var(--gold)", cursor: "pointer", fontSize: "0.78rem", fontWeight: 500, fontFamily: "'DM Sans', sans-serif" }}>
                   View all <ChevronRight size={13} />
                 </button>
               </div>
@@ -235,8 +234,23 @@ const navItems = [
         {/* SETTINGS TAB */}
         {activeTab === "settings" && <SettingsTab supabase={supabase} />}
 
-
       </div>
     </main>
+  );
+}
+
+// ── Outer component wraps inner in Suspense (required for useSearchParams) ──
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: "100vh", background: "var(--green-dk)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <img src="/images/sunco-logo.png" alt="SUNCO" style={{ width: 60, height: 60, borderRadius: "50%", marginBottom: "1rem", opacity: 0.7 }} />
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>Loading Admin Panel...</p>
+        </div>
+      </div>
+    }>
+      <AdminPageInner />
+    </Suspense>
   );
 }
