@@ -3,20 +3,10 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import {
-  LogOut, User, CreditCard, Edit3, Phone, MapPin,
+  LogOut, User, CreditCard, Edit3, Phone,
   Calendar, Heart, Shield, BookOpen, Star, TrendingUp,
-  Upload, Camera, X, CheckCircle, Info, Bell, Clock,
+  Upload, Camera, X, CheckCircle, Info, Clock,
 } from "lucide-react";
-
-// ── Officers — update as needed ──
-const OFFICERS = [
-  { role: "President",       name: "Roberto C. Santos",  icon: "★" },
-  { role: "Vice President",  name: "Maria L. Reyes",     icon: "◆" },
-  { role: "Secretary",       name: "Jose A. Cruz",       icon: "✦" },
-  { role: "Treasurer",       name: "Ana B. Flores",      icon: "◈" },
-  { role: "Auditor",         name: "Pedro M. Garcia",    icon: "◉" },
-  { role: "PRO",             name: "Elena S. Torres",    icon: "◎" },
-];
 
 const MEMBER_RIGHTS = [
   { icon: Shield,   title: "Mortuary Assistance",  desc: "Eligible for MAS benefit upon the death of a member or immediate family." },
@@ -38,6 +28,7 @@ export default function DashboardPage() {
   const [user,       setUser]       = useState<any>(null);
   const [member,     setMember]     = useState<any>(null);
   const [payments,   setPayments]   = useState<any[]>([]);
+  const [officers,   setOfficers]   = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [activeTab,  setActiveTab]  = useState<"overview"|"payments"|"rights"|"officers">("overview");
   const [editOpen,   setEditOpen]   = useState(false);
@@ -79,6 +70,15 @@ export default function DashboardPage() {
           .order("year", { ascending: false });
         setPayments(paymentData || []);
       }
+
+      // ── Load real officers from database ──
+      const { data: officerData } = await supabase
+        .from("officers")
+        .select("*")
+        .eq("is_active", true)
+        .order("order_num");
+      setOfficers(officerData || []);
+
       setLoading(false);
     };
     load();
@@ -170,13 +170,13 @@ export default function DashboardPage() {
   const sc = STATUS_STYLE[member?.status] || STATUS_STYLE["active"];
 
   const TABS = [
-    { id: "overview",  label: "Overview",      icon: User      },
-    { id: "payments",  label: "Payments",      icon: CreditCard },
-    { id: "rights",    label: "Rights & Rules", icon: BookOpen  },
-    { id: "officers",  label: "Officers",      icon: Star      },
+    { id: "overview",  label: "Overview",       icon: User       },
+    { id: "payments",  label: "Payments",       icon: CreditCard },
+    { id: "rights",    label: "Rights & Rules", icon: BookOpen   },
+    { id: "officers",  label: "Officers",       icon: Star       },
   ] as const;
 
-  // ─────────────── LOADING ───────────────
+  // ── LOADING ──
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "#0D3320", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
     </div>
   );
 
-  // ─────────────── PENDING ───────────────
+  // ── PENDING ──
   if (member?.approval_status === "pending") return (
     <main style={{ minHeight: "100vh", background: "#0D3320", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
     </main>
   );
 
-  // ─────────────── REJECTED ───────────────
+  // ── REJECTED ──
   if (member?.approval_status === "rejected") return (
     <main style={{ minHeight: "100vh", background: "#0D3320", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
       <div style={{ maxWidth: 480, width: "100%", textAlign: "center" }}>
@@ -235,11 +235,11 @@ export default function DashboardPage() {
     </main>
   );
 
-  // ─────────────── MAIN DASHBOARD ───────────────
+  // ── MAIN DASHBOARD ──
   return (
     <main style={{ minHeight: "100vh", background: "#F7F5F0", fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* ── NAV ── */}
+      {/* NAV */}
       <nav style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "0 2rem", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src="/images/sunco-logo.png" alt="SUNCO" style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "contain" }} />
@@ -257,7 +257,7 @@ export default function DashboardPage() {
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-        {/* ── BIRTHDAY BANNER ── */}
+        {/* BIRTHDAY BANNER */}
         {isBirthday() && (
           <div style={{ background: "linear-gradient(135deg, #8B6914, #C9A84C)", borderRadius: 10, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "1rem" }}>
             <span style={{ fontSize: "1.6rem" }}>🎂</span>
@@ -268,15 +268,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── HERO CARD ── */}
-        <div style={{
-          background: "linear-gradient(135deg, #0D3320 0%, #1A5C2A 65%, #0D3320 100%)",
-          borderRadius: 16, padding: "2rem", marginBottom: "1.5rem",
-          border: "1px solid rgba(255,255,255,0.06)", position: "relative", overflow: "hidden",
-        }}>
+        {/* HERO CARD */}
+        <div style={{ background: "linear-gradient(135deg, #0D3320 0%, #1A5C2A 65%, #0D3320 100%)", borderRadius: 16, padding: "2rem", marginBottom: "1.5rem", border: "1px solid rgba(255,255,255,0.06)", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(201,168,76,0.06)", pointerEvents: "none" }} />
-
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", position: "relative" }}>
+
             {/* Avatar */}
             <div style={{ position: "relative", flexShrink: 0 }}>
               <div style={{ width: 88, height: 88, borderRadius: "50%", border: "3px solid #C9A84C", overflow: "hidden", background: "rgba(201,168,76,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -335,7 +331,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── STAT CARDS ── */}
+        {/* STAT CARDS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
             { label: "Member Since", value: member?.date_joined ? new Date(member.date_joined).getFullYear().toString() : "—", sub: member?.date_joined ? new Date(member.date_joined).toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "Not set", icon: Calendar, color: "#1A5C2A" },
@@ -357,7 +353,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── TABS ── */}
+        {/* TABS */}
         <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(0,0,0,0.06)" }}>
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.55rem 0.4rem", borderRadius: 7, border: "none", background: activeTab === id ? "#0D3320" : "transparent", color: activeTab === id ? "white" : "#999", fontSize: "0.77rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
@@ -366,7 +362,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── TAB: OVERVIEW ── */}
+        {/* TAB: OVERVIEW */}
         {activeTab === "overview" && (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
             <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5" }}>
@@ -392,7 +388,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── TAB: PAYMENTS ── */}
+        {/* TAB: PAYMENTS */}
         {activeTab === "payments" && (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
             <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -443,10 +439,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── TAB: RIGHTS & RULES ── */}
+        {/* TAB: RIGHTS & RULES */}
         {activeTab === "rights" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {/* Rights */}
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
               <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5" }}>
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1rem", color: "#0D3320", fontWeight: 400 }}>Member Rights & Benefits</h2>
@@ -466,7 +461,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Rules */}
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
               <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5", display: "flex", alignItems: "center", gap: 8 }}>
                 <Info size={15} color="#888" />
@@ -484,7 +478,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Status Guide */}
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
               <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5" }}>
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1rem", color: "#0D3320", fontWeight: 400 }}>Membership Status Guide</h2>
@@ -506,23 +499,88 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── TAB: OFFICERS ── */}
+        {/* TAB: OFFICERS */}
         {activeTab === "officers" && (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.06)", overflow: "hidden" }}>
             <div style={{ padding: "1.1rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "#F9F8F5" }}>
               <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1rem", color: "#0D3320", fontWeight: 400 }}>Current Officers</h2>
               <p style={{ fontSize: "0.73rem", color: "#BBB", marginTop: 3 }}>Board of Officers — {new Date().getFullYear()}</p>
             </div>
-            <div style={{ padding: "1.5rem", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-              {OFFICERS.map(({ role, name, icon }, i) => (
-                <div key={role} style={{ padding: "1.2rem", borderRadius: 10, background: i === 0 ? "#0D3320" : "#F9F8F5", border: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)", position: "relative", overflow: "hidden" }}>
-                  {i === 0 && <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(201,168,76,0.15)", pointerEvents: "none" }} />}
-                  <div style={{ fontSize: "1.1rem", marginBottom: 6, color: i === 0 ? "#C9A84C" : "#0D3320" }}>{icon}</div>
-                  <p style={{ fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase", color: i === 0 ? "rgba(255,255,255,0.38)" : "#BBB", marginBottom: 4 }}>{role}</p>
-                  <p style={{ fontSize: "0.86rem", fontWeight: 600, color: i === 0 ? "white" : "#0D3320", fontFamily: "'DM Serif Display', serif" }}>{name}</p>
+
+            {/* Executive Officers */}
+            {officers.filter(o => o.role_type === "executive").length > 0 && (
+              <div style={{ padding: "1.5rem" }}>
+                <p style={{ fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem" }}>Executive Officers</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "0.5rem" }}>
+                  {officers.filter(o => o.role_type === "executive").map((officer, i) => (
+                    <div key={officer.id} style={{ padding: "1.2rem", borderRadius: 10, background: i === 0 ? "#0D3320" : "#F9F8F5", border: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)", textAlign: "center", position: "relative", overflow: "hidden" }}>
+                      {officer.photo_url ? (
+                        <img src={officer.photo_url} alt={officer.name} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `2px solid ${i === 0 ? "#C9A84C" : "rgba(0,0,0,0.1)"}`, margin: "0 auto 0.6rem", display: "block" }} />
+                      ) : (
+                        <div style={{ width: 56, height: 56, borderRadius: "50%", background: i === 0 ? "rgba(201,168,76,0.2)" : "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.6rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.2rem", color: i === 0 ? "#C9A84C" : "#0D3320" }}>
+                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                        </div>
+                      )}
+                      <p style={{ fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: i === 0 ? "rgba(255,255,255,0.4)" : "#BBB", marginBottom: 3 }}>{officer.role}</p>
+                      <p style={{ fontSize: "0.84rem", fontWeight: 600, color: i === 0 ? "white" : "#0D3320", fontFamily: "'DM Serif Display', serif" }}>{officer.name}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* PIO */}
+            {officers.filter(o => o.role_type === "pio").length > 0 && (
+              <div style={{ padding: "0 1.5rem 1.5rem" }}>
+                <p style={{ fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem" }}>Public Information Officers</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
+                  {officers.filter(o => o.role_type === "pio").map(officer => (
+                    <div key={officer.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem", background: "#F9F8F5", borderRadius: 8 }}>
+                      {officer.photo_url ? (
+                        <img src={officer.photo_url} alt={officer.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.85rem", fontWeight: 700, color: "#0D3320" }}>
+                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0D3320" }}>{officer.name}</p>
+                        <p style={{ fontSize: "0.68rem", color: "#BBB" }}>PIO</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* BOD */}
+            {officers.filter(o => o.role_type === "bod").length > 0 && (
+              <div style={{ padding: "0 1.5rem 1.5rem" }}>
+                <p style={{ fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem" }}>Board of Directors</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
+                  {officers.filter(o => o.role_type === "bod").map(officer => (
+                    <div key={officer.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem", background: "#F9F8F5", borderRadius: 8 }}>
+                      {officer.photo_url ? (
+                        <img src={officer.photo_url} alt={officer.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.85rem", fontWeight: 700, color: "#0D3320" }}>
+                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                        </div>
+                      )}
+                      <div>
+                        <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0D3320" }}>{officer.name}</p>
+                        <p style={{ fontSize: "0.68rem", color: "#BBB" }}>Board Member</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {officers.length === 0 && (
+              <div style={{ padding: "3rem", textAlign: "center", color: "#BBB", fontSize: "0.85rem" }}>No officers listed yet.</div>
+            )}
+
             <div style={{ margin: "0 1.5rem 1.5rem", padding: "0.9rem 1.1rem", background: "#EEF6F1", borderRadius: 10, border: "1px solid #C0D9C6", display: "flex", gap: 8, alignItems: "flex-start" }}>
               <Info size={14} color="#1A5C2A" style={{ marginTop: 2, flexShrink: 0 }} />
               <div>
@@ -534,12 +592,10 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── EDIT PROFILE MODAL ── */}
+      {/* EDIT PROFILE MODAL */}
       {editOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
           <div style={{ background: "white", borderRadius: 14, width: "100%", maxWidth: 460, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.25)" }}>
-
-            {/* Modal header */}
             <div style={{ padding: "1.2rem 1.5rem", background: "#0D3320", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <p style={{ fontSize: "0.58rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>My Account</p>
@@ -549,9 +605,7 @@ export default function DashboardPage() {
                 <X size={13} />
               </button>
             </div>
-
             <div style={{ padding: "1.4rem 1.5rem" }}>
-              {/* Photo section */}
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.3rem", padding: "1rem", background: "#F9F8F5", borderRadius: 10 }}>
                 <div style={{ width: 58, height: 58, borderRadius: "50%", border: "2px solid #C9A84C", overflow: "hidden", background: "#EAF0EB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   {member?.avatar_url ? (
@@ -568,12 +622,10 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Fields */}
               {[
-                { key: "mobile",               label: "Mobile Number",              placeholder: "e.g. 0917-000-0000" },
-                { key: "address",              label: "Home Address",               placeholder: "Full address" },
-                { key: "beneficiary_name",     label: "Beneficiary Name",           placeholder: "Full name" },
+                { key: "mobile",               label: "Mobile Number",               placeholder: "e.g. 0917-000-0000" },
+                { key: "address",              label: "Home Address",                placeholder: "Full address" },
+                { key: "beneficiary_name",     label: "Beneficiary Name",            placeholder: "Full name" },
                 { key: "beneficiary_relation", label: "Relationship to Beneficiary", placeholder: "e.g. Spouse, Child" },
               ].map(({ key, label, placeholder }) => (
                 <div key={key} style={{ marginBottom: "0.95rem" }}>
@@ -586,14 +638,12 @@ export default function DashboardPage() {
                   />
                 </div>
               ))}
-
               {saveMsg && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.65rem 0.9rem", background: "#E6F9ED", borderRadius: 7, marginBottom: "1rem" }}>
                   <CheckCircle size={14} color="#1A6B35" />
                   <p style={{ fontSize: "0.8rem", color: "#1A6B35" }}>{saveMsg}</p>
                 </div>
               )}
-
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.7rem" }}>
                 <button onClick={() => setEditOpen(false)} style={{ padding: "0.72rem", background: "#F5F5F5", border: "none", borderRadius: 8, fontSize: "0.82rem", color: "#777", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>Cancel</button>
                 <button onClick={handleSaveProfile} disabled={saving} style={{ padding: "0.72rem", background: "#0D3320", border: "none", borderRadius: 8, fontSize: "0.82rem", color: "white", cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
