@@ -8,17 +8,18 @@
 import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight } from "lucide-react";
+import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight, Inbox } from "lucide-react";
 import SettingsTab from "./_components/SettingsTab";
-import LogsTab from "./_components/LogsTab";
 import OfficersTab from "./_components/OfficersTab";
 
 // ── Tab Components ──
 import MembersTab from "./_components/MembersTab";
 import PaymentsTab from "./_components/PaymentsTab";
+import PaymentSubmissionsTab from "./_components/PaymentSubmissionsTab";
 import CmsTab from "./_components/CmsTab";
 import ReportsTab from "./_components/ReportsTab";
 import RolesTab from "./_components/RolesTab";
+import LogsTab from "./_components/LogsTab";
 
 // ── Inner component that uses useSearchParams ──
 function AdminPageInner() {
@@ -27,6 +28,7 @@ function AdminPageInner() {
   const [role, setRole] = useState<string>("");
   const [stats, setStats] = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
   const [recentMembers, setRecentMembers] = useState<any[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,14 +55,12 @@ function AdminPageInner() {
       const userRole = roleData?.role || "member";
       setRole(userRole);
 
-
-const { data: memberData } = await supabase
-  .from("members")
-  .select("first_name, last_name")
-  .eq("user_id", user.id)
-  .single();
-if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`);
-
+      const { data: memberData } = await supabase
+        .from("members")
+        .select("first_name, last_name")
+        .eq("user_id", user.id)
+        .single();
+      if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`);
 
       if (userRole === "member") { router.push("/dashboard"); return; }
 
@@ -87,6 +87,14 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
         return 0;
       });
       setRecentMembers(sorted.slice(0, 5));
+
+      // Count pending GCash submissions
+      const { count } = await supabase
+        .from("payment_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      setPendingSubmissions(count || 0);
+
       setLoading(false);
     };
     load();
@@ -104,15 +112,16 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
 
   // ── Nav tabs — filtered by role ──
   const navItems = [
-    { id: "dashboard", icon: <Home size={16} />, label: "Dashboard", show: true },
-    { id: "members", icon: <Users size={16} />, label: "Members", show: canCRUD },
-    { id: "payments", icon: <CreditCard size={16} />, label: "Payments", show: canCRUD },
-    { id: "cms", icon: <FileText size={16} />, label: "CMS", show: canCRUD },
-    { id: "officers_mgmt", icon: <Users size={16} />, label: "Officers", show: canCRUD },
-    { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
-    { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
-    { id: "settings", icon: <Settings size={16} />, label: "Settings", show: role === "admin" },
-    { id: "logs", icon: <FileText size={16} />, label: "Logs", show: role === "admin" },
+    { id: "dashboard",    icon: <Home size={16} />,     label: "Dashboard",   show: true },
+    { id: "members",      icon: <Users size={16} />,    label: "Members",     show: canCRUD },
+    { id: "payments",     icon: <CreditCard size={16} />, label: "Payments",  show: canCRUD },
+    { id: "submissions",  icon: <Inbox size={16} />,    label: "Submissions", show: canCRUD },
+    { id: "cms",          icon: <FileText size={16} />, label: "CMS",         show: canCRUD },
+    { id: "officers_mgmt",icon: <Users size={16} />,    label: "Officers",    show: canCRUD },
+    { id: "reports",      icon: <BarChart2 size={16} />,label: "Reports",     show: canViewReports },
+    { id: "logs",         icon: <FileText size={16} />, label: "Logs",        show: role === "admin" },
+    { id: "roles",        icon: <Settings size={16} />, label: "Roles",       show: role === "admin" },
+    { id: "settings",     icon: <Settings size={16} />, label: "Settings",    show: role === "admin" },
   ].filter(item => item.show);
 
   // ── Loading screen ──
@@ -144,8 +153,13 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
             <button key={item.id} onClick={() => setTab(item.id)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 1.1rem", height: 60, border: "none", background: "transparent", cursor: "pointer", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif", color: activeTab === item.id ? "var(--gold-lt)" : "rgba(255,255,255,0.5)", borderBottom: activeTab === item.id ? "3px solid var(--gold)" : "3px solid transparent", marginBottom: "-3px", transition: "all 0.2s", position: "relative" }}>
               {item.icon} {item.label}
+              {/* Pending members badge */}
               {item.id === "members" && stats.pending > 0 && (
                 <span style={{ position: "absolute", top: 10, right: 6, background: "#C0392B", color: "white", fontSize: "0.6rem", fontWeight: 700, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{stats.pending}</span>
+              )}
+              {/* Pending submissions badge */}
+              {item.id === "submissions" && pendingSubmissions > 0 && (
+                <span style={{ position: "absolute", top: 10, right: 6, background: "#0077FF", color: "white", fontSize: "0.6rem", fontWeight: 700, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{pendingSubmissions}</span>
               )}
             </button>
           ))}
@@ -174,20 +188,20 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
         {activeTab === "dashboard" && (
           <div>
             <div style={{ marginBottom: "2rem" }}>
-                      <p style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
-                        Welcome back, {memberName || user?.email}
-                      </p>
-                      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
-                        {role === "admin" ? "Admin Overview" : `${role.replace("_", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} Dashboard`}
-                      </h1>
+              <p style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                Welcome back, {memberName || user?.email}
+              </p>
+              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
+                {role === "admin" ? "Admin Overview" : `${role.replace("_", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} Dashboard`}
+              </h1>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "1rem", marginBottom: "2rem" }}>
               {[
-                { label: "Total Members", value: stats.total, color: "var(--gold)" },
-                { label: "Active", value: stats.active, color: "#2E8B44" },
-                { label: "Non-active", value: stats.nonactive, color: "#D4A017" },
-                { label: "Dropped", value: stats.dropped, color: "#C0392B" },
-                { label: "Pending Approval", value: stats.pending, color: "#2B5FA8" },
+                { label: "Total Members",    value: stats.total,    color: "var(--gold)"  },
+                { label: "Active",           value: stats.active,   color: "#2E8B44"      },
+                { label: "Non-active",       value: stats.nonactive,color: "#D4A017"      },
+                { label: "Dropped",          value: stats.dropped,  color: "#C0392B"      },
+                { label: "Pending Approval", value: stats.pending,  color: "#2B5FA8"      },
               ].map(({ label, value, color }) => (
                 <div key={label} onClick={() => label === "Pending Approval" && setTab("members")}
                   style={{ background: "white", borderRadius: 10, padding: "1.3rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}`, cursor: label === "Pending Approval" ? "pointer" : "default" }}>
@@ -196,6 +210,23 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
                 </div>
               ))}
             </div>
+
+            {/* Pending submissions alert */}
+            {pendingSubmissions > 0 && (
+              <div onClick={() => setTab("submissions")} style={{ background: "rgba(0,119,255,0.06)", border: "1px solid rgba(0,119,255,0.25)", borderRadius: 10, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: "1.2rem" }}>📱</span>
+                  <div>
+                    <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0077FF", marginBottom: 2 }}>
+                      {pendingSubmissions} GCash Payment {pendingSubmissions === 1 ? "Submission" : "Submissions"} Pending Review
+                    </p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Members have submitted GCash payments waiting for your approval.</p>
+                  </div>
+                </div>
+                <span style={{ fontSize: "0.78rem", color: "#0077FF", fontWeight: 500, whiteSpace: "nowrap" }}>Review now →</span>
+              </div>
+            )}
+
             <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
               <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>Recent Registrations</h2>
@@ -235,13 +266,34 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
         {activeTab === "members" && <MembersTab canCRUD={canCRUD} supabase={supabase} />}
 
         {/* PAYMENTS TAB */}
-        {activeTab === "payments" && <PaymentsTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
+        {activeTab === "payments" && (
+          <PaymentsTab
+            canCRUD={canCRUD}
+            supabase={supabase}
+            currentUser={user}
+            currentRole={role}
+            currentMemberName={memberName}
+          />
+        )}
+
+        {/* PAYMENT SUBMISSIONS TAB */}
+        {activeTab === "submissions" && (
+          <PaymentSubmissionsTab
+            supabase={supabase}
+            currentUser={user}
+            currentMemberName={memberName}
+            currentRole={role}
+          />
+        )}
 
         {/* CMS TAB */}
         {activeTab === "cms" && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} />}
 
         {/* REPORTS TAB */}
         {activeTab === "reports" && <ReportsTab canCRUD={canCRUD} supabase={supabase} />}
+
+        {/* LOGS TAB */}
+        {activeTab === "logs" && role === "admin" && <LogsTab supabase={supabase} />}
 
         {/* ROLES TAB — admin only */}
         {activeTab === "roles" && role === "admin" && <RolesTab supabase={supabase} />}
@@ -251,9 +303,6 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
 
         {/* SETTINGS TAB */}
         {activeTab === "settings" && <SettingsTab supabase={supabase} />}
-
-        {/* NAV TAB */}
-        {activeTab === "logs" && role === "admin" && <LogsTab supabase={supabase} />}
 
       </div>
     </main>

@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import GCashPayment from "@/app/components/GCashPayment";
 import {
   LogOut, User, CreditCard, Edit3, Phone,
   Calendar, Heart, Shield, BookOpen, Star, TrendingUp,
@@ -32,6 +33,8 @@ export default function DashboardPage() {
   const [loading,    setLoading]    = useState(true);
   const [activeTab,  setActiveTab]  = useState<"overview"|"payments"|"rights"|"officers">("overview");
   const [editOpen,   setEditOpen]   = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentItems, setPaymentItems] = useState<any[]>([]);
   const [uploading,  setUploading]  = useState(false);
   const [saving,     setSaving]     = useState(false);
   const [saveMsg,    setSaveMsg]    = useState("");
@@ -353,6 +356,67 @@ export default function DashboardPage() {
           ))}
         </div>
 
+
+        {/* ── DELINQUENT YEARS WARNING ── */}
+{(member?.status === "non-active" || member?.status === "dropped") && (() => {
+  const currentYear = new Date().getFullYear();
+  const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
+  const missingYears: number[] = [];
+  for (let y = joinYear; y <= currentYear; y++) {
+    const hasAof = payments.some(p => p.year === y && p.type === "aof");
+    const hasMas = payments.some(p => p.year === y && p.type === "mas");
+    if (!hasAof || !hasMas) missingYears.push(y);
+  }
+  if (missingYears.length === 0) return null;
+
+  const handlePayNow = () => {
+    // Build payment items for the earliest unpaid year first
+    const earliestUnpaid = missingYears[0];
+    const items: any[] = [];
+    const hasAof = payments.some(p => p.year === earliestUnpaid && p.type === "aof");
+    const hasMas = payments.some(p => p.year === earliestUnpaid && p.type === "mas");
+    if (!hasAof) items.push({ type: "aof", label: "Annual Operating Fund", amount: 100, year: earliestUnpaid });
+    if (!hasMas) items.push({ type: "mas", label: "Mortuary Assistance (MAS)", amount: 740, year: earliestUnpaid });
+    setPaymentItems(items);
+    setShowPayment(true);
+  };
+
+  return (
+    <div style={{ background: member.status === "dropped" ? "#FDECEA" : "#FFF8E1", border: `1px solid ${member.status === "dropped" ? "#F5A49A" : "#FFD97A"}`, borderRadius: 12, padding: "1.2rem 1.5rem", marginBottom: "1.5rem" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <span style={{ fontSize: "1.4rem" }}>{member.status === "dropped" ? "🚫" : "⚠️"}</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: "0.85rem", fontWeight: 700, color: member.status === "dropped" ? "#A8200D" : "#A66C00", marginBottom: 4 }}>
+            {member.status === "dropped" ? "Membership Dropped" : "Account Non-Active"} — Unpaid Dues Detected
+          </p>
+          <p style={{ fontSize: "0.78rem", color: "#666", lineHeight: 1.5, marginBottom: "0.8rem" }}>
+            {member.status === "dropped"
+              ? "Your membership has been dropped due to 3 or more consecutive unpaid years. Please settle your balance and contact SUNCO officers for reinstatement."
+              : "Your account is non-active due to unpaid dues. Settle your balance to restore full membership benefits."}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.8rem" }}>
+            <span style={{ fontSize: "0.72rem", color: "#888", marginRight: 4 }}>Delinquent years:</span>
+            {missingYears.map(y => (
+              <span key={y} style={{ background: member.status === "dropped" ? "rgba(168,32,13,0.12)" : "rgba(166,108,0,0.12)", color: member.status === "dropped" ? "#A8200D" : "#A66C00", fontSize: "0.75rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, border: `1px solid ${member.status === "dropped" ? "rgba(168,32,13,0.25)" : "rgba(166,108,0,0.25)"}` }}>
+                {y}
+              </span>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+            <p style={{ fontSize: "0.73rem", color: "#999" }}>
+              ₱840/year · Total outstanding: <strong style={{ color: member.status === "dropped" ? "#A8200D" : "#A66C00" }}>₱{(missingYears.length * 840).toLocaleString()}</strong>
+            </p>
+            <button onClick={handlePayNow}
+              style={{ background: "#0077FF", color: "white", border: "none", padding: "0.5rem 1.2rem", borderRadius: 8, fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              💳 Pay Now via GCash
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
+
         {/* TABS */}
         <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(0,0,0,0.06)" }}>
           {TABS.map(({ id, label, icon: Icon }) => (
@@ -654,6 +718,35 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* GCash Payment Modal */}
+{showPayment && member && (
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+    <div style={{ background: "white", borderRadius: 14, maxWidth: 480, width: "100%", maxHeight: "95vh", overflowY: "auto", boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+      <div style={{ padding: "1.3rem 1.6rem", background: "#0D3320", borderRadius: "14px 14px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <p style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>SUNCO Dues Payment</p>
+          <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1rem", color: "#C9A84C", fontWeight: 400 }}>Pay via GCash</h3>
+        </div>
+        <button onClick={() => setShowPayment(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 28, height: 28, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <X size={13} />
+        </button>
+      </div>
+      <div style={{ padding: "1.5rem" }}>
+        <GCashPayment
+          supabase={supabase}
+          memberId={member.id}
+          userId={user?.id}
+          items={paymentItems}
+          gcashNumber="0946-365-7331"
+          gcashName="SUNCO Inc."
+          onSuccess={() => { setShowPayment(false); }}
+          onCancel={() => setShowPayment(false)}
+        />
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }
