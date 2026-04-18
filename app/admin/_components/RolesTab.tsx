@@ -17,30 +17,38 @@ export default function RolesTab({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-                          const loadRoles = async () => {
-                            setLoading(true);
+                    const loadRoles = async () => {
+                      setLoading(true);
 
-                            const { data: roles } = await supabase
-                              .from("user_roles")
-                              .select("*")
-                              .order("role");
+                      try {
+                        const { data: roles, error: rolesError } = await supabase
+                          .from("user_roles")
+                          .select("*")
+                          .order("role");
 
-                            const { data: members, error: membersError } = await supabase
-                              .from("members")
-                              .select("user_id, first_name, last_name, email, member_id_code");
+                        console.log("ROLES DATA:", roles);
+                        console.log("ROLES ERROR:", rolesError);
 
-                            console.log("ROLES:", JSON.stringify(roles, null, 2));
-                            console.log("MEMBERS:", JSON.stringify(members, null, 2));
-                            console.log("MEMBERS ERROR:", membersError);
+                        const { data: members, error: membersError } = await supabase
+                          .from("members")
+                          .select("user_id, first_name, last_name, email, member_id_code");
 
-                            const merged = (roles || []).map((ur: any) => ({
-                              ...ur,
-                              members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
-                            }));
+                        console.log("MEMBERS DATA:", members);
+                        console.log("MEMBERS ERROR:", membersError);
 
-                            setUserRoles(merged);
-                            setLoading(false);
-                          };
+                        const merged = (roles || []).map((ur: any) => ({
+                          ...ur,
+                          members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
+                        }));
+
+                        console.log("MERGED:", merged);
+                        setUserRoles(merged);
+                      } catch (err) {
+                        console.log("CAUGHT ERROR:", err);
+                      } finally {
+                        setLoading(false);
+                      }
+                    };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(userId);
