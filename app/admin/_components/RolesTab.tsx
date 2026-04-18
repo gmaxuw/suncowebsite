@@ -17,20 +17,30 @@ export default function RolesTab({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-                        const loadRoles = async () => {
-                          setLoading(true);
+  const loadRoles = async () => {
+    setLoading(true);
 
-                          const { data, error } = await supabase
-                            .from("user_roles")
-                            .select("*, members(first_name, last_name, email, member_id_code)")
-                            .order("role");
+    // Fetch user_roles and members separately to avoid FK join issues
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("*")
+      .order("role");
 
-                          console.log("DATA:", JSON.stringify(data, null, 2));
-                          console.log("ERROR:", error);
+    const { data: members } = await supabase
+      .from("members")
+      .select("user_id, first_name, last_name, email, member_id_code");
 
-                          setUserRoles(data || []);
-                          setLoading(false);
-                        };
+    // Manually merge: match user_roles.user_id → members.user_id
+    const merged = (roles || []).map((ur: any) => ({
+      ...ur,
+      members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
+    }));
+
+    setUserRoles(merged);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadRoles(); }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(userId);
