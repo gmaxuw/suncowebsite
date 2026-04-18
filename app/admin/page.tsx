@@ -10,6 +10,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight } from "lucide-react";
 import SettingsTab from "./_components/SettingsTab";
+import LogsTab from "./_components/LogsTab";
 import OfficersTab from "./_components/OfficersTab";
 
 // ── Tab Components ──
@@ -111,6 +112,7 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
     { id: "reports", icon: <BarChart2 size={16} />, label: "Reports", show: canViewReports },
     { id: "roles", icon: <Settings size={16} />, label: "Roles", show: role === "admin" },
     { id: "settings", icon: <Settings size={16} />, label: "Settings", show: role === "admin" },
+    { id: "logs", icon: <FileText size={16} />, label: "Logs", show: role === "admin" },
   ].filter(item => item.show);
 
   // ── Loading screen ──
@@ -233,7 +235,7 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
         {activeTab === "members" && <MembersTab canCRUD={canCRUD} supabase={supabase} />}
 
         {/* PAYMENTS TAB */}
-        {activeTab === "payments" && <PaymentsTab canCRUD={canCRUD} supabase={supabase} />}
+        {activeTab === "payments" && <PaymentsTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
 
         {/* CMS TAB */}
         {activeTab === "cms" && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} />}
@@ -249,6 +251,9 @@ if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`
 
         {/* SETTINGS TAB */}
         {activeTab === "settings" && <SettingsTab supabase={supabase} />}
+
+        {/* NAV TAB */}
+        {activeTab === "logs" && role === "admin" && <LogsTab supabase={supabase} />}
 
       </div>
     </main>
