@@ -7,9 +7,10 @@
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogOut, Shield, Home, Users, CreditCard, FileText, BarChart2, Settings, ChevronRight } from "lucide-react";
 import SettingsTab from "./_components/SettingsTab";
+
 import OfficersTab from "./_components/OfficersTab";
 
 // ── Tab Components ──
@@ -25,8 +26,14 @@ export default function AdminPage() {
   const [stats, setStats] = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
   const [recentMembers, setRecentMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const router = useRouter();
+                  const router = useRouter();
+                  const searchParams = useSearchParams();
+                  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "dashboard");
+
+                  const setTab = (tab: string) => {
+                    setActiveTab(tab);
+                    router.replace(`/admin?tab=${tab}`, { scroll: false });
+                  };
   const supabase = createClient();
 
   // ── Permission helpers ──
