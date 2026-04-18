@@ -21,6 +21,7 @@ import RolesTab from "./_components/RolesTab";
 
 // ── Inner component that uses useSearchParams ──
 function AdminPageInner() {
+  const [memberName, setMemberName] = useState<string>("");
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string>("");
   const [stats, setStats] = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
@@ -50,6 +51,15 @@ function AdminPageInner() {
         .from("user_roles").select("role").eq("user_id", user.id).single();
       const userRole = roleData?.role || "member";
       setRole(userRole);
+
+
+const { data: memberData } = await supabase
+  .from("members")
+  .select("first_name, last_name")
+  .eq("user_id", user.id)
+  .single();
+if (memberData) setMemberName(`${memberData.first_name} ${memberData.last_name}`);
+
 
       if (userRole === "member") { router.push("/dashboard"); return; }
 
@@ -143,7 +153,9 @@ function AdminPageInner() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Shield size={13} color="var(--gold)" />
-            <span style={{ fontSize: "0.72rem", color: "var(--gold)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>{role.replace("_", " ")}</span>
+            <span style={{ fontSize: "0.72rem", color: "var(--gold)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              {memberName ? `${memberName} · ${role.replace("_", " ")}` : role.replace("_", " ")}
+            </span>
           </div>
           <a href="/admin/profile" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>My Profile</a>
           <a href="/" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Main Site</a>
@@ -160,8 +172,12 @@ function AdminPageInner() {
         {activeTab === "dashboard" && (
           <div>
             <div style={{ marginBottom: "2rem" }}>
-              <p style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Welcome back</p>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>Admin Overview</h1>
+                      <p style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                        Welcome back, {memberName || user?.email}
+                      </p>
+                      <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
+                        {role === "admin" ? "Admin Overview" : `${role.replace("_", " ").replace(/\b\w/g, (l: string) => l.toUpperCase())} Dashboard`}
+                      </h1>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "1rem", marginBottom: "2rem" }}>
               {[
