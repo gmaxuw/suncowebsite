@@ -6,7 +6,7 @@
 // Accessible by: admin ONLY
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
-import { Settings, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
 interface Props {
   supabase: any;
@@ -17,38 +17,40 @@ export default function RolesTab({ supabase }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
-                    const loadRoles = async () => {
-                      setLoading(true);
+  const loadRoles = async () => {
+    setLoading(true);
+    try {
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("*")
+        .order("role");
 
-                      try {
-                        const { data: roles, error: rolesError } = await supabase
-                          .from("user_roles")
-                          .select("*")
-                          .order("role");
+      console.log("ROLES DATA:", roles);
+      console.log("ROLES ERROR:", rolesError);
 
-                        console.log("ROLES DATA:", roles);
-                        console.log("ROLES ERROR:", rolesError);
+      const { data: members, error: membersError } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name, email, member_id_code");
 
-                        const { data: members, error: membersError } = await supabase
-                          .from("members")
-                          .select("user_id, first_name, last_name, email, member_id_code");
+      console.log("MEMBERS DATA:", members);
+      console.log("MEMBERS ERROR:", membersError);
 
-                        console.log("MEMBERS DATA:", members);
-                        console.log("MEMBERS ERROR:", membersError);
+      const merged = (roles || []).map((ur: any) => ({
+        ...ur,
+        members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
+      }));
 
-                        const merged = (roles || []).map((ur: any) => ({
-                          ...ur,
-                          members: (members || []).find((m: any) => m.user_id === ur.user_id) || null,
-                        }));
+      console.log("MERGED:", merged);
+      setUserRoles(merged);
+    } catch (err) {
+      console.log("CAUGHT ERROR:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                        console.log("MERGED:", merged);
-                        setUserRoles(merged);
-                      } catch (err) {
-                        console.log("CAUGHT ERROR:", err);
-                      } finally {
-                        setLoading(false);
-                      }
-                    };
+  // ← THIS IS THE CRITICAL LINE — calls loadRoles when component mounts
+  useEffect(() => { loadRoles(); }, []);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     setSaving(userId);
@@ -66,7 +68,6 @@ export default function RolesTab({ supabase }: Props) {
     pio: "#9A7010", bod: "#5A5240", member: "#95A5A6",
   };
 
-  // Role permission matrix
   const permissions = [
     { role: "admin", label: "Admin", crud_members: true, crud_payments: true, cms: true, reports: true, roles: true },
     { role: "president", label: "President", crud_members: true, crud_payments: true, cms: true, reports: true, roles: false },
@@ -132,6 +133,8 @@ export default function RolesTab({ supabase }: Props) {
         </div>
         {loading ? (
           <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>Loading roles...</div>
+        ) : userRoles.length === 0 ? (
+          <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>No users found. Check console for errors.</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
