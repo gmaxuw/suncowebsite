@@ -369,17 +369,20 @@ export default function DashboardPage() {
   }
   if (missingYears.length === 0) return null;
 
-  const handlePayNow = () => {
-    // Build payment items for the earliest unpaid year first
-    const earliestUnpaid = missingYears[0];
-    const items: any[] = [];
-    const hasAof = payments.some(p => p.year === earliestUnpaid && p.type === "aof");
-    const hasMas = payments.some(p => p.year === earliestUnpaid && p.type === "mas");
-    if (!hasAof) items.push({ type: "aof", label: "Annual Operating Fund", amount: 100, year: earliestUnpaid });
-    if (!hasMas) items.push({ type: "mas", label: "Mortuary Assistance (MAS)", amount: 740, year: earliestUnpaid });
-    setPaymentItems(items);
-    setShowPayment(true);
-  };
+const handlePayNow = () => {
+  const currentYear = new Date().getFullYear();
+  const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
+  const unpaid = [];
+  for (let y = joinYear; y <= currentYear; y++) {
+    unpaid.push({
+      year: y,
+      hasAof: payments.some(p => p.year === y && p.type === "aof"),
+      hasMas: payments.some(p => p.year === y && p.type === "mas"),
+    });
+  }
+  setPaymentItems(unpaid);
+  setShowPayment(true);
+};
 
   return (
     <div style={{ background: member.status === "dropped" ? "#FDECEA" : "#FFF8E1", border: `1px solid ${member.status === "dropped" ? "#F5A49A" : "#FFD97A"}`, borderRadius: 12, padding: "1.2rem 1.5rem", marginBottom: "1.5rem" }}>
@@ -737,7 +740,7 @@ export default function DashboardPage() {
           supabase={supabase}
           memberId={member.id}
           userId={user?.id}
-          items={paymentItems}
+          unpaidYears={paymentItems}
           gcashNumber="0946-365-7331"
           gcashName="SUNCO Inc."
           onSuccess={() => { setShowPayment(false); }}
