@@ -54,7 +54,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     return null;
   };
 
-  // ── Approve: create payment records per year per type ──
+  // ── APPROVE: create payment records per year per type ──
   const handleApprove = async (sub: any) => {
     setSaving(true);
     try {
@@ -107,28 +107,21 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
         return;
       }
 
-      // Insert all payment records
+      // 1. Insert all payment records
       const { error: payErr } = await supabase.from("payments").insert(inserts);
       if (payErr) throw payErr;
 
-      // Mark submission approved
-await supabase.from("payment_submissions").update({
-  status:      "approved",
-  reviewed_at: new Date().toISOString(),
-}).eq("id", sub.id);
+      // 2. Mark submission as approved
+      const { error: updErr } = await supabase
+        .from("payment_submissions")
+        .update({
+          status:      "approved",
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", sub.id);
+      if (updErr) throw updErr;
 
-
-await supabase.from("payment_submissions").update({
-  status:           "rejected",
-  rejection_reason: rejectReason.trim(),
-  reviewed_at:      new Date().toISOString(),
-}).eq("id", sub.id);
-
-
-
-
-      // Log the activity
-      const notes2 = parseNotes(sub);
+      // 3. Log the activity
       await supabase.from("activity_logs").insert({
         user_id:     currentUser?.id,
         member_name: currentMemberName || currentUser?.email,
@@ -136,13 +129,13 @@ await supabase.from("payment_submissions").update({
         action:      "PAYMENT_RECORDED",
         module:      "payments",
         details: {
-          for_member:    sub.members ? `${sub.members.first_name} ${sub.members.last_name}` : "—",
-          years_covered: inserts.map(r => r.year).filter((v, i, a) => a.indexOf(v) === i).join(", "),
-          types:         inserts.map(r => r.type).filter((v, i, a) => a.indexOf(v) === i).join(", ").toUpperCase(),
-          total_amount:  sub.total_amount,
-          or_number:     `GCASH-${sub.gcash_reference}`,
+          for_member:      sub.members ? `${sub.members.first_name} ${sub.members.last_name}` : "—",
+          years_covered:   inserts.map((r: any) => r.year).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", "),
+          types:           inserts.map((r: any) => r.type).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", ").toUpperCase(),
+          total_amount:    sub.total_amount,
+          or_number:       `GCASH-${sub.gcash_reference}`,
           records_created: inserts.length,
-          via:           "GCash submission approval",
+          via:             "GCash submission approval",
         },
       });
 
@@ -154,30 +147,28 @@ await supabase.from("payment_submissions").update({
     setSaving(false);
   };
 
-  
-
+  // ── REJECT ──
   const handleReject = async (sub: any) => {
     if (!rejectReason.trim()) { alert("Please enter a rejection reason."); return; }
     setSaving(true);
-    await supabase.from("payment_submissions").update({
-      status:           "rejected",
-      rejection_reason: rejectReason.trim(),
-      reviewed_by:      currentUser?.id,
-      reviewed_at:      new Date().toISOString(),
-    }).eq("id", sub.id);
+    await supabase
+      .from("payment_submissions")
+      .update({
+        status:           "rejected",
+        rejection_reason: rejectReason.trim(),
+        reviewed_at:      new Date().toISOString(),
+      })
+      .eq("id", sub.id);
     await loadSubmissions();
     setSelected(null);
     setRejectReason("");
     setSaving(false);
   };
 
-  
-
   const formatDate = (ts: string) => new Date(ts).toLocaleDateString("en-PH", {
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
-  // ── Build a readable summary of what the submission covers ──
   const buildCoversSummary = (sub: any) => {
     const notes = parseNotes(sub);
     if (notes?.year_breakdown && notes.year_breakdown.length > 0) {
@@ -346,7 +337,7 @@ await supabase.from("payment_submissions").update({
                   ))}
                 </div>
 
-                {/* Payment breakdown — years */}
+                {/* Payment breakdown */}
                 <div style={{ background: "var(--cream)", borderRadius: 10, padding: "1.1rem", marginBottom: "1.2rem", border: "1px solid rgba(26,92,42,0.08)" }}>
                   <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>
                     Payment Covers {hasMultiYear ? `(${yearBreakdown.length} year${yearBreakdown.length > 1 ? "s" : ""})` : ""}
@@ -401,7 +392,7 @@ await supabase.from("payment_submissions").update({
                   </div>
                 )}
 
-                {/* Rejection reason if rejected */}
+                {/* Rejection reason */}
                 {selected.status === "rejected" && selected.rejection_reason && (
                   <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#C0392B", marginBottom: 4 }}>Rejection Reason</p>
@@ -409,7 +400,7 @@ await supabase.from("payment_submissions").update({
                   </div>
                 )}
 
-                {/* Approval info if approved */}
+                {/* Approved info */}
                 {selected.status === "approved" && selected.reviewed_at && (
                   <div style={{ background: "rgba(46,139,68,0.08)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#2E8B44", marginBottom: 4 }}>✓ Approved & Recorded</p>
@@ -427,10 +418,11 @@ await supabase.from("payment_submissions").update({
                       Review Action
                     </p>
 
-                    {/* What will be created on approval */}
                     <div style={{ background: "rgba(46,139,68,0.06)", border: "1px solid rgba(46,139,68,0.15)", borderRadius: 8, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
                       <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2E8B44", marginBottom: "0.4rem" }}>
-                        ✓ Approving will create {hasMultiYear ? yearBreakdown.reduce((s: number, y: any) => s + (y.aof ? 1 : 0) + (y.mas ? 1 : 0), 0) : (selected.types || []).length} payment record(s):
+                        ✓ Approving will create {hasMultiYear
+                          ? yearBreakdown.reduce((s: number, y: any) => s + (y.aof ? 1 : 0) + (y.mas ? 1 : 0), 0)
+                          : (selected.types || []).length} payment record(s):
                       </p>
                       {hasMultiYear ? (
                         yearBreakdown.map((y: any) => (
