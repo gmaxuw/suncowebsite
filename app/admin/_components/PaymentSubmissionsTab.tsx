@@ -112,11 +112,20 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
       if (payErr) throw payErr;
 
       // Mark submission approved
-      await supabase.from("payment_submissions").update({
-        status:      "approved",
-        reviewed_by: currentUser?.id,
-        reviewed_at: new Date().toISOString(),
-      }).eq("id", sub.id);
+await supabase.from("payment_submissions").update({
+  status:      "approved",
+  reviewed_at: new Date().toISOString(),
+}).eq("id", sub.id);
+
+
+await supabase.from("payment_submissions").update({
+  status:           "rejected",
+  rejection_reason: rejectReason.trim(),
+  reviewed_at:      new Date().toISOString(),
+}).eq("id", sub.id);
+
+
+
 
       // Log the activity
       const notes2 = parseNotes(sub);
@@ -145,6 +154,8 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     setSaving(false);
   };
 
+  
+
   const handleReject = async (sub: any) => {
     if (!rejectReason.trim()) { alert("Please enter a rejection reason."); return; }
     setSaving(true);
@@ -159,6 +170,8 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     setRejectReason("");
     setSaving(false);
   };
+
+  
 
   const formatDate = (ts: string) => new Date(ts).toLocaleDateString("en-PH", {
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
