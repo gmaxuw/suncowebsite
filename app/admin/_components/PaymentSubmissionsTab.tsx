@@ -1,10 +1,4 @@
 "use client";
-// ─────────────────────────────────────────────
-// PaymentSubmissionsTab.tsx
-// Admin panel for reviewing member GCash submissions
-// Supports multi-year approval — creates one payment
-// record per year per type from notes.year_breakdown
-// ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
 import { CheckCircle, X, ExternalLink, RefreshCw } from "lucide-react";
 
@@ -46,15 +40,11 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
   const filtered = submissions.filter(s => filter === "all" || s.status === filter);
   const pendingCount = submissions.filter(s => s.status === "pending").length;
 
-  // ── Parse notes JSON safely ──
   const parseNotes = (sub: any) => {
-    try {
-      if (sub.notes) return JSON.parse(sub.notes);
-    } catch {}
+    try { if (sub.notes) return JSON.parse(sub.notes); } catch {}
     return null;
   };
 
-  // ── APPROVE: create payment records per year per type ──
   const handleApprove = async (sub: any) => {
     setSaving(true);
     try {
@@ -62,33 +52,27 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
       let inserts: any[] = [];
 
       if (notes?.year_breakdown && notes.year_breakdown.length > 0) {
-        // Multi-year submission — create one row per year per type
         for (const yrEntry of notes.year_breakdown) {
-          if (yrEntry.aof) {
-            inserts.push({
-              member_id:      sub.member_id,
-              year:           yrEntry.year,
-              type:           "aof",
-              amount:         AMOUNTS.aof,
-              date_paid:      new Date().toISOString().split("T")[0],
-              receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-AOF`,
-              recorded_by:    currentMemberName || currentUser?.email,
-            });
-          }
-          if (yrEntry.mas) {
-            inserts.push({
-              member_id:      sub.member_id,
-              year:           yrEntry.year,
-              type:           "mas",
-              amount:         AMOUNTS.mas,
-              date_paid:      new Date().toISOString().split("T")[0],
-              receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-MAS`,
-              recorded_by:    currentMemberName || currentUser?.email,
-            });
-          }
+          if (yrEntry.aof) inserts.push({
+            member_id:      sub.member_id,
+            year:           yrEntry.year,
+            type:           "aof",
+            amount:         AMOUNTS.aof,
+            date_paid:      new Date().toISOString().split("T")[0],
+            receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-AOF`,
+            recorded_by:    currentMemberName || "Officer",
+          });
+          if (yrEntry.mas) inserts.push({
+            member_id:      sub.member_id,
+            year:           yrEntry.year,
+            type:           "mas",
+            amount:         AMOUNTS.mas,
+            date_paid:      new Date().toISOString().split("T")[0],
+            receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-MAS`,
+            recorded_by:    currentMemberName || "Officer",
+          });
         }
       } else {
-        // Legacy single-year submission fallback
         const types: string[] = sub.types || [];
         inserts = types.map((type: string) => ({
           member_id:      sub.member_id,
@@ -97,7 +81,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
           amount:         AMOUNTS[type] || 0,
           date_paid:      new Date().toISOString().split("T")[0],
           receipt_number: `GCASH-${sub.gcash_reference}-${type.toUpperCase()}`,
-          recorded_by:    currentMemberName || currentUser?.email,
+          recorded_by:    currentMemberName || "Officer",
         }));
       }
 
@@ -107,37 +91,38 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
         return;
       }
 
-      // 1. Insert all payment records
+      // 1. Insert payment records
       const { error: payErr } = await supabase.from("payments").insert(inserts);
       if (payErr) throw payErr;
 
-      // 2. Mark submission as approved
+      // 2. Mark submission approved
       const { error: updErr } = await supabase
         .from("payment_submissions")
-        .update({
-          status:      "approved",
-          reviewed_at: new Date().toISOString(),
-        })
+        .update({ status: "approved", reviewed_at: new Date().toISOString() })
         .eq("id", sub.id);
       if (updErr) throw updErr;
 
-      // 3. Log the activity
-      await supabase.from("activity_logs").insert({
-        user_id:     currentUser?.id,
-        member_name: currentMemberName || currentUser?.email,
-        role:        currentRole || "officer",
-        action:      "PAYMENT_RECORDED",
-        module:      "payments",
-        details: {
-          for_member:      sub.members ? `${sub.members.first_name} ${sub.members.last_name}` : "—",
-          years_covered:   inserts.map((r: any) => r.year).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", "),
-          types:           inserts.map((r: any) => r.type).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", ").toUpperCase(),
-          total_amount:    sub.total_amount,
-          or_number:       `GCASH-${sub.gcash_reference}`,
-          records_created: inserts.length,
-          via:             "GCash submission approval",
-        },
-      });
+      // 3. Log activity — non-blocking, won't crash approval if it fails
+      try {
+        await supabase.from("activity_logs").insert({
+          user_id:     null,
+          member_name: currentMemberName || "Officer",
+          role:        currentRole || "officer",
+          action:      "PAYMENT_RECORDED",
+          module:      "payments",
+          details: {
+            for_member:      sub.members ? `${sub.members.first_name} ${sub.members.last_name}` : "—",
+            years_covered:   inserts.map((r: any) => r.year).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", "),
+            types:           inserts.map((r: any) => r.type).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", ").toUpperCase(),
+            total_amount:    sub.total_amount,
+            or_number:       `GCASH-${sub.gcash_reference}`,
+            records_created: inserts.length,
+            via:             "GCash submission approval",
+          },
+        });
+      } catch (logErr) {
+        console.warn("Activity log skipped:", logErr);
+      }
 
       await loadSubmissions();
       setSelected(null);
@@ -147,7 +132,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     setSaving(false);
   };
 
-  // ── REJECT ──
   const handleReject = async (sub: any) => {
     if (!rejectReason.trim()) { alert("Please enter a rejection reason."); return; }
     setSaving(true);
@@ -253,24 +237,16 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   const ss = STATUS_STYLE[sub.status] || STATUS_STYLE.pending;
                   return (
                     <tr key={sub.id} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
-                        {formatDate(sub.created_at)}
-                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>{formatDate(sub.created_at)}</td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <p style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--green-dk)", margin: 0, whiteSpace: "nowrap" }}>
                           {sub.members ? `${sub.members.first_name} ${sub.members.last_name}` : "—"}
                         </p>
                         <p style={{ fontSize: "0.7rem", color: "var(--muted)", fontFamily: "monospace", margin: 0 }}>{sub.members?.member_id_code}</p>
                       </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.78rem", color: "var(--green-dk)", fontWeight: 500 }}>
-                        {buildCoversSummary(sub)}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)", whiteSpace: "nowrap" }}>
-                        ₱{Number(sub.total_amount).toLocaleString()}
-                      </td>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "var(--muted)" }}>
-                        {sub.gcash_reference}
-                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.78rem", color: "var(--green-dk)", fontWeight: 500 }}>{buildCoversSummary(sub)}</td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)", whiteSpace: "nowrap" }}>₱{Number(sub.total_amount).toLocaleString()}</td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.78rem", fontFamily: "monospace", color: "var(--muted)" }}>{sub.gcash_reference}</td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <span style={{ background: ss.bg, color: ss.color, fontSize: "0.7rem", fontWeight: 500, padding: "3px 10px", borderRadius: 20 }}>{ss.label}</span>
                       </td>
@@ -299,7 +275,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
             <div style={{ background: "white", borderRadius: 14, maxWidth: 580, width: "100%", maxHeight: "92vh", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.25)", display: "flex", flexDirection: "column" }}>
 
-              {/* Modal header */}
               <div style={{ background: "var(--green-dk)", padding: "1.4rem 1.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
                 <div>
                   <p style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 3 }}>GCash Payment Submission</p>
@@ -314,7 +289,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
 
               <div style={{ overflowY: "auto", padding: "1.5rem 1.6rem" }}>
 
-                {/* Status + date */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem" }}>
                   <span style={{ background: STATUS_STYLE[selected.status]?.bg, color: STATUS_STYLE[selected.status]?.color, fontSize: "0.78rem", fontWeight: 600, padding: "4px 14px", borderRadius: 20 }}>
                     {STATUS_STYLE[selected.status]?.label}
@@ -322,7 +296,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   <span style={{ fontSize: "0.72rem", color: "var(--muted)" }}>{formatDate(selected.created_at)}</span>
                 </div>
 
-                {/* Member + GCash info */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "1.2rem" }}>
                   {[
                     { label: "Member",        value: selected.members ? `${selected.members.first_name} ${selected.members.last_name}` : "—" },
@@ -337,12 +310,10 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   ))}
                 </div>
 
-                {/* Payment breakdown */}
                 <div style={{ background: "var(--cream)", borderRadius: 10, padding: "1.1rem", marginBottom: "1.2rem", border: "1px solid rgba(26,92,42,0.08)" }}>
                   <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>
                     Payment Covers {hasMultiYear ? `(${yearBreakdown.length} year${yearBreakdown.length > 1 ? "s" : ""})` : ""}
                   </p>
-
                   {hasMultiYear ? (
                     yearBreakdown.map((y: any) => (
                       <div key={y.year} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid rgba(26,92,42,0.06)" }}>
@@ -360,8 +331,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   ) : (
                     <p style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{buildCoversSummary(selected)}</p>
                   )}
-
-                  {/* Fees */}
                   {notes && (
                     <div style={{ marginTop: "0.6rem", paddingTop: "0.6rem", borderTop: "1px solid rgba(26,92,42,0.1)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.2rem" }}>
@@ -377,7 +346,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   )}
                 </div>
 
-                {/* Screenshot */}
                 {selected.screenshot_url && (
                   <div style={{ marginBottom: "1.2rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
@@ -392,7 +360,6 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   </div>
                 )}
 
-                {/* Rejection reason */}
                 {selected.status === "rejected" && selected.rejection_reason && (
                   <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#C0392B", marginBottom: 4 }}>Rejection Reason</p>
@@ -400,23 +367,19 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                   </div>
                 )}
 
-                {/* Approved info */}
                 {selected.status === "approved" && selected.reviewed_at && (
                   <div style={{ background: "rgba(46,139,68,0.08)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#2E8B44", marginBottom: 4 }}>✓ Approved & Recorded</p>
                     <p style={{ fontSize: "0.78rem", color: "#2E8B44" }}>
-                      {hasMultiYear ? `${yearBreakdown.length} year(s) of payments created in the system.` : "Payment recorded in the system."}
+                      {hasMultiYear ? `${yearBreakdown.length} year(s) of payments created.` : "Payment recorded in the system."}
                       {" "}Approved on {formatDate(selected.reviewed_at)}.
                     </p>
                   </div>
                 )}
 
-                {/* Actions — pending only */}
                 {selected.status === "pending" && (
                   <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)", paddingTop: "1.2rem" }}>
-                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>
-                      Review Action
-                    </p>
+                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Review Action</p>
 
                     <div style={{ background: "rgba(46,139,68,0.06)", border: "1px solid rgba(46,139,68,0.15)", borderRadius: 8, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
                       <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2E8B44", marginBottom: "0.4rem" }}>
@@ -424,19 +387,15 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                           ? yearBreakdown.reduce((s: number, y: any) => s + (y.aof ? 1 : 0) + (y.mas ? 1 : 0), 0)
                           : (selected.types || []).length} payment record(s):
                       </p>
-                      {hasMultiYear ? (
-                        yearBreakdown.map((y: any) => (
-                          <p key={y.year} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
-                            • {y.year}: {[y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join(" + ")}
-                          </p>
-                        ))
-                      ) : (
-                        (selected.types || []).map((t: string) => (
-                          <p key={t} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
-                            • {selected.year}: {t.toUpperCase()} (₱{AMOUNTS[t] || 0})
-                          </p>
-                        ))
-                      )}
+                      {hasMultiYear ? yearBreakdown.map((y: any) => (
+                        <p key={y.year} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
+                          • {y.year}: {[y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join(" + ")}
+                        </p>
+                      )) : (selected.types || []).map((t: string) => (
+                        <p key={t} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
+                          • {selected.year}: {t.toUpperCase()} (₱{AMOUNTS[t] || 0})
+                        </p>
+                      ))}
                     </div>
 
                     <div style={{ marginBottom: "1rem" }}>
