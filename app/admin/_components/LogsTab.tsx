@@ -100,7 +100,7 @@ function LogDetailModal({ log, onClose }: { log: any; onClose: () => void }) {
               <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "0.5rem 0", borderBottom: "1px solid rgba(26,92,42,0.06)", gap: "1rem" }}>
                 <span style={{ fontSize: "0.75rem", color: "var(--muted)", textTransform: "capitalize", whiteSpace: "nowrap" }}>{key.replace(/_/g, " ")}</span>
                 <span style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--green-dk)", textAlign: "right" }}>
-                  {Array.isArray(val) ? val.join(", ").toUpperCase() : String(val)}
+                  {Array.isArray(val) ? val.join(", ").toUpperCase() : String(val ?? "")}
                 </span>
               </div>
             ))}
@@ -139,7 +139,9 @@ function LogTable({ logs, onSelect, emptyLabel }: { logs: any[]; onSelect: (l: a
             const d = log.details || {};
             let summary = "";
             if (log.module === "payments") {
-              summary = `${d.for_member || ""} · ${(d.types || []).join(", ").toUpperCase()} · ₱${Number(d.total_amount || 0).toLocaleString()} · OR: ${d.or_number || ""}`;
+              const typesVal = d.types;
+const typesStr = Array.isArray(typesVal) ? typesVal.join(", ").toUpperCase() : String(typesVal || "").toUpperCase();
+summary = `${d.for_member || ""} · ${typesStr} · ₱${Number(d.total_amount || 0).toLocaleString()} · OR: ${d.or_number || ""}`;
             } else {
               summary = `${d.for_member || d.member || ""} ${d.new_status ? `→ ${d.new_status}` : ""} ${d.reason ? `· ${d.reason}` : ""}`.trim();
             }
