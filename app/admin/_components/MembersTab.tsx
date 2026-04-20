@@ -12,9 +12,12 @@ import { Users, X, Phone, MapPin, Calendar, Heart, CreditCard, Shield } from "lu
 interface Props {
   canCRUD: boolean;
   supabase: any;
+  currentUser?: any;
+  currentRole?: string;
+  currentMemberName?: string;
 }
 
-export default function MembersTab({ canCRUD, supabase }: Props) {
+export default function MembersTab({ canCRUD, supabase, currentUser, currentRole, currentMemberName }: Props) {
   const [members, setMembers] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -33,7 +36,21 @@ export default function MembersTab({ canCRUD, supabase }: Props) {
     setLoading(false);
   };
 
-  useEffect(() => { loadMembers(); }, []);
+useEffect(() => { loadMembers(); }, []);
+
+  const logActivity = async (action: string, details: object) => {
+    if (!currentUser) return;
+    await supabase.from("activity_logs").insert({
+      user_id: currentUser.id,
+      member_name: currentMemberName || currentUser.email,
+      role: currentRole || "unknown",
+      action,
+      module: "members",
+      details,
+    });
+  };
+
+
 
   const filtered = members.filter(m => {
     const matchFilter =
@@ -48,19 +65,24 @@ export default function MembersTab({ canCRUD, supabase }: Props) {
     return matchFilter && matchSearch;
   });
 
-  const handleApprove = async (member: any) => {
+const handleApprove = async (member: any) => {
     setSaving(true);
     await supabase.from("members").update({
       approval_status: "approved",
       status: "active",
       date_joined: new Date().toISOString().split("T")[0],
     }).eq("id", member.id);
+    await logActivity("MEMBER_APPROVED", {
+      for_member: `${member.first_name} ${member.last_name}`,
+      member_id: member.id,
+      new_status: "active",
+    });
     await loadMembers();
     setSelected(null);
     setSaving(false);
   };
 
-  const handleReject = async (member: any) => {
+const handleReject = async (member: any) => {
     if (!rejectReason) { alert("Please enter a rejection reason."); return; }
     setSaving(true);
     await supabase.from("members").update({
@@ -68,6 +90,11 @@ export default function MembersTab({ canCRUD, supabase }: Props) {
       status: "dropped",
       rejection_reason: rejectReason,
     }).eq("id", member.id);
+    await logActivity("MEMBER_REJECTED", {
+      for_member: `${member.first_name} ${member.last_name}`,
+      member_id: member.id,
+      reason: rejectReason,
+    });
     await loadMembers();
     setSelected(null);
     setRejectReason("");
@@ -79,6 +106,12 @@ export default function MembersTab({ canCRUD, supabase }: Props) {
     await supabase.from("members")
       .update({ status: newStatus })
       .eq("id", member.id);
+    await logActivity("MEMBER_STATUS", {
+      for_member: `${member.first_name} ${member.last_name}`,
+      member_id: member.id,
+      previous_status: member.status,
+      new_status: newStatus,
+    });
     await loadMembers();
     setSaving(false);
   };

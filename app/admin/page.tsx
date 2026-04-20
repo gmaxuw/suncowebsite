@@ -263,7 +263,7 @@ function AdminPageInner() {
         )}
 
         {/* MEMBERS TAB */}
-        {activeTab === "members" && <MembersTab canCRUD={canCRUD} supabase={supabase} />}
+        {activeTab === "members" && <MembersTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
 
         {/* PAYMENTS TAB */}
         {activeTab === "payments" && (
