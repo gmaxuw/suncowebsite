@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import GCashPayment from "@/app/components/GCashPayment";
+import MemberDelinquencyTable from "@/app/components/MemberDelinquencyTable";
 import {
   LogOut, User, CreditCard, Edit3, Phone,
   Calendar, Heart, Shield, BookOpen, Star, TrendingUp,
@@ -750,6 +751,15 @@ export default function DashboardPage() {
               </div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
+
+
+                                                                {payments.length > 0 && (
+                                                                <div style={{ marginTop: "1.5rem" }}>
+                                                                <MemberDelinquencyTable member={member} payments={payments} />
+                                                                </div>
+                                                                )}
+
+
                 <thead>
                   <tr style={{ background: "#F9F8F5" }}>
                     {["Year", "Type", "Amount", "Date Paid", "Receipt No."].map(h => (
