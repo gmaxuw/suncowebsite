@@ -733,6 +733,12 @@ export default function DashboardPage() {
           </div>
         )}
 
+                                                               {payments.length > 0 && (
+                                                                <div style={{ marginTop: "1.5rem" }}>
+                                                                <MemberDelinquencyTable member={member} payments={payments} />
+                                                                </div>
+                                                                )}
+
         {/* TAB: PAYMENTS */}
         {activeTab === "payments" && (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -795,16 +801,15 @@ export default function DashboardPage() {
                   </tr>
                 </tfoot>
 
-                                                               {payments.length > 0 && (
-                                                                <div style={{ marginTop: "1.5rem" }}>
-                                                                <MemberDelinquencyTable member={member} payments={payments} />
-                                                                </div>
-                                                                )}
+
 
 
 
 
               </table>
+
+
+
             )}
           </div>
         )}
