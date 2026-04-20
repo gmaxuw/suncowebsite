@@ -623,79 +623,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── DELINQUENT YEARS WARNING ── */}
-        {(member?.status === "non-active" || member?.status === "dropped") && (() => {
-          const currentYear = new Date().getFullYear();
-          const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
-          const missingYears: number[] = [];
-          for (let y = joinYear; y <= currentYear; y++) {
-            const hasAof = payments.some(p => p.year === y && p.type === "aof");
-            const hasMas = payments.some(p => p.year === y && p.type === "mas");
-            if (!hasAof || !hasMas) missingYears.push(y);
-          }
-          if (missingYears.length === 0) return null;
 
-          const handlePayNow = () => {
-            const currentYear = new Date().getFullYear();
-            const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
-            const unpaid = [];
-            for (let y = joinYear; y <= currentYear; y++) {
-              unpaid.push({
-                year: y,
-                hasAof: payments.some(p => p.year === y && p.type === "aof"),
-                hasMas: payments.some(p => p.year === y && p.type === "mas"),
-              });
-            }
-            setPaymentItems(unpaid);
-            setShowPayment(true);
-          };
-
-          const isDropped = member.status === "dropped";
-          return (
-            <div style={{
-              background: isDropped ? "#FDECEA" : "#FFF8E1",
-              border: `1.5px solid ${isDropped ? "#F5A49A" : "#FFD97A"}`,
-              borderRadius: 12, padding: "1.3rem 1.5rem", marginBottom: "1.5rem",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
-            }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: isDropped ? "rgba(168,32,13,0.12)" : "rgba(166,108,0,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <AlertTriangle size={22} color={isDropped ? "#A8200D" : "#A66C00"} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: "1rem", fontWeight: 700, color: isDropped ? "#A8200D" : "#A66C00", marginBottom: 6 }}>
-                    {isDropped ? "⛔ Membership Dropped" : "⚠️ Account Non-Active"} — Unpaid Dues Detected
-                  </p>
-                  <p style={{ fontSize: "0.88rem", color: "#555", lineHeight: 1.6, marginBottom: "0.8rem" }}>
-                    {isDropped
-                      ? "Your membership has been dropped due to 3 or more consecutive unpaid years. Please settle your balance and contact SUNCO officers for reinstatement."
-                      : "Your account is non-active due to unpaid dues. Settle your balance to restore full membership benefits."}
-                  </p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "1rem" }}>
-                    <span style={{ fontSize: "0.8rem", color: "#888", fontWeight: 600 }}>Delinquent years:</span>
-                    {missingYears.map(y => (
-                      <span key={y} style={{ background: isDropped ? "rgba(168,32,13,0.12)" : "rgba(166,108,0,0.12)", color: isDropped ? "#A8200D" : "#A66C00", fontSize: "0.82rem", fontWeight: 700, padding: "3px 12px", borderRadius: 20, border: `1px solid ${isDropped ? "rgba(168,32,13,0.25)" : "rgba(166,108,0,0.25)"}` }}>
-                        {y}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-                    <div>
-                      <p style={{ fontSize: "0.82rem", color: "#777" }}>₱840 per year</p>
-                      <p style={{ fontSize: "1rem", fontWeight: 700, color: isDropped ? "#A8200D" : "#A66C00" }}>
-                        Total outstanding: ₱{(missingYears.length * 840).toLocaleString()}
-                      </p>
-                    </div>
-                    <button onClick={handlePayNow}
-                      style={{ background: "#0077FF", color: "white", border: "none", padding: "0.65rem 1.5rem", borderRadius: 8, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(0,119,255,0.3)" }}>
-                      <BanknoteIcon size={16} /> Pay Now via GCash
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
 
         {/* TABS */}
         <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.4rem", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -733,86 +661,143 @@ export default function DashboardPage() {
           </div>
         )}
 
-                                                               {payments.length > 0 && (
-                                                                <div style={{ marginTop: "1.5rem" }}>
-                                                                <MemberDelinquencyTable member={member} payments={payments} />
-                                                                </div>
-                                                                )}
-
-        {/* TAB: PAYMENTS */}
-        {activeTab === "payments" && (
-          <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-            <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <CreditCard size={18} color="#1A5C2A" />
 
 
+{/* TAB: PAYMENTS */}
+{activeTab === "payments" && (
+  <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
 
+    {/* ── Pay Dues CTA (shown only when there are delinquent years) ── */}
+    {(() => {
+      const currentYear = new Date().getFullYear();
+      const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
+      const unpaidYears = [];
+      for (let y = joinYear; y <= currentYear; y++) {
+        const hasAof = payments.some(p => p.year === y && p.type === "aof");
+        const hasMas = payments.some(p => p.year === y && p.type === "mas");
+        if (!hasAof || !hasMas) unpaidYears.push(y);
+      }
+      if (unpaidYears.length === 0) return null;
 
+      const isDropped = member?.status === "dropped";
+      const isNonActive = member?.status === "non-active";
+      const accentColor = isDropped ? "#A8200D" : isNonActive ? "#A66C00" : "#0077FF";
+      const accentBg    = isDropped ? "#FDECEA"  : isNonActive ? "#FFF8E1"  : "#EEF4FF";
+      const accentBorder= isDropped ? "#F5A49A"  : isNonActive ? "#FFD97A"  : "#BBCFFF";
 
-
-
-                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
-              </div>
-              <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>AOF ₱100 · MAS ₱740 per year</span>
+      return (
+        <div style={{
+          background: accentBg,
+          border: `1.5px solid ${accentBorder}`,
+          borderRadius: 12, padding: "1.2rem 1.4rem",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexWrap: "wrap", gap: "0.8rem",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accentColor}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <AlertTriangle size={20} color={accentColor} />
             </div>
-            {payments.length === 0 ? (
-              <div style={{ padding: "3rem", textAlign: "center" }}>
-                <CreditCard size={40} color="rgba(0,0,0,0.1)" style={{ marginBottom: 12 }} />
-                <p style={{ color: "#999", fontSize: "1rem", fontWeight: 600 }}>No payments recorded yet.</p>
-                <p style={{ color: "#CCC", fontSize: "0.88rem", marginTop: 6 }}>Your history will appear here once recorded by SUNCO officers.</p>
-              </div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-
-
-
-
-
-                <thead>
-                  <tr style={{ background: "#F9F8F5" }}>
-                    {["Year", "Type", "Amount", "Date Paid", "Receipt No."].map(h => (
-                      <th key={h} style={{ padding: "0.85rem 1.2rem", textAlign: "left", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999", fontWeight: 600 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p, i) => {
-                    const tc = TYPE_COLOR[p.type] || { bg: "#F5F5F5", text: "#666" };
-                    return (
-                      <tr key={p.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", background: i % 2 === 0 ? "white" : "#FAFAF8" }}>
-                        <td style={{ padding: "1rem 1.2rem", fontSize: "1rem", fontWeight: 700, color: "#0D3320" }}>{p.year}</td>
-                        <td style={{ padding: "1rem 1.2rem" }}>
-                          <span style={{ background: tc.bg, color: tc.text, fontSize: "0.75rem", fontWeight: 700, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{p.type}</span>
-                        </td>
-                        <td style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#1A5C2A", fontWeight: 700 }}>₱{Number(p.amount).toLocaleString()}</td>
-                        <td style={{ padding: "1rem 1.2rem", fontSize: "0.88rem", color: "#777", fontWeight: 500 }}>
-                          {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—"}
-                        </td>
-                        <td style={{ padding: "1rem 1.2rem", fontSize: "0.82rem", color: "#999", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ background: "#F9F8F5", borderTop: "2px solid #C9A84C" }}>
-                    <td colSpan={2} style={{ padding: "1rem 1.2rem", fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", fontWeight: 600 }}>Total Paid</td>
-                    <td colSpan={3} style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320", fontWeight: 700 }}>₱{totalPaid.toLocaleString()}</td>
-                  </tr>
-                </tfoot>
-
-
-
-
-
-
-              </table>
-
-
-
-            )}
+            <div>
+              <p style={{ fontSize: "0.92rem", fontWeight: 700, color: accentColor, marginBottom: 2 }}>
+                {unpaidYears.length} delinquent year{unpaidYears.length > 1 ? "s" : ""} — ₱{(unpaidYears.length * 840).toLocaleString()} outstanding
+              </p>
+              <p style={{ fontSize: "0.8rem", color: "#666" }}>
+                Unpaid: {unpaidYears.join(", ")} · ₱840/yr (MAS ₱740 + AOF ₱100)
+              </p>
+            </div>
           </div>
-        )}
+          <button
+            onClick={() => {
+              const allYears = [];
+              for (let y = joinYear; y <= currentYear; y++) {
+                allYears.push({
+                  year: y,
+                  hasAof: payments.some(p => p.year === y && p.type === "aof"),
+                  hasMas: payments.some(p => p.year === y && p.type === "mas"),
+                });
+              }
+              setPaymentItems(allYears);
+              setShowPayment(true);
+            }}
+            style={{
+              background: "#0077FF", color: "white", border: "none",
+              padding: "0.6rem 1.4rem", borderRadius: 8, fontSize: "0.88rem",
+              fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+              display: "flex", alignItems: "center", gap: 8,
+              boxShadow: "0 4px 12px rgba(0,119,255,0.3)", whiteSpace: "nowrap",
+            }}
+          >
+            <BanknoteIcon size={16} /> Pay Now via GCash
+          </button>
+        </div>
+      );
+    })()}
+
+    {/* ── Delinquency Table ── */}
+    {payments.length > 0 && (
+      <div style={{ width: "100%", minWidth: 0 }}>
+        <MemberDelinquencyTable member={member} payments={payments} />
+      </div>
+    )}
+
+    {/* ── Payment History Table ── */}
+    <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+      <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <CreditCard size={18} color="#1A5C2A" />
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
+        </div>
+        <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>AOF ₱100 · MAS ₱740 per year</span>
+      </div>
+
+      {payments.length === 0 ? (
+        <div style={{ padding: "3rem", textAlign: "center" }}>
+          <CreditCard size={40} color="rgba(0,0,0,0.1)" style={{ marginBottom: 12 }} />
+          <p style={{ color: "#999", fontSize: "1rem", fontWeight: 600 }}>No payments recorded yet.</p>
+          <p style={{ color: "#CCC", fontSize: "0.88rem", marginTop: 6 }}>Your history will appear here once recorded by SUNCO officers.</p>
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+            <thead>
+              <tr style={{ background: "#F9F8F5" }}>
+                {["Year", "Type", "Amount", "Date Paid", "Receipt No."].map(h => (
+                  <th key={h} style={{ padding: "0.85rem 1.2rem", textAlign: "left", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999", fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p, i) => {
+                const tc = TYPE_COLOR[p.type] || { bg: "#F5F5F5", text: "#666" };
+                return (
+                  <tr key={p.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", background: i % 2 === 0 ? "white" : "#FAFAF8" }}>
+                    <td style={{ padding: "1rem 1.2rem", fontSize: "1rem", fontWeight: 700, color: "#0D3320" }}>{p.year}</td>
+                    <td style={{ padding: "1rem 1.2rem" }}>
+                      <span style={{ background: tc.bg, color: tc.text, fontSize: "0.75rem", fontWeight: 700, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{p.type}</span>
+                    </td>
+                    <td style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#1A5C2A", fontWeight: 700 }}>₱{Number(p.amount).toLocaleString()}</td>
+                    <td style={{ padding: "1rem 1.2rem", fontSize: "0.88rem", color: "#777", fontWeight: 500 }}>
+                      {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                    </td>
+                    <td style={{ padding: "1rem 1.2rem", fontSize: "0.82rem", color: "#999", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: "#F9F8F5", borderTop: "2px solid #C9A84C" }}>
+                <td colSpan={2} style={{ padding: "1rem 1.2rem", fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", fontWeight: 600 }}>Total Paid</td>
+                <td colSpan={3} style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320", fontWeight: 700 }}>₱{totalPaid.toLocaleString()}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+
+  </div>
+)}
 
         {/* TAB: RIGHTS & RULES */}
         {activeTab === "rights" && (
