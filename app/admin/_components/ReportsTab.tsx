@@ -1118,7 +1118,9 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                       </th>
                     </>
                   ))}
-                  <th colSpan={2} />
+               <th style={{ padding: "0.8rem 1rem", textAlign: "right", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+  Paid / Owed
+</th>
                 </tr>
               )}
             </thead>
@@ -1342,18 +1344,17 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
                                                                     )}
                                                                   </td>
 
-                    {/* Total */}
-                    <td
-                      style={{
-                        padding: "0.7rem 1rem",
-                        textAlign: "right",
-                        fontSize: "0.88rem",
-                        fontWeight: 600,
-                        color: "var(--green-dk)",
-                      }}
-                    >
-                      ₱{total.toLocaleString()}
-                    </td>
+                 {/* Total — paid + owed */}
+<td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>
+  <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)" }}>
+    ₱{total.toLocaleString()}
+  </div>
+  {delinquency.count > 0 && activeFilter !== "lifetime" && (
+    <div style={{ fontSize: "0.7rem", color: "#C0392B", fontWeight: 500, marginTop: 2 }}>
+      owed ₱{(delinquency.count * 840).toLocaleString()}
+    </div>
+  )}
+</td>
                   </tr>
                 );
               })}
