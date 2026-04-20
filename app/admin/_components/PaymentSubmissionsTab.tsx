@@ -23,6 +23,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
   const [selected, setSelected]       = useState<any>(null);
   const [filter, setFilter]           = useState("pending");
   const [rejectReason, setRejectReason] = useState("");
+  const [orNumber, setOrNumber] = useState("");
   const [saving, setSaving]           = useState(false);
 
   const loadSubmissions = async () => {
@@ -45,7 +46,8 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     return null;
   };
 
-  const handleApprove = async (sub: any) => {
+const handleApprove = async (sub: any) => {
+    if (!orNumber.trim()) { alert("Please enter the Official Receipt (OR) number before approving."); return; }
     setSaving(true);
     try {
       const notes = parseNotes(sub);
@@ -59,7 +61,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
             type:           "aof",
             amount:         AMOUNTS.aof,
             date_paid:      new Date().toISOString().split("T")[0],
-            receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-AOF`,
+            receipt_number: `${orNumber.trim()}-${yrEntry.year}-AOF`,
             recorded_by:    currentMemberName || "Officer",
           });
           if (yrEntry.mas) inserts.push({
@@ -68,7 +70,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
             type:           "mas",
             amount:         AMOUNTS.mas,
             date_paid:      new Date().toISOString().split("T")[0],
-            receipt_number: `GCASH-${sub.gcash_reference}-${yrEntry.year}-MAS`,
+            receipt_number: `${orNumber.trim()}-${yrEntry.year}-MAS`,
             recorded_by:    currentMemberName || "Officer",
           });
         }
@@ -80,7 +82,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
           type,
           amount:         AMOUNTS[type] || 0,
           date_paid:      new Date().toISOString().split("T")[0],
-          receipt_number: `GCASH-${sub.gcash_reference}-${type.toUpperCase()}`,
+          receipt_number: `${orNumber.trim()}-${type.toUpperCase()}`,
           recorded_by:    currentMemberName || "Officer",
         }));
       }
@@ -115,7 +117,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
             years_covered:   inserts.map((r: any) => r.year).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", "),
             types:           inserts.map((r: any) => r.type).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", ").toUpperCase(),
             total_amount:    sub.total_amount,
-            or_number:       `GCASH-${sub.gcash_reference}`,
+            or_number: orNumber.trim(),
             records_created: inserts.length,
             via:             "GCash submission approval",
           },
@@ -146,6 +148,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     await loadSubmissions();
     setSelected(null);
     setRejectReason("");
+    setOrNumber("");
     setSaving(false);
   };
 
@@ -282,7 +285,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                     {selected.members ? `${selected.members.first_name} ${selected.members.last_name}` : "Member"}
                   </h2>
                 </div>
-                <button onClick={() => setSelected(null)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setSelected(null); setOrNumber(""); }} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <X size={14} />
                 </button>
               </div>
@@ -398,6 +401,27 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                       ))}
                     </div>
 
+
+                    {/* ── OR Number input ── */}
+                    <div style={{ marginBottom: "1rem" }}>
+                      <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.5rem" }}>
+                        ⭐ Official Receipt (OR) Number <span style={{ color: "#C0392B" }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={orNumber}
+                        onChange={e => setOrNumber(e.target.value)}
+                        placeholder="e.g. 0012345"
+                        style={{ width: "100%", padding: "0.75rem 1rem", border: `1.5px solid ${orNumber.trim() ? "var(--green-lt)" : "rgba(192,57,43,0.4)"}`, borderRadius: 6, fontSize: "0.88rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }}
+                      />
+                      <p style={{ fontSize: "0.68rem", color: "var(--muted)", marginTop: 4 }}>
+                        Enter the BIR official receipt number. This will be recorded for audit purposes.
+                      </p>
+                    </div>
+
+
+
+
                     <div style={{ marginBottom: "1rem" }}>
                       <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.4rem" }}>
                         Rejection Reason (required if rejecting)
@@ -413,7 +437,7 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
                         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.8rem", background: "rgba(192,57,43,0.08)", border: "1.5px solid rgba(192,57,43,0.3)", color: "#C0392B", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                         <X size={14} /> {saving ? "..." : "Reject"}
                       </button>
-                      <button onClick={() => handleApprove(selected)} disabled={saving}
+                      <button onClick={() => handleApprove(selected)} disabled={saving || !orNumber.trim()}
                         style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.8rem", background: "var(--gold)", border: "none", color: "var(--green-dk)", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                         <CheckCircle size={14} /> {saving ? "Processing..." : "Approve & Record"}
                       </button>
