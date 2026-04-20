@@ -107,7 +107,7 @@ const handleApprove = async (sub: any) => {
       // 3. Log activity — non-blocking, won't crash approval if it fails
       try {
         await supabase.from("activity_logs").insert({
-          user_id:     null,
+          user_id:     currentUser?.id || null,
           member_name: currentMemberName || "Officer",
           role:        currentRole || "officer",
           action:      "PAYMENT_RECORDED",
