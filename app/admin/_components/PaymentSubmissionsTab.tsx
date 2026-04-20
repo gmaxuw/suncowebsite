@@ -122,8 +122,9 @@ const handleApprove = async (sub: any) => {
             via:             "GCash submission approval",
           },
         });
-      } catch (logErr) {
-        console.warn("Activity log skipped:", logErr);
+      } catch (logErr: any) {
+        console.error("LOG FAILED:", logErr);
+        alert("Log error: " + (logErr?.message || JSON.stringify(logErr)));
       }
 
       await loadSubmissions();
