@@ -739,6 +739,17 @@ export default function DashboardPage() {
             <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <CreditCard size={18} color="#1A5C2A" />
+
+
+                
+                                                                                {payments.length > 0 && (
+                                                                <div style={{ marginTop: "1.5rem" }}>
+                                                                <MemberDelinquencyTable member={member} payments={payments} />
+                                                                </div>
+                                                                )}
+
+
+
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
               </div>
               <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>AOF ₱100 · MAS ₱740 per year</span>
@@ -753,11 +764,7 @@ export default function DashboardPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
 
 
-                                                                {payments.length > 0 && (
-                                                                <div style={{ marginTop: "1.5rem" }}>
-                                                                <MemberDelinquencyTable member={member} payments={payments} />
-                                                                </div>
-                                                                )}
+
 
 
                 <thead>
