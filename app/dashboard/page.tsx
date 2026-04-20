@@ -251,7 +251,7 @@ export default function DashboardPage() {
           <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Member Portal</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <a href="/" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.45)", textDecoration: "none" }}>Main Site</a>
+          <a href="/" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.45)", textDecoration: "none" }}>Main Site</a>
           <button onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.65)", padding: "0.38rem 1rem", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontFamily: "'DM Sans', sans-serif" }}>
             <LogOut size={13} /> Sign Out
           </button>

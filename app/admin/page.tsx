@@ -174,7 +174,7 @@ function AdminPageInner() {
             </span>
           </div>
           <a href="/admin/profile" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>My Profile</a>
-          <a href="/" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Main Site</a>
+          <a href="/" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>Main Site</a>
           <button onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", padding: "0.35rem 0.9rem", borderRadius: 6, cursor: "pointer", fontSize: "0.75rem", fontFamily: "'DM Sans', sans-serif" }}>
             <LogOut size={13} /> Sign Out
           </button>
