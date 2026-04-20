@@ -24,6 +24,11 @@ export default function RegisterPage() {
     address: "",
     beneficiary_name: "",
     beneficiary_relation: "",
+    alternate_contact_name: "",
+    alternate_contact_number: "",
+    alternate_contact_relation: "",
+    gender: "male",
+    citizenship: "Filipino",
     include_mas: true,
   });
 
@@ -105,6 +110,11 @@ export default function RegisterPage() {
           address: form.address,
           beneficiary_name: form.beneficiary_name,
           beneficiary_relation: form.beneficiary_relation,
+          alternate_contact_name: form.alternate_contact_name || null,
+          alternate_contact_number: form.alternate_contact_number || null,
+          alternate_contact_relation: form.alternate_contact_relation || null,
+          gender: form.gender || "male",
+          citizenship: form.citizenship || "Filipino",
           status: "non-active",
           approval_status: "pending",
           date_joined: null,
@@ -294,6 +304,32 @@ export default function RegisterPage() {
                   {fieldGroup("Relationship", "beneficiary_relation", "text", "Spouse")}
                 </div>
               </div>
+                                            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                                              <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: "0.8rem" }}>Alternate Contact</p>
+                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
+                                                {fieldGroup("Full Name", "alternate_contact_name", "text", "e.g. Maria dela Cruz")}
+                                                {fieldGroup("Relationship", "alternate_contact_relation", "text", "e.g. Spouse, Child")}
+                                              </div>
+                                              {fieldGroup("Contact Number", "alternate_contact_number", "tel", "09XX XXX XXXX")}
+                                            </div>
+                                            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
+                                                <div style={{ marginBottom: "1rem" }}>
+                                                  <label style={labelStyle}>Gender</label>
+                                                  <select value={form.gender} onChange={e => update("gender", e.target.value)}
+                                                    style={{ ...inputStyle, cursor: "pointer" }}>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="other">Other</option>
+                                                  </select>
+                                                </div>
+                                                <div style={{ marginBottom: "1rem" }}>
+                                                  <label style={labelStyle}>Citizenship</label>
+                                                  <input type="text" value={form.citizenship} onChange={e => update("citizenship", e.target.value)}
+                                                    placeholder="Filipino" style={inputStyle} />
+                                                </div>
+                                              </div>
+                                            </div>
             </div>
           )}
 

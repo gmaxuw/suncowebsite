@@ -25,6 +25,17 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const [selected, setSelected] = useState<any>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    first_name: "", middle_name: "", last_name: "",
+    birthdate: "", mobile: "", address: "", email: "",
+    beneficiary_name: "", beneficiary_relation: "",
+    alternate_contact_name: "", alternate_contact_number: "", alternate_contact_relation: "",
+    gender: "male", citizenship: "Filipino",
+    date_joined: new Date().toISOString().split("T")[0],
+    status: "active",
+  });
+  const [addSaving, setAddSaving] = useState(false);
 
   const loadMembers = async () => {
     setLoading(true);
@@ -131,6 +142,66 @@ const handleReject = async (member: any) => {
     setRejectReason("");
   };
 
+  const resetAddForm = () => setAddForm({
+    first_name: "", middle_name: "", last_name: "",
+    birthdate: "", mobile: "", address: "", email: "",
+    beneficiary_name: "", beneficiary_relation: "",
+    alternate_contact_name: "", alternate_contact_number: "", alternate_contact_relation: "",
+    gender: "male", citizenship: "Filipino",
+    date_joined: new Date().toISOString().split("T")[0],
+    status: "active",
+  });
+
+  const handleAddMember = async () => {
+    if (!addForm.first_name.trim() || !addForm.last_name.trim()) {
+      alert("First name and last name are required.");
+      return;
+    }
+    setAddSaving(true);
+    try {
+      const placeholderEmail = addForm.email.trim() ||
+        `${addForm.first_name.toLowerCase().replace(/\s/g,"")}.${addForm.last_name.toLowerCase().replace(/\s/g,"")}.manual@sunco.local`;
+
+      const { data: newMember, error } = await supabase.from("members").insert({
+        first_name:                addForm.first_name.trim(),
+        middle_name:               addForm.middle_name.trim() || null,
+        last_name:                 addForm.last_name.trim(),
+        birthdate:                 addForm.birthdate || null,
+        mobile:                    addForm.mobile || null,
+        contact_number:            addForm.mobile || null,
+        address:                   addForm.address || null,
+        email:                     placeholderEmail,
+        beneficiary_name:          addForm.beneficiary_name || null,
+        beneficiary_relation:      addForm.beneficiary_relation || null,
+        alternate_contact_name:    addForm.alternate_contact_name || null,
+        alternate_contact_number:  addForm.alternate_contact_number || null,
+        alternate_contact_relation:addForm.alternate_contact_relation || null,
+        gender:                    addForm.gender,
+        citizenship:               addForm.citizenship || "Filipino",
+        date_joined:               addForm.date_joined,
+        status:                    addForm.status,
+        approval_status:           "approved",
+        user_id:                   null,
+      }).select("id, first_name, last_name").single();
+
+      if (error) throw error;
+
+      await logActivity("MEMBER_APPROVED", {
+        for_member: `${addForm.first_name} ${addForm.last_name}`,
+        member_id: newMember.id,
+        new_status: addForm.status,
+        added_manually: true,
+      });
+
+      await loadMembers();
+      setShowAddForm(false);
+      resetAddForm();
+    } catch (err: any) {
+      alert("Error adding member: " + err.message);
+    }
+    setAddSaving(false);
+  };
+
   return (
     <div>
       {/* ── Header ── */}
@@ -146,6 +217,12 @@ const handleReject = async (member: any) => {
             )}
           </h1>
         </div>
+        {canCRUD && (
+          <button onClick={() => { setShowAddForm(true); resetAddForm(); }}
+            style={{ background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.65rem 1.4rem", borderRadius: 6, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            + Add Member
+          </button>
+        )}
       </div>
 
       {/* ── Filter Tabs ── */}
@@ -394,6 +471,154 @@ const handleReject = async (member: any) => {
           </div>
         </div>
       )}
-    </div>
-  );
-}
+                                                      {/* ── ADD MEMBER MANUALLY MODAL ── */}
+                                                            {showAddForm && (
+                                                              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+                                                                <div style={{ background: "white", borderRadius: 14, maxWidth: 580, width: "100%", maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+
+                                                                  <div style={{ background: "#0D3320", padding: "1.4rem 1.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                                                                    <div>
+                                                                      <p style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 3 }}>Manual Entry</p>
+                                                                      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: "#C9A84C" }}>Add Member Manually</h2>
+                                                                    </div>
+                                                                    <button onClick={() => setShowAddForm(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                                      <X size={14} />
+                                                                    </button>
+                                                                  </div>
+
+                                                                  <div style={{ overflowY: "auto", padding: "1.5rem 1.6rem" }}>
+
+                                                                    {/* Name */}
+                                                                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Full Name</p>
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.6rem", marginBottom: "1.2rem" }}>
+                                                                      {[["First Name *", "first_name"], ["Middle Name", "middle_name"], ["Last Name *", "last_name"]].map(([label, key]) => (
+                                                                        <div key={key}>
+                                                                          <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>{label}</label>
+                                                                          <input value={(addForm as any)[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))}
+                                                                            style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                        </div>
+                                                                      ))}
+                                                                    </div>
+
+                                                                    {/* Basic Info */}
+                                                                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Basic Information</p>
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "1.2rem" }}>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Date of Birth</label>
+                                                                        <input type="date" value={addForm.birthdate} onChange={e => setAddForm(p => ({ ...p, birthdate: e.target.value }))}
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Date Registered</label>
+                                                                        <input type="date" value={addForm.date_joined}
+                                                                          min="2011-01-01" max={new Date().toISOString().split("T")[0]}
+                                                                          onChange={e => setAddForm(p => ({ ...p, date_joined: e.target.value }))}
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Gender</label>
+                                                                        <select value={addForm.gender} onChange={e => setAddForm(p => ({ ...p, gender: e.target.value }))}
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", background: "white", boxSizing: "border-box" }}>
+                                                                          <option value="male">Male</option>
+                                                                          <option value="female">Female</option>
+                                                                          <option value="other">Other</option>
+                                                                        </select>
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Citizenship</label>
+                                                                        <input value={addForm.citizenship} onChange={e => setAddForm(p => ({ ...p, citizenship: e.target.value }))}
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Initial Status</label>
+                                                                        <select value={addForm.status} onChange={e => setAddForm(p => ({ ...p, status: e.target.value }))}
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", background: "white", boxSizing: "border-box" }}>
+                                                                          <option value="active">Active</option>
+                                                                          <option value="non-active">Non-Active</option>
+                                                                          <option value="dropped">Dropped</option>
+                                                                          <option value="deceased">Deceased</option>
+                                                                        </select>
+                                                                      </div>
+                                                                    </div>
+
+                                                                    {/* Contact */}
+                                                                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Contact Details</p>
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.6rem" }}>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Mobile Number</label>
+                                                                        <input type="tel" value={addForm.mobile} onChange={e => setAddForm(p => ({ ...p, mobile: e.target.value }))} placeholder="09XX XXX XXXX"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Email (optional)</label>
+                                                                        <input type="email" value={addForm.email} onChange={e => setAddForm(p => ({ ...p, email: e.target.value }))} placeholder="Leave blank if none yet"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                    </div>
+                                                                    <div style={{ marginBottom: "1.2rem" }}>
+                                                                      <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Complete Address</label>
+                                                                      <input value={addForm.address} onChange={e => setAddForm(p => ({ ...p, address: e.target.value }))} placeholder="Barangay, Municipality, Province"
+                                                                        style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                    </div>
+
+                                                                    {/* Beneficiary */}
+                                                                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Beneficiary (for MAS)</p>
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "1.2rem" }}>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Beneficiary Name</label>
+                                                                        <input value={addForm.beneficiary_name} onChange={e => setAddForm(p => ({ ...p, beneficiary_name: e.target.value }))} placeholder="Full name"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Relationship</label>
+                                                                        <input value={addForm.beneficiary_relation} onChange={e => setAddForm(p => ({ ...p, beneficiary_relation: e.target.value }))} placeholder="e.g. Spouse, Child"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                    </div>
+
+                                                                    {/* Alternate Contact */}
+                                                                    <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Alternate Contact</p>
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.6rem" }}>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Full Name</label>
+                                                                        <input value={addForm.alternate_contact_name} onChange={e => setAddForm(p => ({ ...p, alternate_contact_name: e.target.value }))} placeholder="e.g. Maria dela Cruz"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                      <div>
+                                                                        <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Relationship</label>
+                                                                        <input value={addForm.alternate_contact_relation} onChange={e => setAddForm(p => ({ ...p, alternate_contact_relation: e.target.value }))} placeholder="e.g. Daughter"
+                                                                          style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                      </div>
+                                                                    </div>
+                                                                    <div style={{ marginBottom: "1.5rem" }}>
+                                                                      <label style={{ display: "block", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>Contact Number</label>
+                                                                      <input type="tel" value={addForm.alternate_contact_number} onChange={e => setAddForm(p => ({ ...p, alternate_contact_number: e.target.value }))} placeholder="09XX XXX XXXX"
+                                                                        style={{ width: "100%", padding: "0.65rem 0.8rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.85rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }} />
+                                                                    </div>
+
+                                                                    {/* Note about email */}
+                                                                    {!addForm.email.trim() && (
+                                                                      <div style={{ background: "rgba(43,95,168,0.08)", border: "1px solid rgba(43,95,168,0.2)", borderRadius: 8, padding: "0.8rem 1rem", marginBottom: "1.2rem" }}>
+                                                                        <p style={{ fontSize: "0.78rem", color: "#2B5FA8" }}>
+                                                                          ℹ️ No email entered — a placeholder will be auto-generated. You can link a real email later by editing the member.
+                                                                        </p>
+                                                                      </div>
+                                                                    )}
+
+                                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                                                                      <button onClick={() => setShowAddForm(false)}
+                                                                        style={{ padding: "0.8rem", background: "#F5F5F5", border: "none", borderRadius: 8, fontSize: "0.85rem", color: "#777", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                                                                        Cancel
+                                                                      </button>
+                                                                      <button onClick={handleAddMember} disabled={addSaving}
+                                                                        style={{ padding: "0.8rem", background: "var(--gold)", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, color: "var(--green-dk)", cursor: addSaving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                                                                        {addSaving ? "Saving..." : "Add Member"}
+                                                                      </button>
+                                                                    </div>
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        );
+                                                      }
