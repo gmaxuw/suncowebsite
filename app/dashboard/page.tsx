@@ -741,12 +741,8 @@ export default function DashboardPage() {
                 <CreditCard size={18} color="#1A5C2A" />
 
 
-                
-                                                                                {payments.length > 0 && (
-                                                                <div style={{ marginTop: "1.5rem" }}>
-                                                                <MemberDelinquencyTable member={member} payments={payments} />
-                                                                </div>
-                                                                )}
+
+
 
 
 
@@ -798,6 +794,16 @@ export default function DashboardPage() {
                     <td colSpan={3} style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320", fontWeight: 700 }}>₱{totalPaid.toLocaleString()}</td>
                   </tr>
                 </tfoot>
+
+                                                               {payments.length > 0 && (
+                                                                <div style={{ marginTop: "1.5rem" }}>
+                                                                <MemberDelinquencyTable member={member} payments={payments} />
+                                                                </div>
+                                                                )}
+
+
+
+
               </table>
             )}
           </div>
