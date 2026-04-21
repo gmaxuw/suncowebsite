@@ -7,6 +7,7 @@
 // Performance: lazy loading on all images
 // ─────────────────────────────────────────────
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail } from "lucide-react";
+import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 
 interface Props {
   settings: Record<string, string>;
@@ -280,6 +281,18 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           </div>
         </div>
       </section>
+
+
+      {/* ── Senior Citizen Calculator ── */}
+
+      <SeniorCitizenCalculator />
+
+
+
+
+
+
+
 
       {/* ── OFFICERS ── */}
       <section id="officers" style={{ padding: "6rem 0", background: "var(--cream)" }}>
