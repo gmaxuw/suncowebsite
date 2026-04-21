@@ -287,7 +287,7 @@ function AdminPageInner() {
         )}
 
         {/* CMS TAB */}
-        {activeTab === "cms" && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} />}
+        {activeTab === "cms" && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} currentMemberName={memberName} />}
 
         {/* REPORTS TAB */}
         {activeTab === "reports" && <ReportsTab canCRUD={canCRUD} supabase={supabase} />}
