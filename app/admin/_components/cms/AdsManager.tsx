@@ -34,7 +34,7 @@ export default function AdsManager({ canCRUD, supabase }: Props) {
 
   const loadAds = async () => {
     setLoading(true);
-    const { data } = await supabase.from("ads").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("promotions").select("*").order("created_at", { ascending: false });
     setAds(data || []);
     setLoading(false);
   };
@@ -97,22 +97,22 @@ export default function AdsManager({ canCRUD, supabase }: Props) {
   const handleSave = async () => {
     if (!adForm.image_url) { alert("Please upload an ad image."); return; }
     if (editing) {
-      await supabase.from("ads").update(adForm).eq("id", editing.id);
+      await supabase.from("promotions").update(adForm).eq("id", editing.id);
     } else {
-      await supabase.from("ads").insert(adForm);
+      await supabase.from("promotions").insert(adForm);
     }
     await loadAds();
     setShowForm(false);
   };
 
   const toggleActive = async (ad: any) => {
-    await supabase.from("ads").update({ is_active: !ad.is_active }).eq("id", ad.id);
+    await supabase.from("promotions").update({ is_active: !ad.is_active }).eq("id", ad.id);
     await loadAds();
   };
 
   const deleteAd = async (id: string) => {
     if (!confirm("Delete this ad?")) return;
-    await supabase.from("ads").delete().eq("id", id);
+    await supabase.from("promotions").delete().eq("id", id);
     await loadAds();
   };
 
