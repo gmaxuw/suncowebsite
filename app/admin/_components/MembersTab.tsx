@@ -35,10 +35,10 @@ const PAYMENT_TYPES = [
 ];
 
 const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }> = {
-  active:       { text: "#1A6B35", bg: "#E6F9ED", border: "#A8E6BC" },
-  "non-active": { text: "#A66C00", bg: "#FFF8E1", border: "#FFD97A" },
-  dropped:      { text: "#A8200D", bg: "#FDECEA", border: "#F5A49A" },
-  deceased:     { text: "#555",    bg: "#F2F2F2", border: "#CCC"    },
+  Active:       { text: "#1A6B35", bg: "#E6F9ED", border: "#A8E6BC" },
+  "Non-active": { text: "#A66C00", bg: "#FFF8E1", border: "#FFD97A" },
+  Dropped:      { text: "#A8200D", bg: "#FDECEA", border: "#F5A49A" },
+  Deceased:     { text: "#555",    bg: "#F2F2F2", border: "#CCC"    },
 };
 
 const APPROVAL_STYLES: Record<string, { text: string; bg: string }> = {
@@ -98,7 +98,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     beneficiary_name: "", beneficiary_relation: "",
     gender: "male", citizenship: "Filipino",
     date_joined: new Date().toISOString().split("T")[0],
-    status: "active",
+    status: "Active",
   });
   const [addSaving, setAddSaving] = useState(false);
 
@@ -152,7 +152,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       beneficiary_name:     m.beneficiary_name || "",
       beneficiary_relation: m.beneficiary_relation || "",
       date_joined:          m.date_joined || "",
-      status:               m.status || "active",
+      status:               m.status || "Active",
     });
     setRejectReason("");
     setShowPayForm(false);
@@ -234,8 +234,8 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   // ── Approve / Reject ──
   const handleApprove = async () => {
     setActionSaving(true);
-    await supabase.from("members").update({ approval_status: "approved", status: "active", date_joined: new Date().toISOString().split("T")[0] }).eq("id", selected.id);
-    await logActivity("MEMBER_APPROVED", { for_member: `${selected.first_name} ${selected.last_name}`, member_id: selected.id, new_status: "active" });
+    await supabase.from("members").update({ approval_status: "Approved", status: "Active", date_joined: new Date().toISOString().split("T")[0] }).eq("id", selected.id);
+    await logActivity("MEMBER_APPROVED", { for_member: `${selected.first_name} ${selected.last_name}`, member_id: selected.id, new_status: "Active" });
     await loadMembers();
     setSelected(null);
     setActionSaving(false);
@@ -310,7 +310,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
         first_name:  addForm.first_name.trim(),
         last_name:   addForm.last_name.trim(),
         middle_name: addForm.middle_name.trim() || null,
-        approval_status: "approved",
+        approval_status: "Approved",
         user_id: null,
       });
       if (error) throw error;
@@ -324,15 +324,15 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const filtered = members.filter(m => {
     const matchFilter =
       filter === "all"      ? true :
-      filter === "pending"  ? m.approval_status === "pending" :
-      filter === "approved" ? m.approval_status === "approved" :
-      filter === "rejected" ? m.approval_status === "rejected" :
+      filter === "pending"  ? m.approval_status === "Pending" :
+      filter === "approved" ? m.approval_status === "Approved" :
+      filter === "rejected" ? m.approval_status === "Rejected" :
       m.status === filter;
     const matchSearch = !search || `${m.first_name} ${m.last_name} ${m.email}`.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
-  const pendingCount = members.filter(m => m.approval_status === "pending").length;
+  const pendingCount = members.filter(m => m.approval_status === "Pending").length;
   const totalPaidForMember = memberPayments.reduce((s, p) => s + Number(p.amount), 0);
 
   const inputCls: React.CSSProperties = {
@@ -354,7 +354,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             Member Management
             {pendingCount > 0 && (
               <span style={{ marginLeft: 10, background: "#2B5FA8", color: "white", fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20, verticalAlign: "middle" }}>
-                {pendingCount} pending
+                {pendingCount} Pending
               </span>
             )}
           </h1>
@@ -371,10 +371,10 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: "0.8rem", marginBottom: "1.5rem" }}>
         {[
           { label: "Total",    value: members.length,                                              color: "var(--gold)" },
-          { label: "Active",   value: members.filter(m => m.status === "active").length,           color: "#2E8B44" },
+          { label: "Active",   value: members.filter(m => m.status === "Active").length,           color: "#2E8B44" },
           { label: "Pending",  value: pendingCount,                                                color: "#2B5FA8" },
-          { label: "Non-active",value: members.filter(m => m.status === "non-active").length,      color: "#D4A017" },
-          { label: "Dropped",  value: members.filter(m => m.status === "dropped").length,          color: "#C0392B" },
+          { label: "Non-active",value: members.filter(m => m.status === "Non-active").length,      color: "#D4A017" },
+          { label: "Dropped",  value: members.filter(m => m.status === "Dropped").length,          color: "#C0392B" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "white", borderRadius: 10, padding: "1rem 1.2rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}` }}>
             <p style={{ fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.3rem" }}>{label}</p>
@@ -395,10 +395,10 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
           {[
             { id: "all",        label: `All (${members.length})` },
             { id: "pending",    label: `Pending (${pendingCount})` },
-            { id: "approved",   label: `Approved (${members.filter(m => m.approval_status === "approved").length})` },
-            { id: "active",     label: `Active (${members.filter(m => m.status === "active" && m.approval_status === "approved").length})` },
-            { id: "non-active", label: `Non-active (${members.filter(m => m.status === "non-active").length})` },
-            { id: "dropped",    label: `Dropped (${members.filter(m => m.status === "dropped").length})` },
+            { id: "approved",   label: `Approved (${members.filter(m => m.approval_status === "Approved").length})` },
+            { id: "active",     label: `Active (${members.filter(m => m.status === "Active" && m.approval_status === "Approved").length})` },
+            { id: "non-active", label: `Non-active (${members.filter(m => m.status === "Non-active").length})` },
+            { id: "dropped",    label: `Dropped (${members.filter(m => m.status === "Dropped").length})` },
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setFilter(id)}
               style={{ padding: "0.42rem 0.9rem", borderRadius: 20, border: "1.5px solid", borderColor: filter === id ? "var(--gold)" : "rgba(26,92,42,0.15)", background: filter === id ? "var(--gold)" : "white", color: filter === id ? "var(--green-dk)" : "var(--muted)", fontSize: "0.72rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap" }}>
@@ -469,7 +469,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                         {canCRUD && m.approval_status === "approved" ? (
                           <select value={m.status} onChange={e => { handleStatusChange(e.target.value); setSelected(m); }}
                             style={{ fontSize: "0.75rem", padding: "3px 8px", border: `1.5px solid ${ss.border}`, borderRadius: 6, color: ss.text, fontFamily: "'DM Sans',sans-serif", cursor: "pointer", background: ss.bg }}>
-                            {["active","non-active","dropped","deceased"].map(s => <option key={s} value={s}>{s}</option>)}
+                            {["Active","Non-active","Dropped","Deceased"].map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         ) : (
                           <span style={{ fontSize: "0.75rem", color: ss.text, fontWeight: 600, textTransform: "capitalize" }}>{m.status}</span>
@@ -631,7 +631,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                         <div>
                           <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>Membership Status</label>
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-                            {["active","non-active","dropped","deceased"].map(s => {
+                            {["Active","Non-active","Dropped","Deceased"].map(s => {
                               const ss = STATUS_STYLES[s];
                               const isActive = selected.status === s;
                               return (
@@ -932,7 +932,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                     <div>
                       <label style={{ display: "block", fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 3 }}>Initial Status</label>
                       <select value={addForm.status} onChange={e => setAddForm((p: any) => ({ ...p, status: e.target.value }))} style={{ ...inputCls, background: "white" }}>
-                        {["active","non-active","dropped","deceased"].map(s => <option key={s} value={s}>{s}</option>)}
+                        {["Active","Non-active","Dropped","Deceased"].map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   </div>
