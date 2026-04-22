@@ -2,44 +2,36 @@
 // ─────────────────────────────────────────────
 // admin/page.tsx  —  Responsive shell
 //
-// Layout:
-//   Desktop  → fixed left sidebar (220px) + content area
-//   Tablet   → collapsed sidebar with icons only
-//   Mobile   → hamburger menu with slide-out drawer
+// Sidebar tabs: Dashboard · Members · Payments
+//               Submissions · CMS · Reports · Roles
 //
-// Navbar changes:
-//   - Settings tab REMOVED (now inside CMS → Settings)
-//   - Remaining tabs grouped in sidebar
+// Moved into CMS: Officers · Logs · Settings
 // ─────────────────────────────────────────────
-"use client";
 import { useEffect, useState, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  LogOut, Shield, Home, Users, CreditCard, FileText,
-  BarChart2, ChevronRight, Inbox, UserCog, Menu, X,
-  Bell,
+  LogOut, Shield, Home, Users, CreditCard,
+  FileText, BarChart2, ChevronRight, Inbox,
+  UserCog, Menu, X, Bell,
 } from "lucide-react";
 
-// Tab components
-import MembersTab           from "./_components/MembersTab";
-import PaymentsTab          from "./_components/PaymentsTab";
+import MembersTab            from "./_components/MembersTab";
+import PaymentsTab           from "./_components/PaymentsTab";
 import PaymentSubmissionsTab from "./_components/PaymentSubmissionsTab";
-import CmsTab               from "./_components/CmsTab";
-import ReportsTab           from "./_components/ReportsTab";
-import RolesTab             from "./_components/RolesTab";
-import LogsTab              from "./_components/LogsTab";
-import OfficersTab          from "./_components/OfficersTab";
+import CmsTab                from "./_components/CmsTab";
+import ReportsTab            from "./_components/ReportsTab";
+import RolesTab              from "./_components/RolesTab";
 
 function AdminPageInner() {
-  const [memberName,          setMemberName]          = useState("");
-  const [user,                setUser]                = useState<any>(null);
-  const [role,                setRole]                = useState("");
-  const [stats,               setStats]               = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
-  const [recentMembers,       setRecentMembers]       = useState<any[]>([]);
-  const [pendingSubmissions,  setPendingSubmissions]  = useState(0);
-  const [loading,             setLoading]             = useState(true);
-  const [sidebarOpen,         setSidebarOpen]         = useState(false);
+  const [memberName,         setMemberName]         = useState("");
+  const [user,               setUser]               = useState<any>(null);
+  const [role,               setRole]               = useState("");
+  const [stats,              setStats]              = useState({ total: 0, active: 0, nonactive: 0, dropped: 0, pending: 0 });
+  const [recentMembers,      setRecentMembers]      = useState<any[]>([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState(0);
+  const [loading,            setLoading]            = useState(true);
+  const [sidebarOpen,        setSidebarOpen]        = useState(false);
 
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -50,10 +42,10 @@ function AdminPageInner() {
   const setTab = (tab: string) => {
     setActiveTab(tab);
     router.replace(`/admin?tab=${tab}`, { scroll: false });
-    setSidebarOpen(false); // close mobile drawer on tab change
+    setSidebarOpen(false);
   };
 
-  const canCRUD       = ["admin","president","treasurer","secretary"].includes(role);
+  const canCRUD        = ["admin","president","treasurer","secretary"].includes(role);
   const canViewReports = !["member",""].includes(role);
 
   useEffect(() => {
@@ -77,10 +69,10 @@ function AdminPageInner() {
       if (members) {
         setStats({
           total:     members.length,
-          active:    members.filter(m => m.status === "active").length,
-          nonactive: members.filter(m => m.status === "non-active").length,
-          dropped:   members.filter(m => m.status === "dropped").length,
-          pending:   members.filter(m => m.approval_status === "pending").length,
+          active:    members.filter((m: any) => m.status === "active").length,
+          nonactive: members.filter((m: any) => m.status === "non-active").length,
+          dropped:   members.filter((m: any) => m.status === "dropped").length,
+          pending:   members.filter((m: any) => m.approval_status === "pending").length,
         });
       }
 
@@ -94,7 +86,9 @@ function AdminPageInner() {
       setRecentMembers(sorted.slice(0, 5));
 
       const { count } = await supabase
-        .from("payment_submissions").select("id", { count: "exact", head: true }).eq("status", "pending");
+        .from("payment_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
       setPendingSubmissions(count || 0);
       setLoading(false);
     };
@@ -103,20 +97,20 @@ function AdminPageInner() {
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push("/"); };
 
+  // ── Sidebar nav — Officers and Logs removed (now in CMS) ──
   const NAV_ITEMS = [
-    { id: "dashboard",     icon: Home,     label: "Dashboard",    show: true,            badge: 0 },
-    { id: "members",       icon: Users,    label: "Members",      show: canCRUD,         badge: stats.pending },
-    { id: "payments",      icon: CreditCard,label: "Payments",    show: canCRUD,         badge: 0 },
-    { id: "submissions",   icon: Inbox,    label: "Submissions",  show: canCRUD,         badge: pendingSubmissions },
-    { id: "cms",           icon: FileText, label: "CMS",          show: canCRUD,         badge: 0 },
-    { id: "officers_mgmt", icon: Users,    label: "Officers",     show: canCRUD,         badge: 0 },
-    { id: "reports",       icon: BarChart2,label: "Reports",      show: canViewReports,  badge: 0 },
-    { id: "logs",          icon: FileText, label: "Audit Logs",   show: role === "admin",badge: 0 },
-    { id: "roles",         icon: UserCog,  label: "Roles",        show: role === "admin",badge: 0 },
+    { id: "dashboard",   icon: Home,      label: "Dashboard",   show: true,           badge: 0 },
+    { id: "members",     icon: Users,     label: "Members",     show: canCRUD,        badge: stats.pending },
+    { id: "payments",    icon: CreditCard,label: "Payments",    show: canCRUD,        badge: 0 },
+    { id: "submissions", icon: Inbox,     label: "Submissions", show: canCRUD,        badge: pendingSubmissions },
+    { id: "cms",         icon: FileText,  label: "CMS",         show: canCRUD,        badge: 0 },
+    { id: "reports",     icon: BarChart2, label: "Reports",     show: canViewReports, badge: 0 },
+    { id: "roles",       icon: UserCog,   label: "Roles",       show: role === "admin",badge: 0 },
   ].filter(i => i.show);
 
   const statusColor: any = {
-    active: "#2E8B44", "non-active": "#D4A017", dropped: "#C0392B", deceased: "#95A5A6",
+    active: "#2E8B44", "non-active": "#D4A017",
+    dropped: "#C0392B", deceased: "#95A5A6",
   };
 
   if (loading) return (
@@ -133,26 +127,13 @@ function AdminPageInner() {
   return (
     <main style={{ minHeight: "100vh", background: "var(--cream)", display: "flex", flexDirection: "column" }}>
 
-      {/* ── TOP BAR (mobile + desktop) ── */}
-      <nav style={{
-        background: "var(--green-dk)",
-        borderBottom: "3px solid var(--gold)",
-        padding: "0 1.2rem",
-        height: 60,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        position: "sticky",
-        top: 0,
-        zIndex: 200,
-        flexShrink: 0,
-      }}>
-        {/* Left: hamburger + brand */}
+      {/* ── TOP BAR ── */}
+      <nav style={{ background: "var(--green-dk)", borderBottom: "3px solid var(--gold)", padding: "0 1.2rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 200, flexShrink: 0 }}>
+
+        {/* Left */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            onClick={() => setSidebarOpen(v => !v)}
-            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "white", width: 34, height: 34, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, position: "relative" }}
-          >
+          <button onClick={() => setSidebarOpen(v => !v)}
+            style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "white", width: 34, height: 34, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, position: "relative" }}>
             {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
             {!sidebarOpen && totalBadges > 0 && (
               <span style={{ position: "absolute", top: -4, right: -4, background: "#C0392B", color: "white", fontSize: "0.55rem", fontWeight: 700, width: 14, height: 14, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -160,6 +141,7 @@ function AdminPageInner() {
               </span>
             )}
           </button>
+
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img src="/images/sunco-logo.png" alt="SUNCO" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "contain" }} />
             <div>
@@ -168,46 +150,43 @@ function AdminPageInner() {
             </div>
           </div>
 
-          {/* Current tab label — desktop */}
-          <div style={{ display: "none", alignItems: "center", gap: 6 }} className="admin-breadcrumb">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
             <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
-            <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)", textTransform: "capitalize" }}>
+            <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)", textTransform: "capitalize" }}>
               {NAV_ITEMS.find(i => i.id === activeTab)?.label || activeTab}
             </span>
           </div>
         </div>
 
-        {/* Right: user info + actions */}
+        {/* Right */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
           {pendingSubmissions > 0 && (
-            <button onClick={() => setTab("submissions")} title={`${pendingSubmissions} pending GCash submissions`}
+            <button onClick={() => setTab("submissions")} title={`${pendingSubmissions} pending`}
               style={{ position: "relative", background: "rgba(0,119,255,0.15)", border: "1px solid rgba(0,119,255,0.3)", color: "#5BA8FF", width: 34, height: 34, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
               <Bell size={15} />
               <span style={{ position: "absolute", top: -4, right: -4, background: "#0077FF", color: "white", fontSize: "0.55rem", fontWeight: 700, width: 14, height: 14, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{pendingSubmissions}</span>
             </button>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <Shield size={12} color="var(--gold)" />
-            <span style={{ fontSize: "0.7rem", color: "var(--gold)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", display: "none" }} className="admin-username">
+            <span style={{ fontSize: "0.7rem", color: "var(--gold)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {memberName ? `${memberName.split(" ")[0]} · ${role}` : role}
             </span>
           </div>
-          <a href="/admin/profile" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", textDecoration: "none", display: "none" }} className="admin-links">Profile</a>
-          <a href="/" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", textDecoration: "none", display: "none" }} className="admin-links">Main Site</a>
+          <a href="/admin/profile" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", textDecoration: "none" }}>Profile</a>
+          <a href="/" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>Main Site</a>
           <button onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.65)", padding: "0.35rem 0.8rem", borderRadius: 6, cursor: "pointer", fontSize: "0.72rem", fontFamily: "'DM Sans',sans-serif" }}>
-            <LogOut size={12} /> <span style={{ display: "none" }} className="admin-btn-text">Sign Out</span>
+            <LogOut size={12} /> Sign Out
           </button>
         </div>
       </nav>
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
-        {/* ── SIDEBAR OVERLAY (mobile) ── */}
+        {/* Overlay */}
         {sidebarOpen && (
-          <div
-            onClick={() => setSidebarOpen(false)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 150, top: 60 }}
-          />
+          <div onClick={() => setSidebarOpen(false)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 150, top: 60 }} />
         )}
 
         {/* ── SIDEBAR ── */}
@@ -216,16 +195,13 @@ function AdminPageInner() {
           minWidth: sidebarOpen ? 240 : 0,
           background: "var(--green-dk)",
           borderRight: "1px solid rgba(255,255,255,0.06)",
-          display: "flex",
-          flexDirection: "column",
-          position: "fixed",
-          top: 60,
-          left: 0,
-          bottom: 0,
+          display: "flex", flexDirection: "column",
+          position: "fixed", top: 60, left: 0, bottom: 0,
           zIndex: 160,
           transition: "width 0.22s ease, min-width 0.22s ease",
           overflow: "hidden",
         }}>
+
           {/* User identity */}
           <div style={{ padding: "1.2rem 1.2rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -243,8 +219,14 @@ function AdminPageInner() {
 
           {/* Nav items */}
           <nav style={{ flex: 1, overflowY: "auto", padding: "0.6rem 0" }}>
+
+            {/* CMS note */}
+            <div style={{ padding: "0.5rem 1.2rem 0.3rem" }}>
+              <p style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)" }}>Navigation</p>
+            </div>
+
             {NAV_ITEMS.map(item => {
-              const Icon    = item.icon;
+              const Icon     = item.icon;
               const isActive = activeTab === item.id;
               return (
                 <button key={item.id} onClick={() => setTab(item.id)}
@@ -257,7 +239,6 @@ function AdminPageInner() {
                     cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
                     color: isActive ? "white" : "rgba(255,255,255,0.55)",
                     textAlign: "left", position: "relative",
-                    transition: "background 0.15s",
                   }}
                   onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
@@ -272,12 +253,18 @@ function AdminPageInner() {
                 </button>
               );
             })}
+
+            {/* CMS hint */}
+            <div style={{ margin: "0.8rem 1.2rem 0.3rem", padding: "0.7rem 0.9rem", background: "rgba(201,168,76,0.08)", borderRadius: 8, border: "1px solid rgba(201,168,76,0.15)" }}>
+              <p style={{ fontSize: "0.65rem", color: "rgba(201,168,76,0.7)", fontWeight: 600, marginBottom: 2 }}>📋 Inside CMS</p>
+              <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>Posts · Ads · Officers · Audit Logs · Settings</p>
+            </div>
           </nav>
 
           {/* Sidebar footer */}
           <div style={{ padding: "0.8rem 1.2rem", borderTop: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
             <a href="/" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", textDecoration: "none", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.7rem" }}>🌐</span> View Main Site
+              🌐 View Main Site
             </a>
             <button onClick={handleLogout} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)", padding: "0.55rem 0.8rem", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontFamily: "'DM Sans',sans-serif" }}>
               <LogOut size={13} /> Sign Out
@@ -286,12 +273,7 @@ function AdminPageInner() {
         </aside>
 
         {/* ── MAIN CONTENT ── */}
-        <div style={{
-          flex: 1,
-          padding: "1.8rem 1.5rem",
-          overflowY: "auto",
-          maxWidth: "100%",
-        }}>
+        <div style={{ flex: 1, padding: "1.8rem 1.5rem", overflowY: "auto", maxWidth: "100%" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
             {/* DASHBOARD */}
@@ -300,12 +282,12 @@ function AdminPageInner() {
                 <div style={{ marginBottom: "1.5rem" }}>
                   <p style={{ fontSize: "0.7rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Welcome back</p>
                   <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.4rem,3vw,1.8rem)", fontWeight: 700, color: "var(--green-dk)" }}>
-                    {role === "admin" ? "Admin Overview" : `${role.replace("_"," ").replace(/\b\w/g, l => l.toUpperCase())} Dashboard`}
+                    {role === "admin" ? "Admin Overview" : `${role.replace("_"," ").replace(/\b\w/g, (l: string) => l.toUpperCase())} Dashboard`}
                   </h1>
                   <p style={{ fontSize: "0.82rem", color: "var(--muted)", marginTop: 4 }}>{memberName}</p>
                 </div>
 
-                {/* Stats grid — responsive */}
+                {/* Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
                   {[
                     { label: "Total Members",    value: stats.total,     color: "var(--gold)" },
@@ -313,7 +295,7 @@ function AdminPageInner() {
                     { label: "Non-active",       value: stats.nonactive, color: "#D4A017" },
                     { label: "Dropped",          value: stats.dropped,   color: "#C0392B" },
                     { label: "Pending Approval", value: stats.pending,   color: "#2B5FA8", onClick: () => setTab("members") },
-                  ].map(({ label, value, color, onClick }) => (
+                  ].map(({ label, value, color, onClick }: any) => (
                     <div key={label} onClick={onClick}
                       style={{ background: "white", borderRadius: 10, padding: "1.1rem 1.2rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}`, cursor: onClick ? "pointer" : "default" }}>
                       <p style={{ fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.4rem" }}>{label}</p>
@@ -324,14 +306,15 @@ function AdminPageInner() {
 
                 {/* Pending submissions alert */}
                 {pendingSubmissions > 0 && (
-                  <div onClick={() => setTab("submissions")} style={{ background: "rgba(0,119,255,0.06)", border: "1px solid rgba(0,119,255,0.25)", borderRadius: 10, padding: "1rem 1.4rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div onClick={() => setTab("submissions")}
+                    style={{ background: "rgba(0,119,255,0.06)", border: "1px solid rgba(0,119,255,0.25)", borderRadius: 10, padding: "1rem 1.4rem", marginBottom: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", flexWrap: "wrap", gap: "0.5rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: "1.2rem" }}>📱</span>
                       <div>
                         <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0077FF", marginBottom: 2 }}>
                           {pendingSubmissions} GCash {pendingSubmissions === 1 ? "Submission" : "Submissions"} Pending Review
                         </p>
-                        <p style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Members have submitted GCash payments waiting for your approval.</p>
+                        <p style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Members submitted GCash payments waiting for your approval.</p>
                       </div>
                     </div>
                     <span style={{ fontSize: "0.78rem", color: "#0077FF", fontWeight: 600, whiteSpace: "nowrap" }}>Review now →</span>
@@ -356,7 +339,7 @@ function AdminPageInner() {
                         </tr>
                       </thead>
                       <tbody>
-                        {recentMembers.map((m, i) => (
+                        {recentMembers.map((m: any, i: number) => (
                           <tr key={m.id} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
                             <td style={{ padding: "0.85rem 1rem", fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)", whiteSpace: "nowrap" }}>{m.first_name} {m.last_name}</td>
                             <td style={{ padding: "0.85rem 1rem", fontSize: "0.8rem", color: "var(--muted)" }}>{m.email}</td>
@@ -374,28 +357,16 @@ function AdminPageInner() {
               </div>
             )}
 
-            {activeTab === "members"       && <MembersTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
-            {activeTab === "payments"      && <PaymentsTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
-            {activeTab === "submissions"   && <PaymentSubmissionsTab supabase={supabase} currentUser={user} currentMemberName={memberName} currentRole={role} />}
-            {activeTab === "cms"           && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} currentMemberName={memberName} />}
-            {activeTab === "reports"       && <ReportsTab canCRUD={canCRUD} supabase={supabase} />}
-            {activeTab === "logs"          && role === "admin" && <LogsTab supabase={supabase} />}
-            {activeTab === "roles"         && role === "admin" && <RolesTab supabase={supabase} />}
-            {activeTab === "officers_mgmt" && <OfficersTab canCRUD={canCRUD} supabase={supabase} />}
+            {activeTab === "members"     && <MembersTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
+            {activeTab === "payments"    && <PaymentsTab canCRUD={canCRUD} supabase={supabase} currentUser={user} currentRole={role} currentMemberName={memberName} />}
+            {activeTab === "submissions" && <PaymentSubmissionsTab supabase={supabase} currentUser={user} currentMemberName={memberName} currentRole={role} />}
+            {activeTab === "cms"         && <CmsTab canCRUD={canCRUD} supabase={supabase} userId={user?.id} currentMemberName={memberName} currentRole={role} />}
+            {activeTab === "reports"     && <ReportsTab canCRUD={canCRUD} supabase={supabase} />}
+            {activeTab === "roles"       && role === "admin" && <RolesTab supabase={supabase} />}
 
           </div>
         </div>
       </div>
-
-      {/* ── Responsive CSS ── */}
-      <style>{`
-        @media (min-width: 768px) {
-          .admin-breadcrumb { display: flex !important; }
-          .admin-username   { display: inline !important; }
-          .admin-links      { display: inline !important; }
-          .admin-btn-text   { display: inline !important; }
-        }
-      `}</style>
     </main>
   );
 }

@@ -1,21 +1,23 @@
 "use client";
 // ─────────────────────────────────────────────
 // CmsTab.tsx  —  Thin shell
-// Splits into: PostsList, PostEditor, AdsManager
-// Settings are handled by SettingsTab.tsx
+// Tabs: Posts | Ads | Officers | Logs | Settings
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { FileText, Megaphone, PlusCircle, Settings } from "lucide-react";
+import { FileText, Megaphone, PlusCircle, Settings, Users, ScrollText } from "lucide-react";
 import PostsList     from "./cms/PostsList";
 import PostEditor    from "./cms/PostEditor";
 import AdsManager    from "./cms/AdsManager";
 import SettingsPanel from "./cms/SettingsPanel";
+import OfficersTab   from "./OfficersTab";
+import LogsTab       from "./LogsTab";
 
 export interface CmsTabProps {
   canCRUD:           boolean;
   supabase:          any;
   userId:            string;
   currentMemberName?: string;
+  currentRole?:      string;
 }
 
 export type Post = {
@@ -53,13 +55,23 @@ export const CATEGORIES = [
   { value: "milestones",      label: "Milestones",      color: "#C46B1A" },
 ];
 
-type Tab = "posts" | "ads" | "settings";
+type Tab = "posts" | "ads" | "officers" | "logs" | "settings";
 
-export default function CmsTab({ canCRUD, supabase, userId, currentMemberName }: CmsTabProps) {
+const TAB_TITLES: Record<Tab, string> = {
+  posts:    "Content Management",
+  ads:      "Ads Manager",
+  officers: "Officers & BOD",
+  logs:     "Audit Logs",
+  settings: "Site Settings",
+};
+
+export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, currentRole }: CmsTabProps) {
   const [activeTab,   setActiveTab]   = useState<Tab>("posts");
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showEditor,  setShowEditor]  = useState(false);
   const [refreshKey,  setRefreshKey]  = useState(0);
+
+  const isAdmin = currentRole === "admin";
 
   const openNew = () => {
     setEditingPost({ ...EMPTY_POST, author_name: currentMemberName || "" });
@@ -76,58 +88,68 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName }:
     setRefreshKey(k => k + 1);
   };
 
+  const TABS = [
+    { id: "posts",    label: "Posts",    icon: FileText,   show: true      },
+    { id: "ads",      label: "Ads",      icon: Megaphone,  show: canCRUD   },
+    { id: "officers", label: "Officers", icon: Users,      show: canCRUD   },
+    { id: "logs",     label: "Audit Logs", icon: ScrollText, show: isAdmin },
+    { id: "settings", label: "Settings", icon: Settings,   show: canCRUD   },
+  ].filter(t => t.show) as { id: Tab; label: string; icon: any; show: boolean }[];
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.8rem" }}>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem", flexWrap: "wrap", gap: "0.8rem" }}>
         <div>
-          <p style={{ fontSize: "0.7rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.3rem" }}>Admin Panel</p>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>Content Management</h1>
+          <p style={{ fontSize: "0.7rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Admin Panel</p>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
+            {TAB_TITLES[activeTab]}
+          </h1>
         </div>
-        {canCRUD && (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {activeTab === "posts" && (
-              <button onClick={openNew} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.7rem 1.4rem", borderRadius: 6, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-                <PlusCircle size={15} /> New Post
-              </button>
-            )}
-          </div>
+        {canCRUD && activeTab === "posts" && (
+          <button onClick={openNew} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.7rem 1.4rem", borderRadius: 6, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+            <PlusCircle size={15} /> New Post
+          </button>
         )}
       </div>
 
-      {/* Tab switcher */}
-      <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.5rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", width: "fit-content" }}>
-        {([
-          { id: "posts",    label: "Posts",    icon: FileText  },
-          { id: "ads",      label: "Ads",      icon: Megaphone },
-          { id: "settings", label: "Settings", icon: Settings  },
-        ] as const).map(({ id, label, icon: Icon }) => (
+      {/* ── Tab switcher ── */}
+      <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.5rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", width: "fit-content", flexWrap: "wrap" }}>
+        {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.5rem 1.1rem", borderRadius: 7, border: "none", background: activeTab === id ? "var(--green-dk)" : "transparent", color: activeTab === id ? "white" : "var(--muted)", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-            <Icon size={14} /> {label}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "0.48rem 1rem", borderRadius: 7, border: "none",
+              background: activeTab === id ? "var(--green-dk)" : "transparent",
+              color: activeTab === id ? "white" : "var(--muted)",
+              fontSize: "0.78rem", fontWeight: activeTab === id ? 600 : 500,
+              cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
+              whiteSpace: "nowrap",
+            }}>
+            <Icon size={13} /> {label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ── Tab content ── */}
       {activeTab === "posts" && (
-        <PostsList
-          key={refreshKey}
-          canCRUD={canCRUD}
-          supabase={supabase}
-          onEdit={openEdit}
-          onNew={openNew}
-        />
+        <PostsList key={refreshKey} canCRUD={canCRUD} supabase={supabase} onEdit={openEdit} onNew={openNew} />
       )}
       {activeTab === "ads" && (
         <AdsManager canCRUD={canCRUD} supabase={supabase} />
+      )}
+      {activeTab === "officers" && (
+        <OfficersTab canCRUD={canCRUD} supabase={supabase} />
+      )}
+      {activeTab === "logs" && (
+        <LogsTab supabase={supabase} />
       )}
       {activeTab === "settings" && (
         <SettingsPanel supabase={supabase} />
       )}
 
-      {/* Editor overlay */}
+      {/* ── Post editor overlay ── */}
       {showEditor && editingPost && (
         <PostEditor
           supabase={supabase}
