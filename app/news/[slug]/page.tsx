@@ -1,25 +1,15 @@
-// app/news/[slug]/page.tsx
-// ─────────────────────────────────────────────
-// Magazine-style single post page
-// Layout: Left (ads) | Center (article) | Right (sidebar)
-// SEO: Full Next.js metadata export
-// Reads from: posts table (slug-based routing)
-// Falls back to: articles table by ID for legacy URLs
-// ─────────────────────────────────────────────
 import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import PostPageClient from "./_components/PostPageClient";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-// ── Helper: fetch post by slug or legacy ID ──
 async function getPost(slugOrId: string) {
   const supabase = createClient();
 
-  // Try slug first (new posts table)
   const { data: postBySlug } = await supabase
     .from("posts")
     .select("*")
@@ -29,7 +19,6 @@ async function getPost(slugOrId: string) {
 
   if (postBySlug) return { post: postBySlug, source: "posts" };
 
-  // Try ID in posts table
   const { data: postById } = await supabase
     .from("posts")
     .select("*")
@@ -39,84 +28,53 @@ async function getPost(slugOrId: string) {
 
   if (postById) return { post: postById, source: "posts" };
 
-  // Legacy: try articles table by ID
-  const { data: article } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("id", slugOrId)
-    .eq("published", true)
-    .single();
-
-  if (article) {
-    // Normalize articles schema to posts schema
-    return {
-      post: {
-        ...article,
-        content:         article.body,
-        status:          "published",
-        slug:            slugOrId,
-        seo_title:       article.title,
-        seo_description: article.excerpt,
-        author_name:     "SUNCO Editorial Team",
-        reading_time:    Math.ceil((article.body?.split(/\s+/).length || 300) / 200),
-      },
-      source: "articles",
-    };
-  }
-
   return null;
 }
 
-// ── SEO Metadata ──
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const result = await getPost(params.slug);
+  const { slug } = await params;
+  const result = await getPost(slug);
   if (!result) return { title: "Post Not Found — SUNCO" };
 
   const { post } = result;
-  const orgName  = "SUNCO — Surigao del Norte Consumers Organization";
-  const baseUrl  = "https://sunco.gabrielsacro.com";
+  const orgName = "SUNCO — Surigao del Norte Consumers Organization";
+  const baseUrl = "https://sunco.gabrielsacro.com";
 
   return {
-    title:       `${post.seo_title || post.title} | ${orgName}`,
+    title: `${post.seo_title || post.title} | ${orgName}`,
     description: post.seo_description || post.excerpt || "",
-    keywords:    Array.isArray(post.seo_keywords) ? post.seo_keywords.join(", ") : "",
-    authors:     [{ name: post.author_name || "SUNCO Editorial Team" }],
+    keywords: Array.isArray(post.seo_keywords) ? post.seo_keywords.join(", ") : "",
+    authors: [{ name: post.author_name || "SUNCO Editorial Team" }],
     openGraph: {
-      title:       post.seo_title || post.title,
+      title: post.seo_title || post.title,
       description: post.seo_description || post.excerpt || "",
-      url:         `${baseUrl}/news/${params.slug}`,
-      siteName:    orgName,
-      images:      post.thumbnail_url ? [{ url: post.thumbnail_url, width: 1200, height: 630 }] : [],
-      type:        "article",
+      url: `${baseUrl}/news/${slug}`,
+      siteName: orgName,
+      images: post.thumbnail_url ? [{ url: post.thumbnail_url, width: 1200, height: 630 }] : [],
+      type: "article",
       publishedTime: post.published_at || post.created_at,
-      authors:     [post.author_name || "SUNCO Editorial Team"],
+      authors: [post.author_name || "SUNCO Editorial Team"],
     },
     twitter: {
-      card:        "summary_large_image",
-      title:       post.seo_title || post.title,
+      card: "summary_large_image",
+      title: post.seo_title || post.title,
       description: post.seo_description || post.excerpt || "",
-      images:      post.thumbnail_url ? [post.thumbnail_url] : [],
+      images: post.thumbnail_url ? [post.thumbnail_url] : [],
     },
-    alternates: { canonical: `${baseUrl}/news/${params.slug}` },
-    robots:     { index: true, follow: true },
+    alternates: { canonical: `${baseUrl}/news/${slug}` },
+    robots: { index: true, follow: true },
   };
 }
 
-// ── Page ──
 export default async function PostPage({ params }: Props) {
+  const { slug } = await params;
   const supabase = createClient();
-  const result   = await getPost(params.slug);
+  const result = await getPost(slug);
 
   if (!result) notFound();
 
   const { post } = result;
 
-  // Increment view count (non-blocking, only for posts table)
-  if (result.source === "posts") {
-    supabase.from("posts").update({ views: (post.views || 0) + 1 }).eq("id", post.id).then(() => {});
-  }
-
-  // Fetch sidebar data in parallel
   const [{ data: recentPosts }, { data: activeAds }, { data: settings }] = await Promise.all([
     supabase
       .from("posts")
@@ -138,19 +96,18 @@ export default async function PostPage({ params }: Props) {
   const settingsMap: Record<string, string> = {};
   (settings || []).forEach((s: any) => { settingsMap[s.key] = s.value; });
 
-  // JSON-LD structured data for Google
   const jsonLd = {
-    "@context":          "https://schema.org",
-    "@type":             "Article",
-    "headline":          post.title,
-    "description":       post.seo_description || post.excerpt,
-    "image":             post.thumbnail_url,
-    "author":            { "@type": "Organization", "name": post.author_name || "SUNCO" },
-    "publisher":         { "@type": "Organization", "name": "SUNCO", "logo": { "@type": "ImageObject", "url": settingsMap["hero_logo_url"] || "/images/sunco-logo.png" } },
-    "datePublished":     post.published_at || post.created_at,
-    "dateModified":      post.updated_at,
-    "mainEntityOfPage":  { "@type": "WebPage", "@id": `https://sunco.gabrielsacro.com/news/${params.slug}` },
-    "keywords":          Array.isArray(post.seo_keywords) ? post.seo_keywords.join(", ") : "",
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": post.title,
+    "description": post.seo_description || post.excerpt,
+    "image": post.thumbnail_url,
+    "author": { "@type": "Organization", "name": post.author_name || "SUNCO" },
+    "publisher": { "@type": "Organization", "name": "SUNCO", "logo": { "@type": "ImageObject", "url": settingsMap["hero_logo_url"] || "/images/sunco-logo.png" } },
+    "datePublished": post.published_at || post.created_at,
+    "dateModified": post.updated_at,
+    "mainEntityOfPage": { "@type": "WebPage", "@id": `https://sunco.gabrielsacro.com/news/${slug}` },
+    "keywords": Array.isArray(post.seo_keywords) ? post.seo_keywords.join(", ") : "",
   };
 
   return (

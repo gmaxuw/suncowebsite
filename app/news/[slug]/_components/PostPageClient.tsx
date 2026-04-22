@@ -1,22 +1,8 @@
 "use client";
-// ─────────────────────────────────────────────
-// app/news/[slug]/_components/PostPageClient.tsx
-//
-// The magazine-style 3-column layout:
-//   LEFT  — ads (portrait stacked)
-//   CENTER — article content (wide, editorial)
-//   RIGHT  — recent posts, ads, live PH clock
-//
-// Design: luxury editorial magazine — Playfair serif
-// headings, generous leading, drop caps, pull quotes,
-// gold accents on dark green.
-// ─────────────────────────────────────────────
 import { useState, useEffect } from "react";
-
 import {
   Clock, Calendar, Eye, BookOpen, Tag,
-  ChevronRight, ArrowLeft, Share2,
-  Link2
+  ChevronRight, ArrowLeft, Share2, Link2
 } from "lucide-react";
 
 interface Props {
@@ -27,13 +13,13 @@ interface Props {
 }
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
-  news:             { label: "News",            color: "#0D3320", bg: "#C9A84C" },
-  "consumer-rights":{ label: "Consumer Rights", color: "#fff",    bg: "#2B5FA8" },
-  announcements:    { label: "Announcements",   color: "#0D3320", bg: "#D4A017" },
-  mas:              { label: "MAS Program",     color: "#fff",    bg: "#9A2020" },
-  programs:         { label: "Programs",        color: "#fff",    bg: "#6B3FA0" },
-  "success-stories":{ label: "Success Stories", color: "#fff",    bg: "#1A7A8A" },
-  milestones:       { label: "Milestones",      color: "#fff",    bg: "#C46B1A" },
+  news:              { label: "News",            color: "#0D3320", bg: "#C9A84C" },
+  "consumer-rights": { label: "Consumer Rights", color: "#fff",    bg: "#2B5FA8" },
+  announcements:     { label: "Announcements",   color: "#0D3320", bg: "#D4A017" },
+  mas:               { label: "MAS Program",     color: "#fff",    bg: "#9A2020" },
+  programs:          { label: "Programs",        color: "#fff",    bg: "#6B3FA0" },
+  "success-stories": { label: "Success Stories", color: "#fff",    bg: "#1A7A8A" },
+  milestones:        { label: "Milestones",      color: "#fff",    bg: "#C46B1A" },
 };
 
 function formatBody(content: string): string {
@@ -43,15 +29,10 @@ function formatBody(content: string): string {
     .map(para => para.trim())
     .filter(Boolean)
     .map((para, i) => {
-      // Lines ending with colon = subheading
-      if (para.endsWith(":") && para.length < 100 && !para.includes("\n")) {
+      if (para.endsWith(":") && para.length < 100 && !para.includes("\n"))
         return `<h3 class="article-subheading">${para}</h3>`;
-      }
-      // First paragraph gets drop cap
-      if (i === 0) {
+      if (i === 0)
         return `<p class="article-paragraph drop-cap">${para}</p>`;
-      }
-      // Lines starting with • or - = list item
       if (para.match(/^[•\-]/)) {
         const items = para.split("\n").map(l => `<li>${l.replace(/^[•\-]\s*/, "")}</li>`).join("");
         return `<ul class="article-list">${items}</ul>`;
@@ -63,24 +44,20 @@ function formatBody(content: string): string {
 
 function PhilippineClock() {
   const [time, setTime] = useState<Date | null>(null);
-
   useEffect(() => {
     const tick = () => setTime(new Date());
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-
   if (!time) return null;
-
   const phTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
   const hh = phTime.getHours();
-  const mm  = phTime.getMinutes().toString().padStart(2, "0");
-  const ss  = phTime.getSeconds().toString().padStart(2, "0");
+  const mm = phTime.getMinutes().toString().padStart(2, "0");
+  const ss = phTime.getSeconds().toString().padStart(2, "0");
   const ampm = hh >= 12 ? "PM" : "AM";
   const h12 = (hh % 12 || 12).toString().padStart(2, "0");
   const dateStr = phTime.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-
   return (
     <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: "0.5rem" }}>
@@ -98,15 +75,13 @@ function PhilippineClock() {
 
 export default function PostPageClient({ post, recentPosts, ads, settings }: Props) {
   const [copied, setCopied] = useState(false);
-
-  const cat     = CATEGORY_META[post.category] || { label: post.category, color: "#fff", bg: "#555" };
-  const pubDate = post.published_at || post.created_at;
-  const bodyHtml= formatBody(post.content || post.body || "");
-
+  const cat      = CATEGORY_META[post.category] || { label: post.category, color: "#fff", bg: "#555" };
+  const pubDate  = post.published_at || post.created_at;
+  const bodyHtml = formatBody(post.content || post.body || "");
   const leftAds  = ads.filter(a => a.position === "left"  || a.position === "top");
   const rightAds = ads.filter(a => a.position === "right" || a.position === "inline");
-
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const orgName  = settings["org_short_name"] || "SUNCO";
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -115,98 +90,45 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
     });
   };
 
-  const orgName = settings["org_short_name"] || "SUNCO";
-
   return (
     <>
-      {/* ── Global magazine styles ── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
-
-        .article-paragraph {
-          font-family: 'Source Serif 4', Georgia, serif;
-          font-size: 1.08rem;
-          line-height: 1.9;
-          color: #2A2A2A;
-          margin-bottom: 1.4rem;
-          font-weight: 300;
-        }
-        .article-paragraph.drop-cap::first-letter {
-          font-family: 'Playfair Display', serif;
-          font-size: 4.2rem;
-          font-weight: 900;
-          float: left;
-          line-height: 0.78;
-          margin-right: 0.12em;
-          margin-top: 0.08em;
-          color: #0D3320;
-        }
-        .article-subheading {
-          font-family: 'Playfair Display', serif;
-          font-size: 1.35rem;
-          font-weight: 700;
-          color: #0D3320;
-          margin: 2rem 0 0.8rem;
-          padding-bottom: 0.4rem;
-          border-bottom: 2px solid #C9A84C;
-        }
-        .article-list {
-          font-family: 'Source Serif 4', Georgia, serif;
-          font-size: 1.05rem;
-          line-height: 1.8;
-          color: #333;
-          padding-left: 1.4rem;
-          margin-bottom: 1.4rem;
-          font-weight: 300;
-        }
-        .article-list li {
-          margin-bottom: 0.4rem;
-        }
-        .recent-card:hover .recent-title {
-          color: #C9A84C !important;
-        }
-        .ad-link:hover {
-          opacity: 0.9;
-          transform: translateY(-2px);
-        }
-        @media (max-width: 900px) {
-          .magazine-grid { grid-template-columns: 1fr !important; }
-          .left-col, .right-col { display: none !important; }
-        }
-        @media (max-width: 600px) {
-          .article-paragraph { font-size: 0.98rem !important; }
-          .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; }
-        }
+        .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
+        .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
+        .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
+        .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
+        .article-list li { margin-bottom: 0.4rem; }
+        .recent-card:hover .recent-title { color: #C9A84C !important; }
+        .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
+        @media (max-width: 900px) { .magazine-grid { grid-template-columns: 1fr !important; } .left-col, .right-col { display: none !important; } }
+        @media (max-width: 600px) { .article-paragraph { font-size: 0.98rem !important; } .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; } }
       `}</style>
 
       <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── Top nav bar ── */}
+        {/* Nav */}
         <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 2rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.04em" }}>{orgName}</span>
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            {["#about","#programs","#membership","#officers"].map((href, i) => (
-              <a key={i} href={`/${href}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {["About","Programs","Membership","Officers"][i]}
-              </a>
+            {["About","Programs","Membership","Officers"].map((label, i) => (
+              <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
             ))}
             <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
             <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.38rem 1rem", borderRadius: 4, fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Login</a>
           </div>
         </nav>
 
-        {/* ── Article hero banner ── */}
+        {/* Hero */}
         <div style={{ position: "relative", width: "100%", height: "clamp(280px, 40vw, 480px)", overflow: "hidden", background: "#0D3320" }}>
           {post.thumbnail_url && (
-            <img src={post.thumbnail_url} alt={post.title} loading="eager"
-              style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.45 }} />
+            <img src={post.thumbnail_url} alt={post.title} loading="eager" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.45 }} />
           )}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #0D3320 0%, rgba(13,51,32,0.6) 50%, rgba(13,51,32,0.2) 100%)" }} />
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem clamp(1.5rem, 5vw, 4rem) 2.5rem" }}>
-            {/* Breadcrumb */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.8rem" }}>
               <a href="/" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>Home</a>
               <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
@@ -214,15 +136,12 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
               <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
               <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>{cat.label}</span>
             </div>
-            {/* Category badge */}
             <div style={{ marginBottom: "0.8rem" }}>
               <span style={{ background: cat.bg, color: cat.color, fontSize: "0.68rem", fontWeight: 700, padding: "4px 14px", borderRadius: 3, letterSpacing: "0.1em", textTransform: "uppercase" }}>{cat.label}</span>
             </div>
-            {/* Title */}
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.6rem, 4vw, 3rem)", fontWeight: 900, color: "white", lineHeight: 1.15, maxWidth: 820, marginBottom: "1rem" }}>
               {post.title}
             </h1>
-            {/* Meta row */}
             <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
                 <Calendar size={13} /> {pubDate ? new Date(pubDate).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"}
@@ -246,62 +165,36 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
           </div>
         </div>
 
-        {/* ── 3-Column Magazine Grid ── */}
+        {/* 3-Column Grid */}
         <div className="magazine-grid" style={{ display: "grid", gridTemplateColumns: "200px 1fr 240px", gap: "2rem", maxWidth: 1280, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-          {/* ════════════════════════════════════
-              LEFT COLUMN — Ads (portrait stacked)
-          ════════════════════════════════════ */}
+          {/* Left */}
           <aside className="left-col" style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-            {/* Back link */}
             <a href="/news" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "#0D3320", textDecoration: "none", fontWeight: 600, padding: "0.5rem 0" }}>
               <ArrowLeft size={14} /> All Articles
             </a>
-
-            <div style={{ width: 1, height: 1, background: "rgba(0,0,0,0.1)", marginBottom: "0.5rem" }} />
-
-            {/* Ads */}
-            {leftAds.length > 0 ? (
-              leftAds.map(ad => (
-                <a key={ad.id} href={ad.link_url || "#"} target={ad.link_url ? "_blank" : "_self"} rel="noopener noreferrer"
-                  className="ad-link"
-                  style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
-                  <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    {ad.image_url && (
-                      <img src={ad.image_url} alt={ad.title || "Advertisement"} loading="lazy"
-                        style={{ width: "100%", aspectRatio: "2/3", objectFit: "cover", display: "block" }} />
-                    )}
-                    {ad.title && (
-                      <div style={{ padding: "0.6rem 0.8rem", background: "#0D3320" }}>
-                        <p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ad.title}</p>
-                      </div>
-                    )}
-                  </div>
-                </a>
-              ))
-            ) : (
-              // Placeholder when no ads
+            {leftAds.length > 0 ? leftAds.map(ad => (
+              <a key={ad.id} href={ad.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-link" style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
+                <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                  {ad.image_url && <img src={ad.image_url} alt={ad.title || "Ad"} loading="lazy" style={{ width: "100%", aspectRatio: "2/3", objectFit: "cover", display: "block" }} />}
+                  {ad.title && <div style={{ padding: "0.6rem 0.8rem", background: "#0D3320" }}><p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ad.title}</p></div>}
+                </div>
+              </a>
+            )) : (
               <div style={{ background: "white", borderRadius: 10, border: "2px dashed rgba(0,0,0,0.08)", padding: "2rem 1rem", textAlign: "center" }}>
                 <p style={{ fontSize: "0.7rem", color: "rgba(0,0,0,0.25)", lineHeight: 1.5 }}>Ad Space<br />Available</p>
               </div>
             )}
-
-            {/* Share section */}
             <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(0,0,0,0.07)", padding: "1rem", marginTop: "0.5rem" }}>
               <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#888", marginBottom: "0.7rem" }}>Share</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: "#1877F2", borderRadius: 6, textDecoration: "none" }}>
-                  <span style={{ fontSize: "0.72rem", color: "white", fontWeight: 600 }}>Facebook</span>
+                <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: "#1877F2", borderRadius: 6, textDecoration: "none" }}>
                   <span style={{ fontSize: "0.72rem", color: "white", fontWeight: 600 }}>Facebook</span>
                 </a>
-                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: "#1DA1F2", borderRadius: 6, textDecoration: "none" }}>
+                <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: "#1DA1F2", borderRadius: 6, textDecoration: "none" }}>
                   <span style={{ fontSize: "0.72rem", color: "white", fontWeight: 600 }}>X (Twitter)</span>
-                  <span style={{ fontSize: "0.72rem", color: "white", fontWeight: 600 }}>Twitter / X</span>
                 </a>
-                <button onClick={handleCopyLink}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: copied ? "#2E8B44" : "#F0EDE6", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                <button onClick={handleCopyLink} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.7rem", background: copied ? "#2E8B44" : "#F0EDE6", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
                   <Link2 size={13} color={copied ? "white" : "#555"} />
                   <span style={{ fontSize: "0.72rem", color: copied ? "white" : "#555", fontWeight: 600 }}>{copied ? "Copied!" : "Copy Link"}</span>
                 </button>
@@ -309,32 +202,21 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
             </div>
           </aside>
 
-          {/* ════════════════════════════════════
-              CENTER COLUMN — Article Content
-          ════════════════════════════════════ */}
+          {/* Center */}
           <main style={{ minWidth: 0 }}>
-            {/* Excerpt / lead */}
             {post.excerpt && (
               <div style={{ borderLeft: "4px solid #C9A84C", paddingLeft: "1.2rem", marginBottom: "2rem" }}>
-                <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: "1.15rem", fontStyle: "italic", color: "#0D3320", lineHeight: 1.7, fontWeight: 400 }}>
-                  {post.excerpt}
-                </p>
+                <p style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: "1.15rem", fontStyle: "italic", color: "#0D3320", lineHeight: 1.7, fontWeight: 400 }}>{post.excerpt}</p>
               </div>
             )}
-
-            {/* Decorative rule */}
             <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2rem" }}>
               <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} />
               <div style={{ width: 6, height: 6, background: "#C9A84C", borderRadius: "50%", flexShrink: 0 }} />
               <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} />
             </div>
-
-            {/* Article body */}
             <article style={{ background: "white", borderRadius: 14, padding: "clamp(1.5rem, 4vw, 2.8rem)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}>
               <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
             </article>
-
-            {/* Tags */}
             {Array.isArray(post.tags) && post.tags.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginTop: "1.5rem" }}>
                 <Tag size={14} color="#888" />
@@ -343,8 +225,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
                 ))}
               </div>
             )}
-
-            {/* Author card */}
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.4rem 1.6rem", marginTop: "2rem", display: "flex", alignItems: "center", gap: "1.2rem" }}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "2px solid #C9A84C", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain" }} />
@@ -355,8 +235,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
                 <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Surigao del Norte Consumers Organization, Inc.</p>
               </div>
             </div>
-
-            {/* Back to news */}
             <div style={{ marginTop: "2rem", textAlign: "center" }}>
               <a href="/news" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#F0EDE6", border: "1.5px solid rgba(13,51,32,0.15)", color: "#0D3320", padding: "0.75rem 1.8rem", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem", fontWeight: 600 }}>
                 <ArrowLeft size={15} /> Back to All Articles
@@ -364,39 +242,30 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
             </div>
           </main>
 
-          {/* ════════════════════════════════════
-              RIGHT COLUMN — Sidebar
-          ════════════════════════════════════ */}
+          {/* Right */}
           <aside className="right-col" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-
-            {/* Live PH Clock */}
             <PhilippineClock />
-
-            {/* Recent posts */}
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
               <div style={{ padding: "0.9rem 1.1rem", background: "#0D3320", borderBottom: "2px solid #C9A84C" }}>
-                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.9rem", color: "#C9A84C", fontWeight: 700, letterSpacing: "0.04em" }}>Recent Articles</h3>
+                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.9rem", color: "#C9A84C", fontWeight: 700 }}>Recent Articles</h3>
               </div>
               <div style={{ padding: "0.4rem 0" }}>
                 {recentPosts.slice(0, 5).map((p, i) => {
                   const rc = CATEGORY_META[p.category] || { label: p.category, color: "#fff", bg: "#555" };
                   return (
                     <a key={p.id} href={`/news/${p.slug || p.id}`} className="recent-card"
-                      style={{ display: "flex", gap: 10, padding: "0.75rem 1rem", borderBottom: i < Math.min(recentPosts.length, 5) - 1 ? "1px solid rgba(0,0,0,0.05)" : "none", textDecoration: "none", transition: "background 0.15s" }}
+                      style={{ display: "flex", gap: 10, padding: "0.75rem 1rem", borderBottom: i < 4 ? "1px solid rgba(0,0,0,0.05)" : "none", textDecoration: "none" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "#F9F8F5")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                       {p.thumbnail_url ? (
-                        <img src={p.thumbnail_url} alt={p.title} loading="lazy"
-                          style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 7, flexShrink: 0, border: "1px solid rgba(0,0,0,0.07)" }} />
+                        <img src={p.thumbnail_url} alt={p.title} loading="lazy" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 7, flexShrink: 0, border: "1px solid rgba(0,0,0,0.07)" }} />
                       ) : (
                         <div style={{ width: 52, height: 52, borderRadius: 7, background: rc.bg, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ fontSize: "0.55rem", color: rc.color, fontWeight: 700, textTransform: "uppercase", textAlign: "center", lineHeight: 1.2 }}>{rc.label}</span>
+                          <span style={{ fontSize: "0.55rem", color: rc.color, fontWeight: 700, textTransform: "uppercase", textAlign: "center" }}>{rc.label}</span>
                         </div>
                       )}
                       <div style={{ minWidth: 0 }}>
-                        <p className="recent-title" style={{ fontSize: "0.78rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.4, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", transition: "color 0.15s" }}>
-                          {p.title}
-                        </p>
+                        <p className="recent-title" style={{ fontSize: "0.78rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.4, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", transition: "color 0.15s" }}>{p.title}</p>
                         <p style={{ fontSize: "0.65rem", color: "#AAA" }}>
                           {(p.published_at || p.created_at) ? new Date(p.published_at || p.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : ""}
                         </p>
@@ -411,27 +280,14 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
                 </a>
               </div>
             </div>
-
-            {/* Right ads */}
             {rightAds.map(ad => (
-              <a key={ad.id} href={ad.link_url || "#"} target={ad.link_url ? "_blank" : "_self"} rel="noopener noreferrer"
-                className="ad-link"
-                style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
+              <a key={ad.id} href={ad.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-link" style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
                 <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                  {ad.image_url && (
-                    <img src={ad.image_url} alt={ad.title || "Ad"} loading="lazy"
-                      style={{ width: "100%", objectFit: "cover", display: "block", maxHeight: 200 }} />
-                  )}
-                  {ad.title && (
-                    <div style={{ padding: "0.6rem 0.8rem", background: "#0D3320" }}>
-                      <p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ad.title}</p>
-                    </div>
-                  )}
+                  {ad.image_url && <img src={ad.image_url} alt={ad.title || "Ad"} loading="lazy" style={{ width: "100%", objectFit: "cover", display: "block", maxHeight: 200 }} />}
+                  {ad.title && <div style={{ padding: "0.6rem 0.8rem", background: "#0D3320" }}><p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ad.title}</p></div>}
                 </div>
               </a>
             ))}
-
-            {/* About SUNCO widget */}
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.3rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.7rem" }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "contain" }} />
@@ -447,7 +303,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
           </aside>
         </div>
 
-        {/* ── Footer ── */}
         <footer style={{ background: "#080f0a", borderTop: "3px solid #C9A84C", padding: "2rem 2.5rem", textAlign: "center" }}>
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
             © {new Date().getFullYear()} {settings["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
