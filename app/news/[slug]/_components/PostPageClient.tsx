@@ -57,7 +57,7 @@ function PhilippineClock() {
   const ss = phTime.getSeconds().toString().padStart(2, "0");
   const ampm = hh >= 12 ? "PM" : "AM";
   const h12 = (hh % 12 || 12).toString().padStart(2, "0");
-  const dateStr = phTime.toLocaleDateString("en-PH", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const dateStr = phTime.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return (
     <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: "0.5rem" }}>
@@ -92,18 +92,30 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
-        .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
-        .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
-        .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
-        .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
-        .article-list li { margin-bottom: 0.4rem; }
-        .recent-card:hover .recent-title { color: #C9A84C !important; }
-        .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
-        @media (max-width: 900px) { .magazine-grid { grid-template-columns: 1fr !important; } .left-col, .right-col { display: none !important; } }
-        @media (max-width: 600px) { .article-paragraph { font-size: 0.98rem !important; } .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; } }
-      `}</style>
+    <style>{`
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+
+  .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
+  .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
+  .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
+  .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
+  .article-list li { margin-bottom: 0.4rem; }
+  .recent-card:hover .recent-title { color: #C9A84C !important; }
+  .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
+
+  /* ── MOBILE NAV FIX ── */
+  .post-nav-links { display: flex; align-items: center; gap: 1.5rem; }
+  @media (max-width: 768px) {
+    .post-nav-links { display: none !important; }
+    .magazine-grid { grid-template-columns: 1fr !important; }
+    .left-col, .right-col { display: none !important; }
+    .article-paragraph { font-size: 0.98rem !important; }
+    .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; }
+  }
+  @media (max-width: 600px) {
+    .article-paragraph { font-size: 0.95rem !important; line-height: 1.8 !important; }
+  }
+`}</style>
 
       <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -113,8 +125,8 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
             <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.04em" }}>{orgName}</span>
           </a>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            {["About","Programs","Membership","Officers"].map((label, i) => (
+<div className="post-nav-links" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+  {["About","Programs","Membership","Officers"].map((label, i) => (
               <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
             ))}
             <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
@@ -144,7 +156,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
-                <Calendar size={13} /> {pubDate ? new Date(pubDate).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"}
+                <Calendar size={13} /> {pubDate ? new Date(pubDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}
               </div>
               {post.author_name && (
                 <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
@@ -267,7 +279,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
                       <div style={{ minWidth: 0 }}>
                         <p className="recent-title" style={{ fontSize: "0.78rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.4, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", transition: "color 0.15s" }}>{p.title}</p>
                         <p style={{ fontSize: "0.65rem", color: "#AAA" }}>
-                          {(p.published_at || p.created_at) ? new Date(p.published_at || p.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : ""}
+                          {(p.published_at || p.created_at) ? new Date(p.published_at || p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                         </p>
                       </div>
                     </a>
