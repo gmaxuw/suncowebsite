@@ -20,7 +20,7 @@ export default async function NewsPage() {
       .eq("status", "published")
       .order("published_at", { ascending: false }),
     supabase
-      .from("ads")
+      .from("promotion")
       .select("*")
       .eq("is_active", true),
     supabase
