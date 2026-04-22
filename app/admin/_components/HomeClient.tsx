@@ -1,12 +1,6 @@
 "use client";
-// ─────────────────────────────────────────────
-// HomeClient.tsx
-// Client component for the public homepage
-// Receives data from server component (page.tsx)
-// SEO-friendly: server renders the data
-// Performance: lazy loading on all images
-// ─────────────────────────────────────────────
-import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail } from "lucide-react";
+import { useState } from "react";
+import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 
 interface Props {
@@ -18,6 +12,7 @@ interface Props {
 
 export default function HomeClient({ settings, officers, programs, articles }: Props) {
   const s = (key: string, fallback = "") => settings[key] || fallback;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const executives = officers.filter(o => o.role_type === "executive");
   const pios = officers.filter(o => o.role_type === "pio");
@@ -33,6 +28,15 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const feeMas = s("fee_mas", "740");
   const firstYearTotal = Number(feeLifetime) + Number(feeAof) + Number(feeMas);
 
+  const navLinks = [
+    ["#about", "About"],
+    ["#programs", "Programs"],
+    ["#membership", "Membership"],
+    ["#officers", "Officers"],
+    ["#news", "News"],
+    ["/login", "Login"],
+  ];
+
   return (
     <main>
 
@@ -43,28 +47,46 @@ export default function HomeClient({ settings, officers, programs, articles }: P
             style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "contain" }} />
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>{s("org_short_name", "SUNCO")}</span>
         </a>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.2rem" }}>
-          {["#about","#programs","#membership","#officers","#news"].map((href, i) => (
-            <a key={i} href={href} style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>
-              {["About","Programs","Membership","Officers","News"][i]}
+
+        {/* Desktop nav links */}
+        <div className="resp-nav-links">
+          {navLinks.map(([href, label]) => (
+            <a key={href} href={href} style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>
+              {label}
             </a>
           ))}
-          <a href="/login" style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>Login</a>
           <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>Join Now</a>
         </div>
+
+        {/* Mobile hamburger */}
+        <button className="nav-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu">
+          {menuOpen ? <X size={22} color="white" /> : (
+            <>
+              <span /><span /><span />
+            </>
+          )}
+        </button>
       </nav>
+
+      {/* Mobile drawer */}
+      <div className={`nav-drawer${menuOpen ? " open" : ""}`}>
+        {navLinks.map(([href, label]) => (
+          <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
+        ))}
+        <a href="/register" className="join-btn" onClick={() => setMenuOpen(false)}>Join Now</a>
+      </div>
 
       {/* ── HERO ── */}
       <section style={{ minHeight: "92vh", display: "flex", alignItems: "center", background: "var(--green-dk)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", width: 680, height: 680, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.12)", right: -160, top: -80 }} />
         <div style={{ position: "absolute", width: 440, height: 440, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.08)", right: -60, top: 20 }} />
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "5rem 2.5rem", display: "grid", gridTemplateColumns: "1fr 320px", gap: "4rem", alignItems: "center", width: "100%", position: "relative", zIndex: 2 }}>
+        <div className="resp-grid-hero resp-hero-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "5rem 2.5rem", width: "100%", position: "relative", zIndex: 2 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.5rem" }}>
               <div style={{ width: 28, height: 1.5, background: "var(--gold)" }} />
               <span style={{ fontSize: "0.7rem", fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)" }}>{s("hero_eyebrow", "Surigao del Norte · Est. 2011")}</span>
             </div>
-            <h1 className="playfair" style={{ fontSize: "clamp(2.8rem, 5vw, 4.2rem)", fontWeight: 900, lineHeight: 1.08, color: "white", marginBottom: "0.5rem" }}>
+            <h1 className="playfair" style={{ fontSize: "clamp(2.2rem, 5vw, 4.2rem)", fontWeight: 900, lineHeight: 1.08, color: "white", marginBottom: "0.5rem" }}>
               {s("hero_title_line1", "Protecting")} <em style={{ fontStyle: "italic", color: "var(--gold-lt)" }}>{s("hero_title_highlight", "Consumers,")}</em><br />
               {s("hero_title_line2", "Empowering")}<br />
               {s("hero_title_line3", "Communities.")}
@@ -79,7 +101,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               <a href="#membership" style={{ background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>Become a Member</a>
               <a href="#about" style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>Our Mission</a>
             </div>
-            <div style={{ display: "flex", gap: "2.5rem", paddingTop: "2rem", borderTop: "1px solid rgba(212,160,23,0.2)" }}>
+            <div style={{ display: "flex", gap: "2.5rem", paddingTop: "2rem", borderTop: "1px solid rgba(212,160,23,0.2)", flexWrap: "wrap" }}>
               {[
                 [s("hero_stat1_num","2011"), s("hero_stat1_label","Year Founded")],
                 [s("hero_stat2_num","SEC"), s("hero_stat2_label","Registered Org.")],
@@ -92,7 +114,8 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.2rem" }}>
+          {/* Logo column — hidden on mobile via CSS */}
+          <div className="resp-logo-col">
             <img
               src={s("hero_logo_url", "/images/sunco-logo.png")}
               alt={`${s("org_short_name","SUNCO")} Official Seal`}
@@ -118,9 +141,9 @@ export default function HomeClient({ settings, officers, programs, articles }: P
       </div>
 
       {/* ── ABOUT ── */}
-      <section id="about" style={{ padding: "6rem 0", background: "var(--cream)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5rem", alignItems: "start" }}>
+      <section id="about" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--cream)" }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
+          <div className="resp-grid-2">
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.8rem" }}>
                 <div style={{ width: 20, height: 1.5, background: "var(--gold)" }} />
@@ -132,7 +155,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               <p className="sourceserif" style={{ fontSize: "1rem", lineHeight: 1.85, color: "var(--muted)", marginBottom: "1.1rem", fontWeight: 300 }}>{s("about_p1")}</p>
               <p className="sourceserif" style={{ fontSize: "1rem", lineHeight: 1.85, color: "var(--muted)", marginBottom: "1.1rem", fontWeight: 300 }}>{s("about_p2")}</p>
               <p className="sourceserif" style={{ fontSize: "1rem", lineHeight: 1.85, color: "var(--muted)", marginBottom: "1.1rem", fontWeight: 300 }}>{s("about_p3")}</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginTop: "2rem" }}>
+              <div className="resp-grid-2-sm" style={{ marginTop: "2rem" }}>
                 {[
                   { icon: <BookOpen size={16}/>, title: "Rights Education", desc: "Informing consumers of their basic rights and legal protections under Philippine law." },
                   { icon: <Users size={16}/>, title: "DTI Partnership", desc: "Coordinating with DTI on consumer affairs programs and policy implementation." },
@@ -174,9 +197,9 @@ export default function HomeClient({ settings, officers, programs, articles }: P
       </section>
 
       {/* ── PROGRAMS ── */}
-      <section id="programs" style={{ padding: "6rem 0", background: "var(--green-dk)", position: "relative", overflow: "hidden" }}>
+      <section id="programs" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--green-dk)", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.08)", right: -100, bottom: -100 }} />
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem", position: "relative", zIndex: 1 }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem", position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.8rem" }}>
             <div style={{ width: 20, height: 1.5, background: "var(--gold)" }} />
             <span style={{ fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(212,160,23,0.7)" }}>What We Do</span>
@@ -187,7 +210,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           <p className="sourceserif" style={{ fontSize: "1rem", fontWeight: 300, fontStyle: "italic", color: "rgba(255,255,255,0.6)", maxWidth: 560, lineHeight: 1.7, marginBottom: "3rem" }}>
             Every Filipino consumer has rights protected by law. SUNCO actively educates, advocates, and assists our members in exercising these rights.
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1.5rem" }}>
+          <div className="resp-grid-3">
             {programs.map(p => (
               <div key={p.id} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.18)", borderRadius: 8, padding: "1.8rem 1.5rem" }}>
                 <div className="playfair" style={{ fontSize: "2.4rem", fontWeight: 900, color: "rgba(212,160,23,0.15)", lineHeight: 1, marginBottom: "0.5rem" }}>{p.number}</div>
@@ -200,9 +223,9 @@ export default function HomeClient({ settings, officers, programs, articles }: P
       </section>
 
       {/* ── MEMBERSHIP ── */}
-      <section id="membership" style={{ padding: "6rem 0", background: "var(--warm)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 440px", gap: "4rem", alignItems: "start" }}>
+      <section id="membership" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--warm)" }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
+          <div className="resp-grid-membership">
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.8rem" }}>
                 <div style={{ width: 20, height: 1.5, background: "var(--gold)" }} />
@@ -220,12 +243,12 @@ export default function HomeClient({ settings, officers, programs, articles }: P
                   { label: "Annual Operating Fee (AOF)", desc: "Paid yearly. Covers organizational operations.", amount: `₱${feeAof}`, sub: "/year", border: "var(--blue-lt)" },
                   { label: "Mortuary Assistance Service (MAS)", desc: "Annual mutual aid contribution for member families.", amount: `₱${feeMas}`, sub: "/year", border: "var(--green-lt)" },
                 ].map(({ label, desc, amount, sub, border }) => (
-                  <div key={label} style={{ background: "white", borderRadius: 8, padding: "1.4rem 1.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(26,92,42,0.12)", borderLeft: `4px solid ${border}` }}>
+                  <div key={label} style={{ background: "white", borderRadius: 8, padding: "1.4rem 1.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid rgba(26,92,42,0.12)", borderLeft: `4px solid ${border}`, flexWrap: "wrap", gap: "0.5rem" }}>
                     <div>
                       <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--green-dk)", marginBottom: "0.2rem" }}>{label}</div>
                       <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{desc}</div>
                     </div>
-                    <div className="playfair" style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--green-dk)", whiteSpace: "nowrap", marginLeft: "1rem" }}>
+                    <div className="playfair" style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--green-dk)", whiteSpace: "nowrap" }}>
                       {amount} <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: "0.75rem", fontWeight: 400, color: "var(--muted)" }}>{sub}</span>
                     </div>
                   </div>
@@ -245,17 +268,17 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               ))}
             </div>
 
-            {/* Join Form — links to register page */}
-            <div id="contact" style={{ background: "white", borderRadius: 10, padding: "2.2rem", border: "1px solid rgba(212,160,23,0.2)", boxShadow: "0 4px 30px rgba(26,92,42,0.08)", position: "sticky", top: 80 }}>
+            {/* Join Form */}
+            <div id="contact" className="resp-sticky" style={{ background: "white", borderRadius: 10, padding: "2.2rem", border: "1px solid rgba(212,160,23,0.2)", boxShadow: "0 4px 30px rgba(26,92,42,0.08)", position: "sticky", top: 80 }}>
               <h3 className="playfair" style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--green-dk)", marginBottom: "0.3rem" }}>Join SUNCO Today</h3>
               <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginBottom: "1.6rem", lineHeight: 1.5 }}>
                 Fill in your details and our officers will contact you to complete your registration.
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+              <div className="resp-grid-2-sm">
                 {[["First Name","Juan"],["Last Name","dela Cruz"]].map(([label, ph]) => (
                   <div key={label}>
                     <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.4rem" }}>{label}</label>
-                    <input type="text" placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none" }} />
+                    <input type="text" placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>
@@ -266,7 +289,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               ].map(({ label, type, ph }) => (
                 <div key={label} style={{ marginTop: "0.8rem" }}>
                   <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.4rem" }}>{label}</label>
-                  <input type={type} placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none" }} />
+                  <input type={type} placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none", boxSizing: "border-box" }} />
                 </div>
               ))}
               <div style={{ background: "var(--green-dk)", color: "white", borderRadius: 6, padding: "1rem 1.2rem", display: "flex", justifyContent: "space-between", alignItems: "center", margin: "1.2rem 0" }}>
@@ -282,22 +305,13 @@ export default function HomeClient({ settings, officers, programs, articles }: P
         </div>
       </section>
 
-
       {/* ── Senior Citizen Calculator ── */}
-
       <SeniorCitizenCalculator />
 
-
-
-
-
-
-
-
       {/* ── OFFICERS ── */}
-      <section id="officers" style={{ padding: "6rem 0", background: "var(--cream)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
+      <section id="officers" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--cream)" }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
+          <div className="resp-officers-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.8rem" }}>
                 <div style={{ width: 20, height: 1.5, background: "var(--gold)" }} />
@@ -307,11 +321,11 @@ export default function HomeClient({ settings, officers, programs, articles }: P
                 Officers & <em style={{ fontStyle: "italic", color: "var(--green-lt)" }}>Board of Directors</em>
               </h2>
             </div>
-            <div style={{ fontSize: "0.78rem", color: "var(--muted)", background: "var(--warm)", border: "1px solid rgba(212,160,23,0.3)", padding: "0.5rem 1rem", borderRadius: 20 }}>Election of Officers · 2025</div>
+            <div style={{ fontSize: "0.78rem", color: "var(--muted)", background: "var(--warm)", border: "1px solid rgba(212,160,23,0.3)", padding: "0.5rem 1rem", borderRadius: 20, whiteSpace: "nowrap" }}>Election of Officers · 2025</div>
           </div>
 
           {/* Executive Officers */}
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(executives.length, 5)},1fr)`, gap: "1.2rem", marginBottom: "3rem" }}>
+          <div className="resp-grid-exec" style={{ gridTemplateColumns: `repeat(${Math.min(executives.length, 5)},1fr)` }}>
             {executives.map(officer => (
               <div key={officer.id} style={{ background: "white", borderRadius: 8, padding: "1.4rem 1rem", textAlign: "center", border: "1px solid rgba(26,92,42,0.08)", borderBottom: "3px solid var(--gold)" }}>
                 {officer.photo_url ? (
@@ -332,7 +346,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           {pios.length > 0 && (
             <>
               <h3 className="playfair" style={{ fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)", marginBottom: "1.2rem", paddingBottom: "0.6rem", borderBottom: "1px solid rgba(212,160,23,0.2)" }}>Public Information Officers (P.I.O.)</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "1rem", maxWidth: 520, marginBottom: "2.5rem" }}>
+              <div className="resp-grid-2-sm" style={{ maxWidth: 520, marginBottom: "2.5rem" }}>
                 {pios.map((officer, idx) => (
                   <div key={officer.id} style={{ background: "var(--warm)", borderRadius: 6, padding: "1rem", display: "flex", alignItems: "center", gap: "0.8rem", border: "1px solid rgba(212,160,23,0.15)" }}>
                     {officer.photo_url ? (
@@ -355,7 +369,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           {bod.length > 0 && (
             <>
               <h3 className="playfair" style={{ fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)", marginBottom: "1.2rem", paddingBottom: "0.6rem", borderBottom: "1px solid rgba(212,160,23,0.2)" }}>Board of Directors (B.O.D.)</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
+              <div className="resp-grid-4">
                 {bod.map((officer, idx) => (
                   <div key={officer.id} style={{ background: "var(--warm)", borderRadius: 6, padding: "1rem", display: "flex", alignItems: "center", gap: "0.8rem", border: "1px solid rgba(212,160,23,0.15)" }}>
                     {officer.photo_url ? (
@@ -377,8 +391,8 @@ export default function HomeClient({ settings, officers, programs, articles }: P
       </section>
 
       {/* ── NEWS ── */}
-      <section id="news" style={{ padding: "6rem 0", background: "var(--green-dk)" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
+      <section id="news" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--green-dk)" }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.8rem" }}>
             <div style={{ width: 20, height: 1.5, background: "var(--gold)" }} />
             <span style={{ fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(212,160,23,0.7)" }}>Latest Updates</span>
@@ -386,53 +400,53 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           <h2 className="playfair" style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 700, color: "white", lineHeight: 1.15, marginBottom: "2.5rem" }}>
             News & <em style={{ fontStyle: "italic", color: "var(--gold-lt)" }}>Announcements</em>
           </h2>
-                                                  {articles.length > 0 ? (
-                                                    <div style={{ display: "grid", gridTemplateColumns: articles.length === 1 ? "1fr" : articles.length === 2 ? "1fr 1fr" : "1.4fr 1fr 1fr", gap: "1.5rem" }}>
-                                                      {articles.map((article, i) => (
-                                                        <a key={article.id} href={`/news/${article.id}`} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden", display: "block", transition: "border-color 0.2s" }}
-                                                          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.5)")}
-                                                          onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.15)")}>
-
-                                                          {/* Thumbnail */}
-                                                          <div style={{ height: i === 0 ? 260 : 180, position: "relative", overflow: "hidden" }}>
-                                                            {article.thumbnail_url ? (
-                                                              <img
-                                                                src={article.thumbnail_url}
-                                                                alt={article.title}
-                                                                loading="lazy"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
-                                                                onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
-                                                                onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                                                              />
-                                                            ) : (
-                                                              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#1A3C6E,#2E8B44)" }} />
-                                                            )}
-                                                            {/* Category badge overlay */}
-                                                            <div style={{ position: "absolute", bottom: 10, left: 10 }}>
-                                                              <span style={{ background: "var(--gold)", color: "var(--green-dk)", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 3 }}>
-                                                                {article.category?.replace("-", " ")}
-                                                              </span>
-                                                            </div>
-                                                          </div>
-
-                                                          {/* Content */}
-                                                          <div style={{ padding: "1.3rem" }}>
-                                                            <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
-                                                              {new Date(article.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
-                                                            </div>
-                                                            <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
-                                                              {article.title}
-                                                            </h3>
-                                                            <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: i === 0 ? 4 : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                                                              {article.excerpt || article.body?.substring(0, 150)}
-                                                            </p>
-                                                            <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--gold)", marginTop: "0.8rem", fontWeight: 500 }}>
-                                                              Read more <ChevronRight size={12} />
-                                                            </div>
-                                                          </div>
-                                                        </a>
-                                                      ))}
-                                                    </div>
+          {articles.length > 0 ? (
+            <div
+              className="resp-grid-articles"
+              style={{
+                gridTemplateColumns:
+                  articles.length === 1 ? "1fr"
+                  : articles.length === 2 ? "1fr 1fr"
+                  : "1.4fr 1fr 1fr",
+              }}
+            >
+              {articles.map((article, i) => (
+                <a key={article.id} href={`/news/${article.id}`} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden", display: "block", transition: "border-color 0.2s" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.5)")}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.15)")}>
+                  <div style={{ height: i === 0 ? 260 : 180, position: "relative", overflow: "hidden" }}>
+                    {article.thumbnail_url ? (
+                      <img src={article.thumbnail_url} alt={article.title} loading="lazy"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s" }}
+                        onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
+                        onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                      />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#1A3C6E,#2E8B44)" }} />
+                    )}
+                    <div style={{ position: "absolute", bottom: 10, left: 10 }}>
+                      <span style={{ background: "var(--gold)", color: "var(--green-dk)", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 3 }}>
+                        {article.category?.replace("-", " ")}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ padding: "1.3rem" }}>
+                    <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
+                      {new Date(article.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
+                    </div>
+                    <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
+                      {article.title}
+                    </h3>
+                    <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: i === 0 ? 4 : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {article.excerpt || article.body?.substring(0, 150)}
+                    </p>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.75rem", color: "var(--gold)", marginTop: "0.8rem", fontWeight: 500 }}>
+                      Read more <ChevronRight size={12} />
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
           ) : (
             <div style={{ textAlign: "center", padding: "3rem", color: "rgba(255,255,255,0.4)" }}>
               <p style={{ fontSize: "0.9rem" }}>No articles published yet. Check back soon.</p>
@@ -443,8 +457,8 @@ export default function HomeClient({ settings, officers, programs, articles }: P
 
       {/* ── FOOTER ── */}
       <footer style={{ background: "#080f0a", borderTop: "3px solid var(--gold)", padding: "4rem 0 2rem" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: "3rem", marginBottom: "3rem" }}>
+        <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
+          <div className="resp-grid-footer">
             <div>
               <h2 className="playfair" style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--gold-lt)", marginBottom: "0.4rem" }}>{s("org_short_name","SUNCO")} Inc.</h2>
               <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "0.6rem" }}>{s("org_name","Surigao del Norte Consumers Organization")}</p>
