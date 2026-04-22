@@ -99,8 +99,9 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName }:
       {/* Tab switcher */}
       <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.5rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", width: "fit-content" }}>
         {([
-          { id: "posts", label: "Posts",    icon: FileText  },
-          { id: "ads",   label: "Ads",      icon: Megaphone },
+          { id: "posts",    label: "Posts",    icon: FileText  },
+          { id: "ads",      label: "Ads",      icon: Megaphone },
+          { id: "settings", label: "Settings", icon: Settings  },
         ] as const).map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.5rem 1.1rem", borderRadius: 7, border: "none", background: activeTab === id ? "var(--green-dk)" : "transparent", color: activeTab === id ? "white" : "var(--muted)", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
