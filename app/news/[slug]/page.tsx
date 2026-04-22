@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { post } = result;
   const orgName  = "SUNCO — Surigao del Norte Consumers Organization";
-  const baseUrl  = "https://sunco.org.ph";
+  const baseUrl  = "https://sunco.gabrielsacro.com";
 
   return {
     title:       `${post.seo_title || post.title} | ${orgName}`,
@@ -149,7 +149,7 @@ export default async function PostPage({ params }: Props) {
     "publisher":         { "@type": "Organization", "name": "SUNCO", "logo": { "@type": "ImageObject", "url": settingsMap["hero_logo_url"] || "/images/sunco-logo.png" } },
     "datePublished":     post.published_at || post.created_at,
     "dateModified":      post.updated_at,
-    "mainEntityOfPage":  { "@type": "WebPage", "@id": `https://sunco.org.ph/news/${params.slug}` },
+    "mainEntityOfPage":  { "@type": "WebPage", "@id": `https://sunco.gabrielsacro.com/news/${params.slug}` },
     "keywords":          Array.isArray(post.seo_keywords) ? post.seo_keywords.join(", ") : "",
   };
 

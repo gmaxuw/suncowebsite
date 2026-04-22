@@ -411,7 +411,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               }}
             >
               {articles.map((article, i) => (
-                <a key={article.id} href={`/news/${article.id}`} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden", display: "block", transition: "border-color 0.2s" }}
+                <a key={article.id} href={`/news/${article.slug || article.id}`} style={{ textDecoration: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,160,23,0.15)", borderRadius: 8, overflow: "hidden", display: "block", transition: "border-color 0.2s" }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.5)")}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(212,160,23,0.15)")}>
                   <div style={{ height: i === 0 ? 260 : 180, position: "relative", overflow: "hidden" }}>

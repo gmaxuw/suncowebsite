@@ -24,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = getSetting("hero_description") || "SUNCO is the voice of consumers in Surigao del Norte — advocating for your rights and welfare.";
 
   return {
-  metadataBase: new URL("https://sunco.org.ph"),
+  metadataBase: new URL("https://sunco.gabrielsacro.com"),
     title: `SUNCO — ${orgName}`,
     description,
     keywords: ["SUNCO", "Surigao del Norte", "consumers organization", "DTI", "consumer rights", "Philippines", "Caraga"],
@@ -55,7 +55,7 @@ export default async function HomePage() {
     supabase.from("site_settings").select("key, value"),
     supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
     supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
-    supabase.from("articles").select("id, title, excerpt, body, category, thumbnail_url, created_at").eq("published", true).order("created_at", { ascending: false }).limit(6),
+    supabase.from("posts").select("id, title, slug, excerpt, content, category, thumbnail_url, published_at, created_at").eq("status", "published").order("published_at", { ascending: false }).limit(6),
   ]);
 
   // Build settings map
@@ -73,7 +73,7 @@ export default async function HomePage() {
             "@type": "Organization",
             name: settingsMap.org_name || "Surigao del Norte Consumers Organization, Inc.",
             alternateName: "SUNCO",
-            url: "https://sunco.org.ph",
+            url: "https://sunco.gabrielsacro.com",
             logo: "/images/sunco-logo.png",
             foundingDate: settingsMap.org_established || "2011",
             address: {
