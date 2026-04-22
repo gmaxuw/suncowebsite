@@ -59,15 +59,16 @@ function PhilippineClock() {
   const h12 = (hh % 12 || 12).toString().padStart(2, "0");
   const dateStr = phTime.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   return (
-    <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
+    <div suppressHydrationWarning style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: "0.5rem" }}>
         <Clock size={13} color="rgba(201,168,76,0.6)" />
         <span style={{ fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(201,168,76,0.6)", fontWeight: 600 }}>Philippine Standard Time</span>
       </div>
-      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.05em", lineHeight: 1 }}>
+ <div suppressHydrationWarning style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.05em", lineHeight: 1 }}>
         {h12}:{mm}<span style={{ fontSize: "1.2rem", opacity: 0.7 }}>{ss}</span>
         <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", marginLeft: 6, fontFamily: "'DM Sans',sans-serif", fontWeight: 400 }}>{ampm}</span>
       </div>
+      <p suppressHydrationWarning style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "0.4rem" }}>{dateStr}</p>
       <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "0.4rem" }}>{dateStr}</p>
     </div>
   );
