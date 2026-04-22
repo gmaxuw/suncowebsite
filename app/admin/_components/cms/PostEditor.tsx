@@ -94,58 +94,32 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
 
   // ── AI Generator ──
   const handleAIGenerate = async () => {
-    if (!form.title.trim()) { setAiError("Please enter a title first."); return; }
-    setAiLoading(true);
-    setAiError("");
-    try {
-      const prompt = `You are a content writer for SUNCO (Surigao del Norte Consumers Organization), a Filipino consumer cooperative in Mindanao, Philippines.
-
-Write a complete SEO-optimized article for:
-Title: "${form.title}"
-Category: ${form.category}
-${aiPrompt ? `Context: ${aiPrompt}` : ""}
-
-Respond ONLY with valid JSON (no markdown, no backticks):
-{
-  "content": "Full article body, minimum 500 words, natural paragraphs, Filipino consumer context, practical tips.",
-  "excerpt": "Compelling 150-160 character excerpt.",
-  "seo_title": "SEO title under 60 characters",
-  "seo_description": "Meta description 150-160 characters with keyword and CTA",
-  "seo_keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"],
-  "tags": ["tag1","tag2","tag3"],
-  "reading_time": 5
-}`;
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      const raw  = data.content?.find((b: any) => b.type === "text")?.text || "";
-      const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-
-      setForm(prev => ({
-        ...prev,
-        content:         parsed.content         || prev.content,
-        excerpt:         parsed.excerpt         || prev.excerpt,
-        seo_title:       parsed.seo_title       || prev.seo_title,
-        seo_description: parsed.seo_description || prev.seo_description,
-        seo_keywords:    parsed.seo_keywords    || prev.seo_keywords,
-        tags:            parsed.tags            || prev.tags,
-        reading_time:    parsed.reading_time    || prev.reading_time,
-      }));
-      setShowAI(false);
-      setShowSEO(true);
-    } catch (err: any) {
-      setAiError("Generation failed: " + err.message);
-    }
-    setAiLoading(false);
-  };
+  if (!form.title.trim()) { setAiError("Please enter a title first."); return; }
+  setAiLoading(true);
+  setAiError("");
+  try {
+    const res = await fetch("/api/generate-post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: form.title.trim(), category: form.category, context: aiPrompt.trim() }),
+    });
+    const parsed = await res.json();
+    if (!res.ok) throw new Error(parsed.error || "Generation failed");
+    setForm(prev => ({
+      ...prev,
+      content:         parsed.content         || prev.content,
+      excerpt:         parsed.excerpt         || prev.excerpt,
+      seo_title:       parsed.seo_title       || prev.seo_title,
+      seo_description: parsed.seo_description || prev.seo_description,
+      seo_keywords:    parsed.seo_keywords    || prev.seo_keywords,
+      tags:            parsed.tags            || prev.tags,
+      reading_time:    parsed.reading_time    || prev.reading_time,
+    }));
+    setShowAI(false);
+    setShowSEO(true);
+  } catch (err: any) { setAiError("Generation failed: " + err.message); }
+  setAiLoading(false);
+};
 
   // ── Save ──
   const handleSave = async (publishNow = false) => {
