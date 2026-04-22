@@ -5,10 +5,11 @@
 // Settings are handled by SettingsTab.tsx
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { FileText, Megaphone, PlusCircle } from "lucide-react";
-import PostsList from "@/app/admin/_components/cms/PostsList";
-import PostEditor from "@/app/admin/_components/cms/PostEditor";
-import AdsManager from "@/app/admin/_components/cms/AdsManager";
+import { FileText, Megaphone, PlusCircle, Settings } from "lucide-react";
+import PostsList     from "./cms/PostsList";
+import PostEditor    from "./cms/PostEditor";
+import AdsManager    from "./cms/AdsManager";
+import SettingsPanel from "./cms/SettingsPanel";
 
 export interface CmsTabProps {
   canCRUD:           boolean;
@@ -52,7 +53,7 @@ export const CATEGORIES = [
   { value: "milestones",      label: "Milestones",      color: "#C46B1A" },
 ];
 
-type Tab = "posts" | "ads";
+type Tab = "posts" | "ads" | "settings";
 
 export default function CmsTab({ canCRUD, supabase, userId, currentMemberName }: CmsTabProps) {
   const [activeTab,   setActiveTab]   = useState<Tab>("posts");
@@ -120,6 +121,9 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName }:
       )}
       {activeTab === "ads" && (
         <AdsManager canCRUD={canCRUD} supabase={supabase} />
+      )}
+      {activeTab === "settings" && (
+        <SettingsPanel supabase={supabase} />
       )}
 
       {/* Editor overlay */}
