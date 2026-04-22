@@ -1,7 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
-import type { Viewport } from "next";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -10,10 +8,10 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "SUNCO — Surigao del Norte Consumers Organization, Inc.",
+    default: "SUNCO – Surigao del Norte Consumers Organization, Inc.",
     template: "%s | SUNCO",
   },
-  description: "SUNCO is the voice of consumers in Surigao del Norte — advocating for your rights, safeguarding your welfare since 2011.",
+  description: "SUNCO is the voice of consumers in Surigao del Norte – advocating for your rights, safeguarding your welfare since 2011.",
   keywords: ["SUNCO", "Surigao del Norte", "consumers organization", "DTI", "consumer rights", "Philippines"],
   authors: [{ name: "SUNCO Inc." }],
   creator: "SUNCO Inc.",
