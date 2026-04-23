@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/client";
-import NewsClient from "./_components/NewsClient";
+import dynamic from "next/dynamic";
+const NewsClient = dynamic(() => import("./_components/NewsClient"), { ssr: false });
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
   news:              { label: "News",            color: "#0D3320", bg: "#C9A84C" },
@@ -21,7 +22,7 @@ export default async function NewsPage() {
       .eq("status", "published")
       .order("published_at", { ascending: false }),
     supabase
-      .from("ads")
+      .from("promotions")
       .select("*")
       .eq("is_active", true),
     supabase

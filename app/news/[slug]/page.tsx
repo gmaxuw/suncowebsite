@@ -1,7 +1,8 @@
 import { createClient } from "@/utils/supabase/client";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import PostPageClient from "./_components/PostPageClient";
+import dynamic from "next/dynamic";
+const PostPageClient = dynamic(() => import("./_components/PostPageClient"), { ssr: false });
 
 interface Props {
   params: Promise<{ slug: string }>;
