@@ -59,7 +59,7 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
         }
       `}</style>
 
-      <div style={{ background: "#F7F4EF", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+      <div suppressHydrationWarning style={{ background: "#F7F4EF", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
         {/* Masthead */}
         <div className="masthead" style={{ background: "#0D3320", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.45rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

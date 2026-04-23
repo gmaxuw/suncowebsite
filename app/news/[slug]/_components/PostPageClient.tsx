@@ -120,7 +120,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
   }
 `}</style>
 
-      <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+      <div suppressHydrationWarning style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
         {/* Nav */}
         <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 2rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
