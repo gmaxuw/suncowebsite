@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import SummaryCards from "@/app/admin/_components/reports/SummaryCards";
 import ExportPanel  from "@/app/admin/_components/reports/ExportPanel";
 import ImportPanel  from "@/app/admin/_components/reports/ImportPanel";
@@ -7,6 +8,7 @@ import RecordsTable from "@/app/admin/_components/reports/RecordsTable";
 import { useDelinquency } from "@/app/admin/hooks/useDelinquency";
 import { useReportsData } from "@/app/admin/hooks/useReportsData";
 import type { SummaryCardItem } from "@/types/reports.types";
+import type { ActiveTab } from "@/utils/export";
 
 interface Props {
   canCRUD: boolean;
@@ -20,6 +22,9 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     supabase,
     getDelinquency
   );
+
+  // ── Lifted from RecordsTable so ExportPanel knows which tab is active ──
+  const [activeTab, setActiveTab] = useState<ActiveTab>("all");
 
   const displayYears = Array.from({ length: 5 }, (_, i) => currentYear - 4 + i);
 
@@ -57,15 +62,6 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
       };
     });
 
-  const handleExport = async (type: string) => {
-    const { exportToCSV, exportToExcel, exportToPDF } = await import("@/utils/export");
-    const records  = buildRecords();
-    const filename = `SUNCO-Records-${new Date().toISOString().split("T")[0]}`;
-    if (type === "csv")   exportToCSV(records, filename);
-    if (type === "excel") exportToExcel(records, filename);
-    if (type === "pdf")   exportToPDF(records, filename);
-  };
-
   if (loading) {
     return (
       <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>
@@ -96,6 +92,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
           filename={`SUNCO-Records-${new Date().toISOString().split("T")[0]}`}
           memberCount={members.length}
           paymentCount={payments.length}
+          activeTab={activeTab}
         />
         {canCRUD && (
           <ImportPanel
@@ -111,7 +108,8 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
         currentYear={currentYear}
         displayYears={displayYears}
         getDelinquency={getDelinquency}
-        onExport={handleExport}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
     </div>
   );

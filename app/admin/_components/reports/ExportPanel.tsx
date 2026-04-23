@@ -1,10 +1,12 @@
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // reports/ExportPanel.tsx
 //
 // Export buttons for Excel, CSV, PDF.
-// Receives pre-built records and a filename from parent.
-// ─────────────────────────────────────────────
-import type { Member, Payment } from "@/types/reports.types";
+// Receives pre-built records, a filename, and the activeTab from parent.
+// Replace: D:\suncowebsite\app\admin\_components\reports\ExportPanel.tsx
+// ─────────────────────────────────────────────────────────────
+import { useState } from "react";
+import type { ActiveTab } from "@/utils/export";
 
 interface ExportRecord {
   no: number;
@@ -28,13 +30,23 @@ interface Props {
   filename: string;
   memberCount: number;
   paymentCount: number;
+  /** Which tab is currently active in the parent — controls what gets exported */
+  activeTab: ActiveTab;
 }
+
+const TAB_LABELS: Record<ActiveTab, string> = {
+  all:      "All Payments",
+  mas:      "MAS Only",
+  aof:      "Operating Fund",
+  lifetime: "Lifetime",
+};
 
 export default function ExportPanel({
   records,
   filename,
   memberCount,
   paymentCount,
+  activeTab,
 }: Props) {
   const [exporting, setExporting] = useState("");
 
@@ -43,9 +55,9 @@ export default function ExportPanel({
     const { exportToCSV, exportToExcel, exportToPDF } = await import(
       "@/utils/export"
     );
-    if (type === "csv") exportToCSV(records, filename);
-    if (type === "excel") exportToExcel(records, filename);
-    if (type === "pdf") exportToPDF(records, filename);
+    if (type === "csv")   exportToCSV(records, filename, activeTab);
+    if (type === "excel") exportToExcel(records, filename, activeTab);
+    if (type === "pdf")   exportToPDF(records, filename, activeTab);
     setExporting("");
   };
 
@@ -82,7 +94,8 @@ export default function ExportPanel({
           Export Records
         </h2>
         <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.2rem" }}>
-          Download all member and payment data
+          Exporting:{" "}
+          <strong style={{ color: "var(--green-dk)" }}>{TAB_LABELS[activeTab]}</strong>
         </p>
       </div>
 
@@ -118,7 +131,8 @@ export default function ExportPanel({
                 {exporting === type ? "Exporting..." : label}
               </div>
               <div style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 2 }}>
-                {memberCount} members · {paymentCount} payments
+                {memberCount} members · {paymentCount} payments ·{" "}
+                <em>{TAB_LABELS[activeTab]}</em>
               </div>
             </div>
           </button>
@@ -127,6 +141,3 @@ export default function ExportPanel({
     </div>
   );
 }
-
-// ── useState needs importing ──
-import { useState } from "react";

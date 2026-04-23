@@ -17,6 +17,7 @@ import type {
   ReceiptModalData,
   DelinquencyResult,
 } from "@/types/reports.types";
+import type { ActiveTab } from "@/utils/export";
 
 interface Props {
   members: Member[];
@@ -24,7 +25,10 @@ interface Props {
   currentYear: number;
   displayYears: number[];
   getDelinquency: (member: Member, payments: Payment[]) => DelinquencyResult;
-  onExport: (type: string) => void;
+  onExport?: (type: string) => void;
+  /** Controlled from parent so ExportPanel stays in sync */
+  activeTab: ActiveTab;
+  onTabChange: (tab: ActiveTab) => void;
 }
 
 const statusColor: Record<string, string> = {
@@ -41,9 +45,14 @@ export default function RecordsTable({
   displayYears,
   getDelinquency,
   onExport,
+  activeTab,
+  onTabChange,
 }: Props) {
-  const [activeFilter, setActiveFilter] = useState<PaymentFilter>("all");
   const [receiptModal, setReceiptModal] = useState<ReceiptModalData | null>(null);
+
+  // Keep local alias so the rest of the render logic is unchanged
+  const activeFilter = activeTab as PaymentFilter;
+  const setActiveFilter = (f: PaymentFilter) => onTabChange(f as ActiveTab);
 
   // ── Filter members by payment type ──
   const filteredMembers =
@@ -122,28 +131,30 @@ export default function RecordsTable({
           </div>
 
           {/* Quick export buttons */}
-          <div style={{ display: "flex", gap: "0.4rem" }}>
-            {["excel", "csv", "pdf"].map((type) => (
-              <button
-                key={type}
-                onClick={() => onExport(type)}
-                style={{
-                  background: "none",
-                  border: "1px solid rgba(26,92,42,0.2)",
-                  color: "var(--green-dk)",
-                  padding: "0.3rem 0.8rem",
-                  borderRadius: 4,
-                  fontSize: "0.72rem",
-                  cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {type.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          {onExport && (
+            <div style={{ display: "flex", gap: "0.4rem" }}>
+              {["excel", "csv", "pdf"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => onExport(type)}
+                  style={{
+                    background: "none",
+                    border: "1px solid rgba(26,92,42,0.2)",
+                    color: "var(--green-dk)",
+                    padding: "0.3rem 0.8rem",
+                    borderRadius: 4,
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  {type.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Legend ── */}
@@ -305,7 +316,6 @@ export default function RecordsTable({
                 const total          = memberPayments.reduce((s, p) => s + Number(p.amount), 0);
                 const displayStatus  = delinquency.derivedStatus;
 
-                // Derive join year for the Joined column
                 const py   = memberPayments.map((p) => p.year).filter(Boolean);
                 const epy  = py.length > 0 ? Math.min(...py) : null;
                 const djy  = m.date_joined ? new Date(m.date_joined).getFullYear() : null;
@@ -329,7 +339,6 @@ export default function RecordsTable({
                       {m.middle_name ? ` ${m.middle_name[0]}.` : ""}
                     </td>
 
-                    {/* Status badge */}
                     <td style={{ padding: "0.7rem 1rem" }}>
                       <span
                         style={{
@@ -346,12 +355,10 @@ export default function RecordsTable({
                       </span>
                     </td>
 
-                    {/* Joined year */}
                     <td style={{ padding: "0.7rem 1rem", fontSize: "0.75rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
                       {joinYear || "—"}
                     </td>
 
-                    {/* Payment cells */}
                     {displayYears.map((year) =>
                       activeFilter === "all" ? (
                         <>
@@ -381,7 +388,6 @@ export default function RecordsTable({
                       )
                     )}
 
-                    {/* Delinquent badge */}
                     <td style={{ padding: "0.7rem 1rem", textAlign: "center" }}>
                       {activeFilter === "lifetime" ? (
                         <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>—</span>
@@ -405,7 +411,6 @@ export default function RecordsTable({
                       )}
                     </td>
 
-                    {/* Total + owed */}
                     <td style={{ padding: "0.7rem 1rem", textAlign: "right" }}>
                       <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "var(--green-dk)" }}>
                         ₱{total.toLocaleString()}
@@ -424,7 +429,6 @@ export default function RecordsTable({
         </div>
       </div>
 
-      {/* ── Receipt modal (rendered here, state owned here) ── */}
       {receiptModal && (
         <ReceiptModal data={receiptModal} onClose={() => setReceiptModal(null)} />
       )}

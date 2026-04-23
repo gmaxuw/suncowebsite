@@ -35,10 +35,27 @@ export interface MemberRecord {
   total_amount: number;
 }
 
+// ── Active tab type ───────────────────────────────────────────
+export type ActiveTab = "all" | "mas" | "aof" | "lifetime";
+
 // ── Helpers ───────────────────────────────────────────────────
+
+/**
+ * peso() for Excel/CSV — uses the real ₱ sign (these renderers support Unicode)
+ */
 function peso(amount: number) {
   return amount > 0
     ? `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
+    : "—";
+}
+
+/**
+ * pesoPDF() for PDF — jsPDF's built-in fonts are Latin-1 only; ₱ becomes ±.
+ * We use "PHP" prefix instead, which is universally understood and renders cleanly.
+ */
+function pesoPDF(amount: number) {
+  return amount > 0
+    ? `PHP ${amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
     : "—";
 }
 
@@ -54,12 +71,6 @@ function paymentsByYearType(
   type: string
 ): PaymentRecord[] {
   return payments.filter((p) => p.year === year && p.type === type);
-}
-
-function totalByType(payments: PaymentRecord[], type: string) {
-  return payments
-    .filter((p) => (type === "all" ? true : p.type === type))
-    .reduce((s, p) => s + p.amount, 0);
 }
 
 function exportDate() {
@@ -84,24 +95,35 @@ function orgHeader(label: string): any[][] {
   ];
 }
 
+// ── Tab label map ─────────────────────────────────────────────
+const TAB_LABELS: Record<ActiveTab, string> = {
+  all:      "ALL PAYMENTS — Annual Records",
+  mas:      "MAS (Mutual Aid System) Payments",
+  aof:      "AOF (Annual Operating Fund) Payments",
+  lifetime: "Lifetime Membership Fees",
+};
+
 // ─────────────────────────────────────────────────────────────
-// EXCEL — 4 sheets in 1 file
+// EXCEL — exports only the sheet matching activeTab
 // ─────────────────────────────────────────────────────────────
 export function exportToExcel(
   members: MemberRecord[],
-  filename = "SUNCO-Records"
+  filename = "SUNCO-Records",
+  activeTab: ActiveTab = "all"
 ) {
   const wb = XLSX.utils.book_new();
   const years = getAllYears(members);
 
-  const sheets: { name: string; type: "all" | "mas" | "aof" | "lifetime"; label: string }[] = [
-    { name: "All Payments",    type: "all",      label: "ALL PAYMENTS — Annual Records" },
-    { name: "MAS Only",        type: "mas",       label: "MAS (Mutual Aid System) Payments" },
-    { name: "Operating Fund",  type: "aof",       label: "AOF (Annual Operating Fund) Payments" },
-    { name: "Lifetime",        type: "lifetime",  label: "Lifetime Membership Fees" },
-  ];
+  const sheetConfig: { name: string; type: ActiveTab; label: string }[] =
+    activeTab === "all"
+      ? [{ name: "All Payments", type: "all", label: TAB_LABELS.all }]
+      : activeTab === "mas"
+      ? [{ name: "MAS Only", type: "mas", label: TAB_LABELS.mas }]
+      : activeTab === "aof"
+      ? [{ name: "Operating Fund", type: "aof", label: TAB_LABELS.aof }]
+      : [{ name: "Lifetime", type: "lifetime", label: TAB_LABELS.lifetime }];
 
-  sheets.forEach(({ name, type, label }) => {
+  sheetConfig.forEach(({ name, type, label }) => {
     const rows: any[][] = [...orgHeader(label)];
 
     // ── Column header ──
@@ -174,13 +196,8 @@ export function exportToExcel(
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
 
-    // ── Column widths ──
     const baseCols = [
-      { wch: 5 },  // NO
-      { wch: 28 }, // NAME
-      { wch: 12 }, // STATUS
-      { wch: 15 }, // MEMBER ID
-      { wch: 14 }, // DATE JOINED
+      { wch: 5 }, { wch: 28 }, { wch: 12 }, { wch: 15 }, { wch: 14 },
     ];
     const yearCols =
       type === "all"
@@ -195,41 +212,64 @@ export function exportToExcel(
 }
 
 // ─────────────────────────────────────────────────────────────
-// CSV  —  All payments flat
+// CSV  —  respects activeTab
 // ─────────────────────────────────────────────────────────────
 export function exportToCSV(
   members: MemberRecord[],
-  filename = "SUNCO-Records"
+  filename = "SUNCO-Records",
+  activeTab: ActiveTab = "all"
 ) {
   const years = getAllYears(members);
   const rows: any[][] = [];
+  const type = activeTab;
 
-  // Org header
   rows.push([ORG_NAME]);
   rows.push([ORG_SEC]);
   rows.push(["Email: " + ORG_EMAIL + "  |  Mobile: " + ORG_MOBILE]);
   rows.push(["As of: " + exportDate()]);
+  rows.push([TAB_LABELS[type]]);
   rows.push([]);
 
-  // Column header
   const header = ["NO.", "NAME", "STATUS", "MEMBER ID", "DATE JOINED"];
-  years.forEach((yr) => {
-    header.push(`${yr} MAS DATE`, `${yr} MAS AMT`, `${yr} AOF DATE`, `${yr} AOF AMT`);
-  });
+  if (type === "all") {
+    years.forEach((yr) => {
+      header.push(`${yr} MAS DATE`, `${yr} MAS AMT`, `${yr} AOF DATE`, `${yr} AOF AMT`);
+    });
+  } else {
+    years.forEach((yr) => {
+      header.push(`${yr} DATE`, `${yr} AMT`);
+    });
+  }
   header.push("YRS DELINQUENT", "TOTAL PAID");
   rows.push(header);
 
   members.forEach((m) => {
     const row: any[] = [m.no, m.name, m.status, m.member_id_code, m.date_joined];
-    years.forEach((yr) => {
-      const mas = paymentsByYearType(m.payments, yr, "mas")[0];
-      const aof = paymentsByYearType(m.payments, yr, "aof")[0];
-      row.push(mas?.date || "", mas ? peso(mas.amount) : "", aof?.date || "", aof ? peso(aof.amount) : "");
-    });
-    row.push(
-      m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "Paid",
-      peso(m.total_amount)
-    );
+
+    if (type === "all") {
+      years.forEach((yr) => {
+        const mas = paymentsByYearType(m.payments, yr, "mas")[0];
+        const aof = paymentsByYearType(m.payments, yr, "aof")[0];
+        row.push(mas?.date || "", mas ? peso(mas.amount) : "", aof?.date || "", aof ? peso(aof.amount) : "");
+      });
+      row.push(
+        m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "Paid",
+        peso(m.total_amount)
+      );
+    } else {
+      years.forEach((yr) => {
+        const p = paymentsByYearType(m.payments, yr, type)[0];
+        row.push(p?.date || "", p ? peso(p.amount) : "");
+      });
+      const filteredTotal = m.payments
+        .filter((p) => p.type === type)
+        .reduce((s, p) => s + p.amount, 0);
+      row.push(
+        m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "Paid",
+        filteredTotal > 0 ? peso(filteredTotal) : ""
+      );
+    }
+
     rows.push(row);
   });
 
@@ -240,14 +280,17 @@ export function exportToCSV(
 }
 
 // ─────────────────────────────────────────────────────────────
-// PDF  —  Landscape A4, styled like your website table
+// PDF  —  respects activeTab, uses pesoPDF() to avoid ± glitch
 // ─────────────────────────────────────────────────────────────
 export function exportToPDF(
   members: MemberRecord[],
-  filename = "SUNCO-Records"
+  filename = "SUNCO-Records",
+  activeTab: ActiveTab = "all"
 ) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const years = getAllYears(members);
+  const type = activeTab;
+
   const GREEN_DK: [number, number, number] = [13, 51, 32];
   const GOLD: [number, number, number]     = [201, 168, 76];
   const CREAM: [number, number, number]    = [245, 237, 216];
@@ -255,7 +298,7 @@ export function exportToPDF(
 
   // ── Header block ──
   doc.setFillColor(...GREEN_DK);
-  doc.rect(0, 0, 297, 28, "F");
+  doc.rect(0, 0, 297, 32, "F");
 
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
@@ -267,66 +310,117 @@ export function exportToPDF(
   doc.setTextColor(200, 200, 200);
   doc.text(`${ORG_SEC}   |   ${ORG_DTI}`, 14, 16);
   doc.text(`Email: ${ORG_EMAIL}   |   Mobile: ${ORG_MOBILE}`, 14, 21);
-  doc.text(`As of: ${exportDate()}`, 14, 26);
+  doc.text(TAB_LABELS[type], 14, 26);
+  doc.text(`As of: ${exportDate()}`, 14, 31);
 
-  // ── Build table data ──
-  // Columns: No | Name | Status | Joined | [yr MAS | yr AOF]... | Delinquent | Total
-  const yearHeaders = years.flatMap((yr) => [`${yr}\nMAS`, `${yr}\nAOF`]);
-  const head = [["No.", "Name", "Status", "Joined", ...yearHeaders, "Delinquent", "Total"]];
-
-  const body = members.map((m) => {
-    const row: any[] = [
-      m.no,
-      m.name,
-      m.status,
-      m.date_joined ? m.date_joined.toString().slice(0, 7) : "—",
-    ];
-    years.forEach((yr) => {
-      const mas = paymentsByYearType(m.payments, yr, "mas")[0];
-      const aof = paymentsByYearType(m.payments, yr, "aof")[0];
-      row.push(mas ? peso(mas.amount) : "—");
-      row.push(aof ? peso(aof.amount) : "—");
-    });
-    row.push(m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "✓ Paid");
-    row.push(m.total_amount > 0 ? peso(m.total_amount) : "—");
-    return row;
-  });
-
-  // ── Totals footer row ──
-  const footerRow: any[] = ["", "TOTAL", "", ""];
-  years.forEach((yr) => {
-    const masT = members.reduce((s, m) => {
-      const p = paymentsByYearType(m.payments, yr, "mas")[0];
-      return s + (p?.amount || 0);
-    }, 0);
-    const aofT = members.reduce((s, m) => {
-      const p = paymentsByYearType(m.payments, yr, "aof")[0];
-      return s + (p?.amount || 0);
-    }, 0);
-    footerRow.push(masT > 0 ? peso(masT) : "—");
-    footerRow.push(aofT > 0 ? peso(aofT) : "—");
-  });
-  const grandT = members.reduce((s, m) => s + m.total_amount, 0);
-  footerRow.push("", peso(grandT));
-
-  const yearColWidth = Math.max(5, Math.min(18, Math.floor(220 / (years.length * 2 + 5))));
-
-  const colStyles: any = {
+  // ── Build columns based on activeTab ──
+  let head: string[][];
+  let body: any[][];
+  let footerRow: any[];
+  let colStyles: any = {
     0: { cellWidth: 8,  halign: "center" },
     1: { cellWidth: 40 },
     2: { cellWidth: 16 },
     3: { cellWidth: 14 },
   };
-  years.forEach((_, i) => {
-    colStyles[4 + i * 2]     = { cellWidth: yearColWidth, halign: "right" };
-    colStyles[4 + i * 2 + 1] = { cellWidth: yearColWidth, halign: "right" };
-  });
-  const lastCol = 4 + years.length * 2;
-  colStyles[lastCol]     = { cellWidth: 16, halign: "center" };
-  colStyles[lastCol + 1] = { cellWidth: 18, halign: "right" };
+
+  if (type === "all") {
+    // All Payments: show MAS + AOF columns per year
+    const yearHeaders = years.flatMap((yr) => [`${yr}\nMAS`, `${yr}\nAOF`]);
+    head = [["No.", "Name", "Status", "Joined", ...yearHeaders, "Delinquent", "Total"]];
+
+    body = members.map((m) => {
+      const row: any[] = [
+        m.no, m.name, m.status,
+        m.date_joined ? m.date_joined.toString().slice(0, 7) : "—",
+      ];
+      years.forEach((yr) => {
+        const mas = paymentsByYearType(m.payments, yr, "mas")[0];
+        const aof = paymentsByYearType(m.payments, yr, "aof")[0];
+        row.push(mas ? pesoPDF(mas.amount) : "—");
+        row.push(aof ? pesoPDF(aof.amount) : "—");
+      });
+      row.push(m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "Paid");
+      row.push(m.total_amount > 0 ? pesoPDF(m.total_amount) : "—");
+      return row;
+    });
+
+    footerRow = ["", "TOTAL", "", ""];
+    years.forEach((yr) => {
+      const masT = members.reduce((s, m) => {
+        const p = paymentsByYearType(m.payments, yr, "mas")[0];
+        return s + (p?.amount || 0);
+      }, 0);
+      const aofT = members.reduce((s, m) => {
+        const p = paymentsByYearType(m.payments, yr, "aof")[0];
+        return s + (p?.amount || 0);
+      }, 0);
+      footerRow.push(masT > 0 ? pesoPDF(masT) : "—");
+      footerRow.push(aofT > 0 ? pesoPDF(aofT) : "—");
+    });
+    const grandT = members.reduce((s, m) => s + m.total_amount, 0);
+    footerRow.push("", pesoPDF(grandT));
+
+    const yearColWidth = Math.max(5, Math.min(18, Math.floor(220 / (years.length * 2 + 5))));
+    years.forEach((_, i) => {
+      colStyles[4 + i * 2]     = { cellWidth: yearColWidth, halign: "right" };
+      colStyles[4 + i * 2 + 1] = { cellWidth: yearColWidth, halign: "right" };
+    });
+    const lastCol = 4 + years.length * 2;
+    colStyles[lastCol]     = { cellWidth: 18, halign: "center" };
+    colStyles[lastCol + 1] = { cellWidth: 22, halign: "right" };
+
+  } else {
+    // MAS / AOF / Lifetime: one column per year
+    const yearHeaders = years.map((yr) => `${yr}`);
+    const typeLabel = type === "mas" ? "MAS" : type === "aof" ? "AOF" : "Lifetime";
+    head = [["No.", "Name", "Status", "Joined", ...yearHeaders, "Delinquent", "Total"]];
+
+    body = members.map((m) => {
+      const row: any[] = [
+        m.no, m.name, m.status,
+        m.date_joined ? m.date_joined.toString().slice(0, 7) : "—",
+      ];
+      years.forEach((yr) => {
+        const p = paymentsByYearType(m.payments, yr, type)[0];
+        row.push(p ? pesoPDF(p.amount) : "—");
+      });
+      const filteredTotal = m.payments
+        .filter((p) => p.type === type)
+        .reduce((s, p) => s + p.amount, 0);
+      row.push(m.years_delinquent > 0 ? `${m.years_delinquent} yr(s)` : "Paid");
+      row.push(filteredTotal > 0 ? pesoPDF(filteredTotal) : "—");
+      return row;
+    });
+
+    footerRow = ["", "TOTAL", "", ""];
+    years.forEach((yr) => {
+      const yrT = members.reduce((s, m) => {
+        const p = paymentsByYearType(m.payments, yr, type)[0];
+        return s + (p?.amount || 0);
+      }, 0);
+      footerRow.push(yrT > 0 ? pesoPDF(yrT) : "—");
+    });
+    const grandT = members.reduce(
+      (s, m) => s + m.payments.filter((p) => p.type === type).reduce((ss, p) => ss + p.amount, 0),
+      0
+    );
+    footerRow.push("", pesoPDF(grandT));
+
+    const yearColWidth = Math.max(18, Math.min(30, Math.floor(240 / (years.length + 4))));
+    years.forEach((_, i) => {
+      colStyles[4 + i] = { cellWidth: yearColWidth, halign: "right" };
+    });
+    const lastCol = 4 + years.length;
+    colStyles[lastCol]     = { cellWidth: 18, halign: "center" };
+    colStyles[lastCol + 1] = { cellWidth: 24, halign: "right" };
+  }
+
+  const lastDataCol =
+    type === "all" ? 4 + years.length * 2 : 4 + years.length;
 
   autoTable(doc, {
-    startY: 31,
+    startY: 35,
     head,
     body: [...body, footerRow],
     styles: { fontSize: 6.5, cellPadding: 1.8, font: "helvetica", overflow: "linebreak" },
@@ -334,26 +428,26 @@ export function exportToPDF(
     alternateRowStyles: { fillColor: CREAM },
     columnStyles: colStyles,
     didParseCell: (data) => {
-      // Last row = totals — bold dark green background
+      // Totals row — bold light-green background
       if (data.row.index === body.length) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fillColor = [230, 240, 230];
         data.cell.styles.textColor = GREEN_DK;
       }
-      // Highlight missing payments (delinquent cells) in yellow
+      // Highlight missing payments in yellow
       if (
         data.section === "body" &&
         data.row.index < body.length &&
         data.column.index >= 4 &&
-        data.column.index < lastCol
+        data.column.index < lastDataCol
       ) {
         if (data.cell.raw === "—") {
           data.cell.styles.fillColor = YELLOW;
           data.cell.styles.textColor = [160, 100, 0];
         }
       }
-      // Green for "✓ Paid", red for delinquent
-      if (data.section === "body" && data.column.index === lastCol) {
+      // Green for "Paid", red for delinquent
+      if (data.section === "body" && data.column.index === lastDataCol) {
         const raw = String(data.cell.raw || "");
         if (raw.includes("Paid")) {
           data.cell.styles.textColor = [46, 139, 68];
