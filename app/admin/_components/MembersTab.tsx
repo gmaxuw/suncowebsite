@@ -11,6 +11,7 @@
 // Roles: admin, president, treasurer, secretary can edit
 // FIX: STATUS_STYLES crash when m.status is undefined/null
 // FIX: Full mobile + tablet responsiveness
+// NEW: Delete member, styled edit/delete payment modal
 // ─────────────────────────────────────────────
 import { useEffect, useState, useRef } from "react";
 import {
@@ -46,11 +47,9 @@ const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }
   "dropped":    { text: "#A8200D", bg: "#FDECEA", border: "#F5A49A" },
   Deceased:     { text: "#555",    bg: "#F2F2F2", border: "#CCC"    },
   "deceased":   { text: "#555",    bg: "#F2F2F2", border: "#CCC"    },
-  // SAFE DEFAULT — prevents crash when status is undefined/null/unknown
   "__default":  { text: "#666",    bg: "#F5F5F5", border: "#DDD"    },
 };
 
-// Safe getter that never crashes
 function getStatusStyle(status: string | undefined | null) {
   if (!status) return STATUS_STYLES["__default"];
   return STATUS_STYLES[status] || STATUS_STYLES[status.toLowerCase()] || STATUS_STYLES["__default"];
@@ -112,6 +111,14 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const [payOR,             setPayOR]             = useState("");
   const [payDate,           setPayDate]           = useState(new Date().toISOString().split("T")[0]);
   const [paySaving,         setPaySaving]         = useState(false);
+
+  // Edit payment modal
+  const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [editPayOR,      setEditPayOR]      = useState("");
+  const [editPayAmount,  setEditPayAmount]  = useState("");
+  const [editPayDate,    setEditPayDate]    = useState("");
+  const [editPayYear,    setEditPayYear]    = useState(0);
+  const [editPaySaving,  setEditPaySaving]  = useState(false);
 
   // Add member form
   const [showAddForm, setShowAddForm] = useState(false);
@@ -264,6 +271,23 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     setEditSaving(false);
   };
 
+  // ── Delete member ──
+  const handleDeleteMember = async () => {
+    if (!selected) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selected.first_name} ${selected.last_name}?\n\nThis will permanently remove the member and cannot be undone.`
+    );
+    if (!confirmed) return;
+    const { error } = await supabase.from("members").delete().eq("id", selected.id);
+    if (error) { alert("Error deleting member: " + error.message); return; }
+    await logActivity("MEMBER_DELETED", {
+      for_member: `${selected.first_name} ${selected.last_name}`,
+      member_id:  selected.id,
+    });
+    setSelected(null);
+    await loadMembers();
+  };
+
   // ── Approve / Reject ──
   const handleApprove = async () => {
     setActionSaving(true);
@@ -331,6 +355,45 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     setPaySaving(false);
   };
 
+  // ── Save edited payment ──
+  const handleSaveEditPayment = async () => {
+    if (!editPayOR.trim()) { alert("OR number is required."); return; }
+    setEditPaySaving(true);
+    const { error } = await supabase.from("payments").update({
+      receipt_number: editPayOR.trim(),
+      amount:         Number(editPayAmount),
+      date_paid:      editPayDate,
+      year:           editPayYear,
+    }).eq("id", editingPayment.id);
+    if (error) {
+      alert("Error saving: " + error.message);
+    } else {
+      await logActivity("PAYMENT_EDITED", {
+        for_member: `${selected.first_name} ${selected.last_name}`,
+        payment_id: editingPayment.id,
+        new_or:     editPayOR.trim(),
+        new_amount: editPayAmount,
+      });
+      await loadMemberData(selected.id);
+      setEditingPayment(null);
+    }
+    setEditPaySaving(false);
+  };
+
+  // ── Delete payment ──
+  const handleDeletePayment = async (paymentId: string, paymentType: string) => {
+    const confirmed = window.confirm(`Delete this ${paymentType.toUpperCase()} payment record?\n\nThis cannot be undone.`);
+    if (!confirmed) return;
+    const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+    if (error) { alert("Error: " + error.message); return; }
+    await logActivity("PAYMENT_DELETED", {
+      for_member: `${selected.first_name} ${selected.last_name}`,
+      payment_id: paymentId,
+      type:       paymentType,
+    });
+    await loadMemberData(selected.id);
+  };
+
   // ── Add member ──
   const handleAddMember = async () => {
     if (!addForm.first_name.trim() || !addForm.last_name.trim()) { alert("First and last name required."); return; }
@@ -378,11 +441,24 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     color: "#0D3320", outline: "none", boxSizing: "border-box", background: "white",
   };
 
+  const modalInputCls: React.CSSProperties = {
+    width: "100%", padding: "0.72rem 1rem",
+    border: "1.5px solid rgba(26,92,42,0.2)", borderRadius: 8,
+    fontSize: "0.9rem", fontFamily: "'DM Sans',sans-serif",
+    color: "#0D3320", outline: "none", boxSizing: "border-box", background: "white",
+  };
+
+  const modalLabelCls: React.CSSProperties = {
+    display: "block", fontSize: "0.62rem", fontWeight: 600,
+    letterSpacing: "0.1em", textTransform: "uppercase",
+    color: "#888", marginBottom: 6,
+  };
+
   // ────────────────────────────────────────
   return (
     <div style={{ fontFamily: "'DM Sans',sans-serif" }}>
 
-      {/* ── Mobile-responsive styles injected ── */}
+      {/* ── Mobile-responsive styles ── */}
       <style>{`
         @media (max-width: 640px) {
           .members-header { flex-direction: column !important; align-items: flex-start !important; }
@@ -431,11 +507,11 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       {/* ── Stats ── */}
       <div className="members-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: "0.8rem", marginBottom: "1.5rem" }}>
         {[
-          { label: "Total",     value: members.length,                                                         color: "var(--gold)" },
-          { label: "Active",    value: members.filter(m => (m.status||"").toLowerCase() === "active").length,  color: "#2E8B44" },
-          { label: "Pending",   value: pendingCount,                                                           color: "#2B5FA8" },
-          { label: "Non-active",value: members.filter(m => (m.status||"").toLowerCase() === "non-active").length, color: "#D4A017" },
-          { label: "Dropped",   value: members.filter(m => (m.status||"").toLowerCase() === "dropped").length, color: "#C0392B" },
+          { label: "Total",      value: members.length,                                                                    color: "var(--gold)" },
+          { label: "Active",     value: members.filter(m => (m.status||"").toLowerCase() === "active").length,             color: "#2E8B44" },
+          { label: "Pending",    value: pendingCount,                                                                      color: "#2B5FA8" },
+          { label: "Non-active", value: members.filter(m => (m.status||"").toLowerCase() === "non-active").length,         color: "#D4A017" },
+          { label: "Dropped",    value: members.filter(m => (m.status||"").toLowerCase() === "dropped").length,            color: "#C0392B" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "white", borderRadius: 10, padding: "0.9rem 1rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}` }}>
             <p style={{ fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.25rem" }}>{label}</p>
@@ -452,7 +528,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             style={{ border: "none", outline: "none", fontFamily: "'DM Sans',sans-serif", fontSize: "0.85rem", color: "var(--text)", padding: "0.65rem 0", width: "100%", background: "transparent" }} />
           {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}><X size={13} color="var(--muted)" /></button>}
         </div>
-        {/* Horizontally scrollable filter chips on mobile */}
         <div className="filter-scroll" style={{ display: "flex", gap: "0.4rem", flexWrap: "nowrap", overflowX: "auto" }}>
           {[
             { id: "all",        label: `All (${members.length})` },
@@ -470,7 +545,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
         </div>
       </div>
 
-      {/* ── Table — card view on mobile ── */}
+      {/* ── Table ── */}
       <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         {loading ? (
           <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)" }}>Loading members...</div>
@@ -480,7 +555,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>No members found.</p>
           </div>
         ) : isMobile ? (
-          /* ── MOBILE CARD LIST ── */
           <div style={{ display: "flex", flexDirection: "column" }}>
             {filtered.map((m, i) => {
               const ss = getStatusStyle(m.status);
@@ -488,7 +562,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
               return (
                 <div key={m.id} onClick={() => openMember(m)}
                   style={{ padding: "1rem 1.1rem", borderBottom: i < filtered.length - 1 ? "1px solid rgba(26,92,42,0.07)" : "none", background: i % 2 === 0 ? "white" : "#FAFAF9", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
-                  {/* Avatar */}
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--green-dk)", border: "2px solid rgba(201,168,76,0.3)", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {m.avatar_url ? (
                       <img src={m.avatar_url} alt={m.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -514,7 +587,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             })}
           </div>
         ) : (
-          /* ── DESKTOP TABLE ── */
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
               <thead>
@@ -596,7 +668,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", padding: "1.2rem 1.4rem", flexShrink: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                  {/* Avatar with upload */}
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <div style={{ width: 52, height: 52, borderRadius: "50%", border: "3px solid #C9A84C", overflow: "hidden", background: "rgba(201,168,76,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {selected.avatar_url ? (
@@ -627,8 +698,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                   <X size={13} />
                 </button>
               </div>
-
-              {/* Status badges */}
               <div style={{ display: "flex", gap: 6, marginTop: "0.8rem", flexWrap: "wrap" }}>
                 {(() => { const ss = getStatusStyle(selected.status); return (
                   <span style={{ background: ss.bg, color: ss.text, border: `1px solid ${ss.border}`, fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, textTransform: "capitalize" }}>{selected.status || "—"}</span>
@@ -648,9 +717,9 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
             {/* ── Modal Tabs ── */}
             <div style={{ display: "flex", background: "#F9F8F5", borderBottom: "1px solid rgba(26,92,42,0.08)", flexShrink: 0, overflowX: "auto" }}>
               {([
-                { id: "profile",     label: "Profile",     icon: Users    },
-                { id: "payments",    label: "Payments",    icon: CreditCard },
-                { id: "submissions", label: "GCash",       icon: Inbox    },
+                { id: "profile",     label: "Profile",  icon: Users      },
+                { id: "payments",    label: "Payments", icon: CreditCard  },
+                { id: "submissions", label: "GCash",    icon: Inbox       },
                 ...((selected.approval_status || "").toLowerCase() === "pending" ? [{ id: "actions", label: "Review", icon: Shield }] : []),
               ] as { id: ModalTab; label: string; icon: any }[]).map(({ id, label, icon: Icon }) => (
                 <button key={id} onClick={() => setModalTab(id)}
@@ -680,9 +749,16 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                           </button>
                         </div>
                       ) : (
-                        <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "var(--green-dk)" }}>
-                          <Edit3 size={12} /> Edit Profile
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => setEditMode(true)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "var(--green-dk)" }}>
+                            <Edit3 size={12} /> Edit Profile
+                          </button>
+                          <button onClick={handleDeleteMember}
+                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "#C0392B" }}>
+                            <XCircle size={12} /> Delete
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -721,7 +797,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                           </div>
                         ))}
                       </div>
-
                       {(selected.approval_status || "").toLowerCase() === "approved" && (
                         <div>
                           <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>Membership Status</label>
@@ -742,13 +817,13 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                     </div>
                   ) : (
                     <div className="info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.7rem" }}>
-                      <InfoCard icon={CreditCard} label="Member ID" value={selected.member_id_code || `#${selected.membership_number || "—"}`} />
-                      <InfoCard icon={Calendar}   label="Date Joined" value={selected.date_joined ? new Date(selected.date_joined).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
-                      <InfoCard icon={Phone}      label="Mobile" value={selected.mobile || "—"} />
+                      <InfoCard icon={CreditCard} label="Member ID"    value={selected.member_id_code || `#${selected.membership_number || "—"}`} />
+                      <InfoCard icon={Calendar}   label="Date Joined"  value={selected.date_joined ? new Date(selected.date_joined).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
+                      <InfoCard icon={Phone}      label="Mobile"       value={selected.mobile || "—"} />
                       <InfoCard icon={Calendar}   label="Date of Birth" value={selected.birthdate ? new Date(selected.birthdate).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
-                      <InfoCard icon={MapPin}     label="Address" value={selected.address || "—"} />
-                      <InfoCard icon={Heart}      label="Beneficiary" value={selected.beneficiary_name ? `${selected.beneficiary_name} (${selected.beneficiary_relation || "—"})` : "—"} />
-                      <InfoCard icon={Shield}     label="Member No." value={selected.membership_number ? `#${selected.membership_number}` : "—"} />
+                      <InfoCard icon={MapPin}     label="Address"      value={selected.address || "—"} />
+                      <InfoCard icon={Heart}      label="Beneficiary"  value={selected.beneficiary_name ? `${selected.beneficiary_name} (${selected.beneficiary_relation || "—"})` : "—"} />
+                      <InfoCard icon={Shield}     label="Member No."   value={selected.membership_number ? `#${selected.membership_number}` : "—"} />
                       <InfoCard icon={Calendar}   label="Date Applied" value={selected.created_at ? new Date(selected.created_at).toLocaleDateString("en-PH") : "—"} />
                     </div>
                   )}
@@ -758,19 +833,22 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
               {/* ═══ PAYMENTS TAB ═══ */}
               {modalTab === "payments" && (
                 <div>
-                  <div className="pay-summary" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "0.6rem", marginBottom: "1.2rem" }}>
+                  {/* Summary cards */}
+                  <div className="pay-summary" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.6rem", marginBottom: "1.2rem" }}>
                     {[
-                      { label: "Total Paid",  value: `₱${totalPaidForMember.toLocaleString()}`, color: "var(--gold)" },
-                      { label: "AOF",         value: memberPayments.filter(p => p.type === "aof").length, color: "#2B5FA8" },
-                      { label: "MAS",         value: memberPayments.filter(p => p.type === "mas").length, color: "#2E8B44" },
+                      { label: "Total Paid", value: `₱${totalPaidForMember.toLocaleString()}`,                                  color: "var(--gold)" },
+                      { label: "Lifetime",   value: memberPayments.some(p => p.type === "lifetime") ? "✓ Paid" : "Not yet",     color: "#6B3FA0" },
+                      { label: "AOF",        value: String(memberPayments.filter(p => p.type === "aof").length),                 color: "#2B5FA8" },
+                      { label: "MAS",        value: String(memberPayments.filter(p => p.type === "mas").length),                 color: "#2E8B44" },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ background: "#F9F8F5", borderRadius: 10, padding: "0.8rem 0.9rem", borderTop: `3px solid ${color}` }}>
                         <p style={{ fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 3 }}>{label}</p>
-                        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.2rem", fontWeight: 700, color }}>{value}</p>
+                        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.1rem", fontWeight: 700, color }}>{value}</p>
                       </div>
                     ))}
                   </div>
 
+                  {/* Record payment button / form */}
                   {canCRUD && (
                     <div style={{ marginBottom: "1.2rem" }}>
                       {!showPayForm ? (
@@ -784,7 +862,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                             <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--green-dk)" }}>Record New Payment</p>
                             <button onClick={() => setShowPayForm(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={14} color="var(--muted)" /></button>
                           </div>
-
                           <div className="pay-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.8rem" }}>
                             <div>
                               <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Payment Year</label>
@@ -797,7 +874,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                               <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} style={inputCls} />
                             </div>
                           </div>
-
                           <div style={{ marginBottom: "0.8rem" }}>
                             <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>Payment Type(s)</label>
                             {PAYMENT_TYPES.map(({ type, label, amount }) => {
@@ -820,19 +896,16 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                               );
                             })}
                           </div>
-
                           <div style={{ marginBottom: "0.8rem" }}>
                             <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>OR Number *</label>
                             <input type="text" value={payOR} onChange={e => setPayOR(e.target.value)} placeholder="e.g. 0012345" style={inputCls} />
                           </div>
-
                           {payTypes.length > 0 && (
                             <div style={{ background: "var(--green-dk)", borderRadius: 8, padding: "0.7rem 1rem", marginBottom: "0.8rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)" }}>Total to record</span>
                               <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.1rem", fontWeight: 700, color: "#C9A84C" }}>₱{payTypes.reduce((s, t) => s + (PAYMENT_TYPES.find(p => p.type === t)?.amount || 0), 0).toLocaleString()}</span>
                             </div>
                           )}
-
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
                             <button onClick={() => setShowPayForm(false)} style={{ padding: "0.65rem", background: "white", border: "1.5px solid rgba(26,92,42,0.15)", color: "var(--muted)", borderRadius: 6, fontSize: "0.82rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>Cancel</button>
                             <button onClick={handleRecordPayment} disabled={paySaving || payTypes.length === 0 || !payOR.trim()}
@@ -845,6 +918,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                     </div>
                   )}
 
+                  {/* Payment records table */}
                   {paymentsLoading ? (
                     <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>Loading payments...</div>
                   ) : memberPayments.length === 0 ? (
@@ -855,10 +929,10 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                   ) : (
                     <div style={{ border: "1px solid rgba(26,92,42,0.08)", borderRadius: 10, overflow: "hidden" }}>
                       <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: canCRUD ? 480 : 400 }}>
                           <thead>
                             <tr style={{ background: "#F9F8F5" }}>
-                              {["Year","Type","Amount","Date","Receipt"].map(h => (
+                              {["Year","Type","Amount","Date","Receipt", ...(canCRUD ? ["Actions"] : [])].map(h => (
                                 <th key={h} style={{ padding: "0.65rem 0.8rem", textAlign: "left", fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", whiteSpace: "nowrap" }}>{h}</th>
                               ))}
                             </tr>
@@ -875,13 +949,35 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                                   {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                                 </td>
                                 <td style={{ padding: "0.65rem 0.8rem", fontSize: "0.7rem", color: "var(--muted)", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
+                                {canCRUD && (
+                                  <td style={{ padding: "0.65rem 0.8rem" }}>
+                                    <div style={{ display: "flex", gap: 5 }}>
+                                      <button
+                                        onClick={() => {
+                                          setEditingPayment(p);
+                                          setEditPayOR(p.receipt_number || "");
+                                          setEditPayAmount(String(p.amount));
+                                          setEditPayDate(p.date_paid || new Date().toISOString().split("T")[0]);
+                                          setEditPayYear(p.year || new Date().getFullYear());
+                                        }}
+                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.2)", borderRadius: 6, cursor: "pointer", color: "var(--green-dk)", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeletePayment(p.id, p.type)}
+                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 6, cursor: "pointer", color: "#C0392B", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
+                                        Del
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
                               </tr>
                             ))}
                           </tbody>
                           <tfoot>
                             <tr style={{ background: "#F9F8F5", borderTop: "2px solid rgba(201,168,76,0.4)" }}>
                               <td colSpan={2} style={{ padding: "0.65rem 0.8rem", fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 600 }}>Total</td>
-                              <td colSpan={3} style={{ padding: "0.65rem 0.8rem", fontFamily: "'Playfair Display',serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--green-dk)" }}>₱{totalPaidForMember.toLocaleString()}</td>
+                              <td colSpan={canCRUD ? 4 : 3} style={{ padding: "0.65rem 0.8rem", fontFamily: "'Playfair Display',serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--green-dk)" }}>₱{totalPaidForMember.toLocaleString()}</td>
                             </tr>
                           </tfoot>
                         </table>
@@ -905,9 +1001,9 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                       {memberSubmissions.map(sub => {
                         const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-                          pending:  { bg: "rgba(43,95,168,0.08)",   color: "#2B5FA8", label: "⏳ Pending"  },
-                          approved: { bg: "rgba(46,139,68,0.08)",   color: "#2E8B44", label: "✅ Approved" },
-                          rejected: { bg: "rgba(192,57,43,0.08)",   color: "#C0392B", label: "❌ Rejected" },
+                          pending:  { bg: "rgba(43,95,168,0.08)",  color: "#2B5FA8", label: "⏳ Pending"  },
+                          approved: { bg: "rgba(46,139,68,0.08)",  color: "#2E8B44", label: "✅ Approved" },
+                          rejected: { bg: "rgba(192,57,43,0.08)",  color: "#C0392B", label: "❌ Rejected" },
                         };
                         const sc = statusConfig[(sub.status||"").toLowerCase()] || statusConfig.pending;
                         return (
@@ -938,7 +1034,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                 </div>
               )}
 
-              {/* ═══ ACTIONS TAB (pending only) ═══ */}
+              {/* ═══ ACTIONS TAB ═══ */}
               {modalTab === "actions" && (selected.approval_status || "").toLowerCase() === "pending" && (
                 <div>
                   <div style={{ background: "rgba(43,95,168,0.06)", border: "1px solid rgba(43,95,168,0.2)", borderRadius: 10, padding: "1rem 1.1rem", marginBottom: "1.2rem" }}>
@@ -947,7 +1043,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                       Review the member's information in the Profile tab before taking action. Approving will set their status to Active and record their date joined.
                     </p>
                   </div>
-
                   <div style={{ marginBottom: "1.2rem" }}>
                     <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>
                       Rejection Reason <span style={{ color: "var(--muted)", fontWeight: 400 }}>(required if rejecting)</span>
@@ -955,7 +1050,6 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                     <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="e.g. Incomplete information, unable to verify address..." rows={3}
                       style={{ ...inputCls, resize: "vertical", lineHeight: 1.6 }} />
                   </div>
-
                   <div className="action-btns" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
                     <button onClick={handleReject} disabled={actionSaving}
                       style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.85rem", background: "rgba(192,57,43,0.08)", border: "1.5px solid rgba(192,57,43,0.3)", color: "#C0392B", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, cursor: actionSaving ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif" }}>
@@ -968,6 +1062,119 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                   </div>
                 </div>
               )}
+
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════
+          EDIT PAYMENT MODAL
+      ════════════════════════════════════════ */}
+      {editingPayment && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
+
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", padding: "1.2rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ fontSize: "0.55rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>Payment Record</p>
+                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.15rem", color: "#C9A84C" }}>Edit Payment</h2>
+                <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                  {selected?.first_name} {selected?.last_name} · {(editingPayment.type || "").toUpperCase()} · {editingPayment.year}
+                </p>
+              </div>
+              <button onClick={() => setEditingPayment(null)}
+                style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Type badge strip */}
+            <div style={{ background: "#F9F8F5", borderBottom: "1px solid rgba(26,92,42,0.08)", padding: "0.7rem 1.5rem", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                background: editingPayment.type === "mas" ? "rgba(46,139,68,0.12)" : editingPayment.type === "aof" ? "rgba(43,95,168,0.12)" : "rgba(107,63,160,0.12)",
+                color:      editingPayment.type === "mas" ? "#2E7D32"             : editingPayment.type === "aof" ? "#1565C0"             : "#6B3FA0",
+                fontSize: "0.65rem", fontWeight: 700, padding: "3px 12px", borderRadius: 20, textTransform: "uppercase",
+              }}>{editingPayment.type}</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                Editing record — changes save immediately
+              </span>
+            </div>
+
+            {/* Form fields */}
+            <div style={{ padding: "1.4rem 1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+              {/* OR Number */}
+              <div>
+                <label style={modalLabelCls}>Official Receipt (OR) Number *</label>
+                <input
+                  type="text"
+                  value={editPayOR}
+                  onChange={e => setEditPayOR(e.target.value)}
+                  style={{ ...modalInputCls, fontWeight: 600, letterSpacing: "0.03em" }}
+                  placeholder="e.g. OR-2026-00225"
+                />
+              </div>
+
+              {/* Amount + Year */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+                <div>
+                  <label style={modalLabelCls}>Amount (₱)</label>
+                  <input
+                    type="number"
+                    value={editPayAmount}
+                    onChange={e => setEditPayAmount(e.target.value)}
+                    style={modalInputCls}
+                  />
+                </div>
+                <div>
+                  <label style={modalLabelCls}>Year</label>
+                  <select value={editPayYear} onChange={e => setEditPayYear(Number(e.target.value))} style={{ ...modalInputCls, background: "white" }}>
+                    {Array.from({ length: 16 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Date Paid */}
+              <div>
+                <label style={modalLabelCls}>Date Paid</label>
+                <input
+                  type="date"
+                  value={editPayDate}
+                  onChange={e => setEditPayDate(e.target.value)}
+                  style={modalInputCls}
+                />
+              </div>
+
+              {/* Live preview card */}
+              <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", borderRadius: 10, padding: "1rem 1.2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>Amount to save</p>
+                  <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.5rem", fontWeight: 700, color: "#C9A84C" }}>
+                    ₱{Number(editPayAmount || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>OR No.</p>
+                  <p style={{ fontSize: "0.88rem", color: "white", fontWeight: 600, fontFamily: "monospace" }}>{editPayOR || "—"}</p>
+                  <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{editPayYear}</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.7rem" }}>
+                <button onClick={() => setEditingPayment(null)}
+                  style={{ padding: "0.78rem", background: "#F5F5F5", border: "none", borderRadius: 8, fontSize: "0.85rem", color: "#777", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>
+                  Cancel
+                </button>
+                <button onClick={handleSaveEditPayment} disabled={editPaySaving || !editPayOR.trim()}
+                  style={{ padding: "0.78rem", background: editPaySaving || !editPayOR.trim() ? "#CCC" : "var(--gold)", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, color: "var(--green-dk)", cursor: editPaySaving || !editPayOR.trim() ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                  {editPaySaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
 
             </div>
           </div>
