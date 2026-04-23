@@ -64,7 +64,9 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
         {/* Masthead */}
         <div className="masthead" style={{ background: "#0D3320", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.45rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}
+            <span suppressHydrationWarning>
+  {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}
+</span>
           </p>
           <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
             SURIGAO DEL NORTE · EST. {settingsMap["org_established"] || "2011"}
@@ -276,7 +278,7 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
 
         <footer style={{ background: "#080f0a", borderTop: "3px solid #C9A84C", padding: "2rem 1.5rem", textAlign: "center", marginTop: "4rem" }}>
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
-            © {new Date().getFullYear()} {settingsMap["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
+            <span suppressHydrationWarning>© {new Date().getFullYear()}</span> {settingsMap["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
           </p>
         </footer>
       </div>

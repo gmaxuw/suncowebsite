@@ -292,7 +292,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
 
         <footer style={{ background: "#080f0a", borderTop: "3px solid #C9A84C", padding: "2rem 2.5rem", textAlign: "center" }}>
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
-            © {new Date().getFullYear()} {settings["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
+            <span suppressHydrationWarning>© {new Date().getFullYear()}</span> {settings["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
           </p>
         </footer>
       </div>
