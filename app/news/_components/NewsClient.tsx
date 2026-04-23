@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
   news:              { label: "News",            color: "#0D3320", bg: "#C9A84C" },
@@ -23,6 +23,10 @@ interface Props {
 
 export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featured, settingsMap, orgName, logoUrl }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+const [shuffled, setShuffled] = useState(shuffledAds);
+useEffect(() => {
+  setShuffled([...shuffledAds].sort(() => Math.random() - 0.5));
+}, []);
 
   return (
     <>
@@ -160,12 +164,12 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
           )}
 
           {/* Top Banner Ad */}
-          {shuffledAds.length > 0 && shuffledAds[0] && (
-            <a href={shuffledAds[0]?.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-banner" style={{ display: "block", textDecoration: "none", marginBottom: "1.5rem", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)" }}>
-              {shuffledAds[0]?.image_url && <img src={shuffledAds[0].image_url} alt={shuffledAds[0]?.title || "Ad"} style={{ width: "100%", maxHeight: 120, objectFit: "cover", display: "block" }} />}
-              {shuffledAds[0]?.title && (
+          {shuffled.length > 0 && shuffled[0] && (
+            <a href={shuffled[0]?.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-banner" style={{ display: "block", textDecoration: "none", marginBottom: "1.5rem", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)" }}>
+              {shuffled[0]?.image_url && <img src={shuffled[0].image_url} alt={shuffled[0]?.title || "Ad"} style={{ width: "100%", maxHeight: 120, objectFit: "cover", display: "block" }} />}
+              {shuffled[0]?.title && (
                 <div style={{ background: "#0D3320", padding: "0.4rem 1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>{shuffledAds[0].title}</p>
+                  <p style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>{shuffled[0].title}</p>
                   <span style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>ADVERTISEMENT</span>
                 </div>
               )}
@@ -245,7 +249,7 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
                 <a href="/register" style={{ display: "block", background: "#C9A84C", color: "#0D3320", textDecoration: "none", textAlign: "center", padding: "0.6rem", borderRadius: 6, fontSize: "0.75rem", fontWeight: 700 }}>Become a Member →</a>
               </div>
 
-              {shuffledAds.slice(1).filter(Boolean).map((ad) => (
+              {shuffled.slice(1).filter(Boolean).map((ad) => (
                 <a key={ad.id} href={ad?.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-banner" style={{ display: "block", textDecoration: "none", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)" }}>
                   {ad?.image_url && <img src={ad.image_url} alt={ad?.title || "Ad"} loading="lazy" style={{ width: "100%", objectFit: "cover", display: "block", maxHeight: 280 }} />}
                   {ad?.title && <div style={{ background: "#0D3320", padding: "0.5rem 0.8rem" }}><p style={{ fontSize: "0.62rem", color: "#C9A84C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{ad.title}</p></div>}

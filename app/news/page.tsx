@@ -36,7 +36,7 @@ export default async function NewsPage() {
   const allAds     = (ads || []).filter(Boolean);
   const featured   = allPosts.find(p => p.featured) || allPosts[0];
   const rest       = allPosts.filter(p => p.id !== featured?.id);
-  const shuffledAds = [...allAds].filter(Boolean).sort(() => Math.random() - 0.5);
+  const shuffledAds = [...allAds].filter(Boolean);
 
   const postsWithAds: any[] = [];
   rest.forEach((post, i) => {
