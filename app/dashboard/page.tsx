@@ -669,7 +669,7 @@ export default function DashboardPage() {
 
     {/* ── Pay Dues CTA (shown only when there are delinquent years) ── */}
     {(() => {
-      const currentYear = new Date().getFullYear();
+      const currentYear = 2026;
       const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
       const unpaidYears = [];
       for (let y = joinYear; y <= currentYear; y++) {
@@ -869,7 +869,7 @@ export default function DashboardPage() {
               <Users size={18} color="#1A5C2A" />
               <div>
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Current Officers</h2>
-                <p style={{ fontSize: "0.78rem", color: "#BBB", marginTop: 2 }}>Board of Officers — {new Date().getFullYear()}</p>
+                <p style={{ fontSize: "0.78rem", color: "#BBB", marginTop: 2 }}>Board of Officers — 2026</p>
               </div>
             </div>
 
