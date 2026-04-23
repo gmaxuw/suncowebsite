@@ -1,9 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  Clock, Calendar, Eye, BookOpen, Tag,
-  ChevronRight, ArrowLeft, Share2, Link2
-} from "lucide-react";
+import { Clock, Calendar, Eye, BookOpen, Tag, ChevronRight, ArrowLeft, Link2 } from "lucide-react";
 
 interface Props {
   post:        any;
@@ -43,32 +40,37 @@ function formatBody(content: string): string {
 }
 
 function PhilippineClock() {
-  const [time, setTime] = useState<Date | null>(null);
+  const [timeStr, setTimeStr] = useState("");
+  const [dateStr, setDateStr] = useState("");
+
   useEffect(() => {
-    const tick = () => setTime(new Date());
+    const tick = () => {
+      const now = new Date();
+      const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+      const hh = phTime.getHours();
+      const mm = phTime.getMinutes().toString().padStart(2, "0");
+      const ss = phTime.getSeconds().toString().padStart(2, "0");
+      const ampm = hh >= 12 ? "PM" : "AM";
+      const h12 = (hh % 12 || 12).toString().padStart(2, "0");
+      setTimeStr(`${h12}:${mm}:${ss} ${ampm}`);
+      setDateStr(phTime.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }));
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
-  if (!time) return null;
-  const phTime = new Date(time.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-  const hh = phTime.getHours();
-  const mm = phTime.getMinutes().toString().padStart(2, "0");
-  const ss = phTime.getSeconds().toString().padStart(2, "0");
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const h12 = (hh % 12 || 12).toString().padStart(2, "0");
-  const dateStr = phTime.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  if (!timeStr) return null;
+
   return (
-    <div suppressHydrationWarning style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
+    <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.4rem", marginBottom: "1.5rem", textAlign: "center" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: "0.5rem" }}>
         <Clock size={13} color="rgba(201,168,76,0.6)" />
         <span style={{ fontSize: "0.6rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(201,168,76,0.6)", fontWeight: 600 }}>Philippine Standard Time</span>
       </div>
- <div suppressHydrationWarning style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.05em", lineHeight: 1 }}>
-        {h12}:{mm}<span style={{ fontSize: "1.2rem", opacity: 0.7 }}>{ss}</span>
-        <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", marginLeft: 6, fontFamily: "'DM Sans',sans-serif", fontWeight: 400 }}>{ampm}</span>
+      <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.05em", lineHeight: 1 }}>
+        {timeStr}
       </div>
-      <p suppressHydrationWarning style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "0.4rem" }}>{dateStr}</p>
       <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)", marginTop: "0.4rem" }}>{dateStr}</p>
     </div>
   );
@@ -77,15 +79,17 @@ function PhilippineClock() {
 export default function PostPageClient({ post, recentPosts, ads, settings }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+
+  useEffect(() => {
+    setShareUrl(window.location.href);
+  }, []);
+
   const cat      = CATEGORY_META[post.category] || { label: post.category, color: "#fff", bg: "#555" };
   const pubDate  = post.published_at || post.created_at;
   const bodyHtml = formatBody(post.content || post.body || "");
-  const leftAds  = ads.filter(a => a.position === "left"  || a.position === "top");
+  const leftAds  = ads.filter(a => a.position === "left" || a.position === "top");
   const rightAds = ads.filter(a => a.position === "right" || a.position === "inline");
-  const [shareUrl, setShareUrl] = useState("");
-useEffect(() => {
-  setShareUrl(window.location.href);
-}, []);
   const orgName  = settings["org_short_name"] || "SUNCO";
 
   const handleCopyLink = () => {
@@ -97,64 +101,106 @@ useEffect(() => {
 
   return (
     <>
-    <style>{`
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
+        .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
+        .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
+        .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
+        .article-list li { margin-bottom: 0.4rem; }
+        .recent-card:hover .recent-title { color: #C9A84C !important; }
+        .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
+        .post-nav-links { display: flex; align-items: center; gap: 1.5rem; }
+        .post-nav-hamburger { display: none !important; background: none; border: none; cursor: pointer; padding: 0.5rem; flex-direction: column; gap: 5px; }
+        @media (max-width: 768px) {
+          .post-nav-links { display: none !important; }
+          .post-nav-hamburger { display: flex !important; }
+          .magazine-grid { grid-template-columns: 1fr !important; }
+          .left-col, .right-col { display: none !important; }
+          .article-paragraph { font-size: 0.98rem !important; }
+          .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; }
+          .hero-title { font-size: 1.6rem !important; }
+        }
+      `}</style>
 
-  .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
-  .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
-  .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
-  .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
-  .article-list li { margin-bottom: 0.4rem; }
-  .recent-card:hover .recent-title { color: #C9A84C !important; }
-  .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
-
-  /* ── MOBILE NAV FIX ── */
-  .post-nav-links { display: flex; align-items: center; gap: 1.5rem; }
-  @media (max-width: 768px) {
-  .post-nav-links { display: none !important; }
-  .post-nav-hamburger { display: flex !important; }
-  .magazine-grid { grid-template-columns: 1fr !important; }
-  .left-col, .right-col { display: none !important; }
-  .article-paragraph { font-size: 0.98rem !important; }
-  .article-paragraph.drop-cap::first-letter { font-size: 3rem !important; }
-}
-  @media (max-width: 600px) {
-    .article-paragraph { font-size: 0.95rem !important; line-height: 1.8 !important; }
-  }
-`}</style>
-
-      <div suppressHydrationWarning style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
         {/* Nav */}
-        <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 2rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-  <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-    <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
-    <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.04em" }}>{orgName}</span>
-  </a>
-  <div className="post-nav-links" style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-    {["About","Programs","Membership","Officers"].map((label, i) => (
-      <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
-    ))}
-    <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
-    <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.38rem 1rem", borderRadius: 4, fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Login</a>
-  </div>
-  <button className="post-nav-hamburger" onClick={() => setMenuOpen(o => !o)} style={{ display: "none", background: "none", border: "none", cursor: "pointer", padding: "0.5rem", flexDirection: "column", gap: 5 }}>
-    <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "white", transition: "all 0.2s" }} />
-    <span style={{ display: "block", width: 22, height: 2, background: "white", transform: menuOpen ? "rotate(45deg) translate(5px, -5px)" : "none", transition: "all 0.2s" }} />
-    <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "white", transition: "all 0.2s" }} />
-  </button>
-</nav>
+        <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 1.5rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
+            <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
+            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.04em" }}>{orgName}</span>
+          </a>
+          <div className="post-nav-links">
+            {["About","Programs","Membership","Officers"].map((label, i) => (
+              <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
+            ))}
+            <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
+            <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.38rem 1rem", borderRadius: 4, fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Login</a>
+          </div>
+          <button className="post-nav-hamburger" onClick={() => setMenuOpen(o => !o)}>
+            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 3px)" : "none" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "white", transition: "all 0.2s" }} />
+            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px, -3px)" : "none" }} />
+          </button>
+        </nav>
 
-{/* Mobile drawer */}
-{menuOpen && (
-  <div style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "1rem 2rem", display: "flex", flexDirection: "column", gap: "0.8rem", position: "sticky", top: 60, zIndex: 99 }}>
-    {["About","Programs","Membership","Officers"].map((label, i) => (
-      <a key={i} href={`/#${label.toLowerCase()}`} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0" }}>{label}</a>
-    ))}
-    <a href="/news" onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0" }}>News</a>
-    <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.6rem 1rem", borderRadius: 4, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", textAlign: "center" }}>Login</a>
-  </div>
-)}
+        {/* Mobile Drawer */}
+        {menuOpen && (
+          <div style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem", position: "sticky", top: 60, zIndex: 99 }}>
+            {["About","Programs","Membership","Officers"].map((label, i) => (
+              <a key={i} href={`/#${label.toLowerCase()}`} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{label}</a>
+            ))}
+            <a href="/news" onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0" }}>News</a>
+            <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.6rem 1rem", borderRadius: 4, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", textAlign: "center" }}>Login</a>
+          </div>
+        )}
+
+        {/* Hero Banner */}
+        <div style={{ position: "relative", width: "100%", height: "clamp(260px, 38vw, 460px)", overflow: "hidden", background: "#0D3320" }}>
+          {post.thumbnail_url && (
+            <img src={post.thumbnail_url} alt={post.title} loading="eager" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.45 }} />
+          )}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #0D3320 0%, rgba(13,51,32,0.6) 50%, rgba(13,51,32,0.2) 100%)" }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem clamp(1rem, 5vw, 4rem) 2rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.8rem" }}>
+              <a href="/" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>Home</a>
+              <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
+              <a href="/news" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>News</a>
+              <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
+              <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)" }}>{cat.label}</span>
+            </div>
+            <span style={{ background: cat.bg, color: cat.color, fontSize: "0.68rem", fontWeight: 700, padding: "4px 14px", borderRadius: 3, letterSpacing: "0.1em", textTransform: "uppercase", display: "inline-block", marginBottom: "0.8rem" }}>{cat.label}</span>
+            <h1 className="hero-title" style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.6rem, 4vw, 3rem)", fontWeight: 900, color: "white", lineHeight: 1.15, maxWidth: 820, marginBottom: "1rem" }}>
+              {post.title}
+            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
+                <Calendar size={13} />
+                <span suppressHydrationWarning>
+                  {pubDate ? new Date(pubDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}
+                </span>
+              </div>
+              {post.author_name && (
+                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
+                  By <strong style={{ color: "rgba(255,255,255,0.75)" }}>{post.author_name}</strong>
+                </div>
+              )}
+              {post.reading_time && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
+                  <BookOpen size={13} /> {post.reading_time} min read
+                </div>
+              )}
+              {post.views > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.45)" }}>
+                  <Eye size={13} /> {post.views.toLocaleString()} views
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* 3-Column Grid */}
         <div className="magazine-grid" style={{ display: "grid", gridTemplateColumns: "200px 1fr 240px", gap: "2rem", maxWidth: 1280, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
@@ -256,7 +302,7 @@ useEffect(() => {
                       )}
                       <div style={{ minWidth: 0 }}>
                         <p className="recent-title" style={{ fontSize: "0.78rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.4, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", transition: "color 0.15s" }}>{p.title}</p>
-                        <p style={{ fontSize: "0.65rem", color: "#AAA" }}>
+                        <p suppressHydrationWarning style={{ fontSize: "0.65rem", color: "#AAA" }}>
                           {(p.published_at || p.created_at) ? new Date(p.published_at || p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                         </p>
                       </div>

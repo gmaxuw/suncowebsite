@@ -153,7 +153,7 @@ useEffect(() => {
                   {featured.excerpt && (
                     <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.7, marginBottom: "1rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{featured.excerpt}</p>
                   )}
-                  <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>
+                  <div suppressHydrationWarning style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>
                     {new Date(featured.published_at || featured.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     {featured.reading_time && ` · ${featured.reading_time} min read`}
                   </div>
@@ -218,7 +218,7 @@ useEffect(() => {
                     <div style={{ padding: "1rem", flex: 1, display: "flex", flexDirection: "column" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.5rem", flexWrap: "wrap" }}>
                         <span style={{ background: cat.bg, color: cat.color, fontSize: "0.58rem", fontWeight: 700, padding: "2px 8px", borderRadius: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{cat.label}</span>
-                        <span style={{ fontSize: "0.63rem", color: "#BBB" }}>
+                        <span suppressHydrationWarning style={{ fontSize: "0.63rem", color: "#BBB" }}>
                           {new Date(post.published_at || post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </span>
                       </div>
