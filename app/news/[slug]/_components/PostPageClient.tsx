@@ -82,7 +82,10 @@ export default function PostPageClient({ post, recentPosts, ads, settings }: Pro
   const bodyHtml = formatBody(post.content || post.body || "");
   const leftAds  = ads.filter(a => a.position === "left"  || a.position === "top");
   const rightAds = ads.filter(a => a.position === "right" || a.position === "inline");
-  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const [shareUrl, setShareUrl] = useState("");
+useEffect(() => {
+  setShareUrl(window.location.href);
+}, []);
   const orgName  = settings["org_short_name"] || "SUNCO";
 
   const handleCopyLink = () => {
