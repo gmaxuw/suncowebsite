@@ -226,7 +226,7 @@ export default function DashboardPage() {
     { id: "officers",  label: "Officers",       icon: Star       },
   ] as const;
 
-  const formatDate = (ts: string) => new Date(ts).toLocaleDateString("en-PH", {
+  const formatDate = (ts: string) => new Date(ts).toLocaleDateString("en-US", {
     year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
@@ -578,7 +578,7 @@ export default function DashboardPage() {
                 )}
                 {member?.birthdate && (
                   <span style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.55)", fontSize: "0.85rem" }}>
-                    <Calendar size={14} color="rgba(255,255,255,0.4)" /> {new Date(member.birthdate).toLocaleDateString("en-PH", { month: "long", day: "numeric" })}
+                    <Calendar size={14} color="rgba(255,255,255,0.4)" /> {new Date(member.birthdate).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
                   </span>
                 )}
                 {member?.beneficiary_name && (
@@ -604,7 +604,7 @@ export default function DashboardPage() {
         {/* STAT CARDS */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
           {[
-            { label: "Member Since", value: member?.date_joined ? new Date(member.date_joined).getFullYear().toString() : "—", sub: member?.date_joined ? new Date(member.date_joined).toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "Not set", icon: Calendar, color: "#1A5C2A" },
+            { label: "Member Since", value: member?.date_joined ? new Date(member.date_joined).getFullYear().toString() : "—", sub: member?.date_joined ? new Date(member.date_joined).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Not set", icon: Calendar, color: "#1A5C2A" },
             { label: "Total Paid",   value: `₱${totalPaid.toLocaleString()}`, sub: `${payments.length} payment${payments.length !== 1 ? "s" : ""} recorded`, icon: TrendingUp, color: "#C9A84C" },
             { label: "Member No.",  value: member?.membership_number ? `#${member.membership_number}` : "—", sub: member?.member_id_code || "Member ID", icon: Shield, color: "#2B5FA8" },
           ].map(({ label, value, sub, icon: Icon, color }) => (
@@ -646,10 +646,10 @@ export default function DashboardPage() {
                 ["Full Name",     `${member?.first_name || ""} ${member?.middle_name || ""} ${member?.last_name || ""}`.trim()],
                 ["Mobile",        member?.mobile || member?.contact_number || "—"],
                 ["Address",       member?.address || "—"],
-                ["Date of Birth", member?.birthdate ? new Date(member.birthdate).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"],
+                ["Date of Birth", member?.birthdate ? new Date(member.birthdate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"],
                 ["Beneficiary",   member?.beneficiary_name || "—"],
                 ["Relationship",  member?.beneficiary_relation || "—"],
-                ["Date Joined",   member?.date_joined ? new Date(member.date_joined).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"],
+                ["Date Joined",   member?.date_joined ? new Date(member.date_joined).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"],
                 ["Approval",      member?.approval_status || "—"],
               ].map(([label, value]) => (
                 <div key={label} style={{ padding: "1rem 1.1rem", background: "#F9F8F5", borderRadius: 10, border: "1px solid rgba(0,0,0,0.04)" }}>
@@ -778,7 +778,7 @@ export default function DashboardPage() {
                     </td>
                     <td style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#1A5C2A", fontWeight: 700 }}>₱{Number(p.amount).toLocaleString()}</td>
                     <td style={{ padding: "1rem 1.2rem", fontSize: "0.88rem", color: "#777", fontWeight: 500 }}>
-                      {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                      {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}
                     </td>
                     <td style={{ padding: "1rem 1.2rem", fontSize: "0.82rem", color: "#999", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
                   </tr>

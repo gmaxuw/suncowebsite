@@ -1,6 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import dynamic from "next/dynamic";
-const NewsClient = dynamic(() => import("./_components/NewsClient"), { ssr: false });
+import NewsClient from "./_components/NewsClient";
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
   news:              { label: "News",            color: "#0D3320", bg: "#C9A84C" },

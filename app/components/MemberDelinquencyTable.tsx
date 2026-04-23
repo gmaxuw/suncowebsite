@@ -325,7 +325,7 @@ export default function MemberDelinquencyTable({ member, payments }: Props) {
                 ["Year",        receiptModal.year],
                 ["Type",        receiptModal.type.toUpperCase()],
                 ["Amount",      `₱${Number(receiptModal.amount).toLocaleString()}`],
-                ["Date Paid",   receiptModal.date_paid ? new Date(receiptModal.date_paid).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" }) : "—"],
+                ["Date Paid",   receiptModal.date_paid ? new Date(receiptModal.date_paid).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"],
                 ["Receipt No.", receiptModal.receipt_number || "—"],
               ].map(([label, value]) => (
                 <div key={label as string} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.7rem 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>

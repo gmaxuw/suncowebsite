@@ -358,7 +358,7 @@ function AdminPageInner() {
                           <tr key={m.id} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
                             <td style={{ padding: "0.8rem 0.9rem", fontSize: "0.85rem", fontWeight: 600, color: "var(--green-dk)", whiteSpace: "nowrap" }}>{m.first_name} {m.last_name}</td>
                             <td style={{ padding: "0.8rem 0.9rem", fontSize: "0.78rem", color: "var(--muted)" }}>{m.mobile || m.email}</td>
-                            <td style={{ padding: "0.8rem 0.9rem", fontSize: "0.78rem", color: "var(--muted)", whiteSpace: "nowrap" }}>{m.created_at ? new Date(m.created_at).toLocaleDateString("en-PH") : "—"}</td>
+                            <td style={{ padding: "0.8rem 0.9rem", fontSize: "0.78rem", color: "var(--muted)", whiteSpace: "nowrap" }}>{m.created_at ? new Date(m.created_at).toLocaleDateString("en-US") : "—"}</td>
                             <td style={{ padding: "0.8rem 0.9rem" }}>
                               <span style={{ background: (m.approval_status||"").toLowerCase() === "approved" ? "rgba(46,139,68,0.1)" : (m.approval_status||"").toLowerCase() === "rejected" ? "rgba(192,57,43,0.1)" : "rgba(43,95,168,0.1)", color: (m.approval_status||"").toLowerCase() === "approved" ? "#2E8B44" : (m.approval_status||"").toLowerCase() === "rejected" ? "#C0392B" : "#2B5FA8", fontSize: "0.68rem", fontWeight: 600, padding: "2px 9px", borderRadius: 20, textTransform: "capitalize" }}>{m.approval_status || "—"}</span>
                             </td>
