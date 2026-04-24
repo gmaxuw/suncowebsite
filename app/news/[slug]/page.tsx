@@ -84,7 +84,7 @@ export default async function PostPage({ params }: Props) {
       .order("published_at", { ascending: false })
       .limit(6),
     supabase
-      .from("promotion")
+      .from("promotions")
       .select("*")
       .eq("is_active", true)
       .order("created_at"),
