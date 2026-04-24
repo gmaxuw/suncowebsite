@@ -5,7 +5,7 @@
 // Groups: Hero · About · Fees · Org Info
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
-import FeeSchedulesPanel from "./cms/FeeSchedulesPanel";
+import FeeSchedulesPanel from "../cms/FeeSchedulesPanel";
 import {
   Save, RefreshCw, Upload, Globe, DollarSign,
   Info, Image, CheckCircle, AlertTriangle,
@@ -68,6 +68,19 @@ export default function SettingsPanel({ supabase }: Props) {
   const [activeGroup,   setActiveGroup]   = useState("hero");
   const [logoUploading, setLogoUploading] = useState(false);
 
+
+
+
+
+                        <FeeSchedulesPanel supabase={supabase} />
+
+
+
+
+
+
+
+                        
   const loadSettings = async () => {
     setLoading(true);
     const { data } = await supabase.from("site_settings").select("*").order("group_name");
@@ -75,6 +88,8 @@ export default function SettingsPanel({ supabase }: Props) {
     setLoading(false);
   };
 
+
+  
   useEffect(() => { loadSettings(); }, []);
 
   const update = (key: string, value: string) =>
