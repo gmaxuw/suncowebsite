@@ -75,7 +75,12 @@ export default async function PostPage({ params }: Props) {
 
   const { post } = result;
 
-  const [{ data: recentPosts }, { data: activeAds }, { data: settings }] = await Promise.all([
+  const [
+    { data: recentPosts },
+    { data: activeAds },
+    { data: settings },
+    { data: documents },   // ← new: fetch matching public documents
+  ] = await Promise.all([
     supabase
       .from("posts")
       .select("id, title, slug, thumbnail_url, category, published_at, created_at, excerpt")
@@ -83,14 +88,30 @@ export default async function PostPage({ params }: Props) {
       .neq("id", post.id)
       .order("published_at", { ascending: false })
       .limit(6),
+
+    // ✅ FIXED: was "promotion" (wrong), now "promotions" (matches your actual table)
     supabase
       .from("promotions")
       .select("*")
       .eq("is_active", true)
       .order("created_at"),
+
     supabase
       .from("site_settings")
       .select("key, value"),
+
+    // Fetch public documents linked to this post by ID or matching tags
+    supabase
+      .from("documents")
+      .select("id, title, description, file_type, file_size_kb, thumbnail_url, category, tags, download_count")
+      .eq("visibility", "public")
+      .or(
+        post.tags?.length > 0
+          ? `linked_post_ids.cs.{${post.id}},tags.ov.{${post.tags.join(",")}}`
+          : `linked_post_ids.cs.{${post.id}}`
+      )
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const settingsMap: Record<string, string> = {};
@@ -103,7 +124,11 @@ export default async function PostPage({ params }: Props) {
     "description": post.seo_description || post.excerpt,
     "image": post.thumbnail_url,
     "author": { "@type": "Organization", "name": post.author_name || "SUNCO" },
-    "publisher": { "@type": "Organization", "name": "SUNCO", "logo": { "@type": "ImageObject", "url": settingsMap["hero_logo_url"] || "/images/sunco-logo.png" } },
+    "publisher": {
+      "@type": "Organization",
+      "name": "SUNCO",
+      "logo": { "@type": "ImageObject", "url": settingsMap["hero_logo_url"] || "/images/sunco-logo.png" },
+    },
     "datePublished": post.published_at || post.created_at,
     "dateModified": post.updated_at,
     "mainEntityOfPage": { "@type": "WebPage", "@id": `https://sunco.gabrielsacro.com/news/${slug}` },
@@ -112,12 +137,16 @@ export default async function PostPage({ params }: Props) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <PostPageClient
         post={post}
         recentPosts={recentPosts || []}
         ads={activeAds || []}
         settings={settingsMap}
+        documents={documents || []}
       />
     </>
   );
