@@ -5,6 +5,7 @@
 // Groups: Hero · About · Fees · Org Info
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
+import FeeSchedulesPanel from "./cms/FeeSchedulesPanel";
 import {
   Save, RefreshCw, Upload, Globe, DollarSign,
   Info, Image, CheckCircle, AlertTriangle,
