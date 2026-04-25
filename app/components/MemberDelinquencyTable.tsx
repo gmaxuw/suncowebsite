@@ -81,8 +81,7 @@ export default function MemberDelinquencyTable({ member, payments }: Props) {
 
   const totalOwed = totalDelinquent * (AOF_AMOUNT + MAS_AMOUNT);
 
-  const memberName = [member.first_name, member.middle_name ? member.middle_name[0] + "." : "", member.last_name]
-    .filter(Boolean).join(" ");
+const memberName = [member.first_name, member.middle_name?.trim() ? member.middle_name.trim()[0] + "." : null, member.last_name].filter(Boolean).join(" ");
 
   // ── Derived status color ──
   const statusStyle: Record<string, { bg: string; color: string }> = {

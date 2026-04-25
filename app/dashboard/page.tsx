@@ -194,7 +194,7 @@ export default function DashboardPage() {
 
   const getFullName = () => {
     if (!member?.first_name) return user?.email;
-    return `${member.first_name}${member.middle_name ? " " + member.middle_name[0] + "." : ""} ${member.last_name}`;
+    return `${member.first_name}${member.middle_name?.trim() ? " " + member.middle_name.trim()[0] + "." : ""} ${member.last_name}`;
   };
 
   const isBirthday = () => {
