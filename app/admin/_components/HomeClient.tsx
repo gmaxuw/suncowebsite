@@ -19,7 +19,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const bod = officers.filter(o => o.role_type === "bod");
 
   const getInitials = (name: string) => {
-    const parts = name.split(" ").filter((p: string) => !p.includes("."));
+    const parts = (name || "").split(" ").filter((p: string) => p.length > 0 && !p.includes("."));
     return parts.slice(0, 2).map((p: string) => p[0]).join("").toUpperCase();
   };
 

@@ -167,7 +167,7 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
   };
 
   const getInitials = (name: string) => {
-    const parts = name.split(" ").filter(p => !p.includes("."));
+    const parts = (name || "").split(" ").filter(p => p.length > 0 && !p.includes("."));
     return parts.slice(0, 2).map(p => p[0]).join("").toUpperCase();
   };
 
