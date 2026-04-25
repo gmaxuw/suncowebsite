@@ -187,7 +187,7 @@ function AdminPageInner() {
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Shield size={11} color="var(--gold)" />
             <span style={{ fontSize: "0.65rem", color: "var(--gold)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-              {memberName ? `${memberName.split(" ")[0]} · ${role}` : role}
+              {memberName?.trim() ? `${memberName.trim().split(" ")[0]} · ${role}` : role}
             </span>
           </div>
           <a href="/admin/profile" style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.45)", textDecoration: "none" }}>Profile</a>
@@ -224,7 +224,7 @@ function AdminPageInner() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "1.5px solid rgba(201,168,76,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.85rem", color: "#C9A84C", fontWeight: 700 }}>
-                  {memberName ? memberName[0].toUpperCase() : "A"}
+                  {memberName?.trim() ? memberName.trim()[0].toUpperCase() : "A"}
                 </span>
               </div>
               <div style={{ overflow: "hidden" }}>
