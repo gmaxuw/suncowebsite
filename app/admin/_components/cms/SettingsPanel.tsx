@@ -72,7 +72,7 @@ export default function SettingsPanel({ supabase }: Props) {
 
 
 
-                        <FeeSchedulesPanel supabase={supabase} />
+  
 
 
 
