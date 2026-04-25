@@ -296,7 +296,7 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
             <label style={labelStyle}>Full Article Content *</label>
             <textarea value={form.content} onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))} placeholder="Write or paste the full article here..." rows={16} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.8, fontSize: "0.92rem" }} />
             <p style={{ fontSize: "0.65rem", color: "var(--muted)", marginTop: 3 }}>
-              {form.content.split(/\s+/).filter(Boolean).length} words · ~{Math.max(1, Math.ceil(form.content.split(/\s+/).filter(Boolean).length / 200))} min read
+              {(form.content || "").split(/\s+/).filter(Boolean).length} words · ~{Math.max(1, Math.ceil((form.content || "").split(/\s+/).filter(Boolean).length / 200))} min read
             </p>
           </div>
 
