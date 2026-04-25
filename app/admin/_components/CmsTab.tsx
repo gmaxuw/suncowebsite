@@ -1,17 +1,18 @@
 "use client";
 // ─────────────────────────────────────────────
-// CmsTab.tsx  —  Thin shell
-// Tabs: Posts | Ads | Officers | Logs | Settings | Fee Schedules
+// CmsTab.tsx
+// Tabs: Posts | Ads | Officers | Documents | Logs | Settings | Fee Schedules
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { FileText, Megaphone, PlusCircle, Settings, Users, ScrollText, CalendarDays } from "lucide-react";
-import PostsList        from "./cms/PostsList";
-import PostEditor       from "./cms/PostEditor";
-import AdsManager       from "./cms/AdsManager";
-import SettingsPanel    from "./cms/SettingsPanel";
+import { FileText, Megaphone, PlusCircle, Settings, Users, ScrollText, CalendarDays, FolderOpen } from "lucide-react";
+import PostsList         from "./cms/PostsList";
+import PostEditor        from "./cms/PostEditor";
+import AdsManager        from "./cms/AdsManager";
+import SettingsPanel     from "./cms/SettingsPanel";
 import FeeSchedulesPanel from "./cms/FeeSchedulesPanel";
-import OfficersTab      from "./OfficersTab";
-import LogsTab          from "./LogsTab";
+import OfficersTab       from "./OfficersTab";
+import LogsTab           from "./LogsTab";
+import DocumentsPanel    from "./cms/DocumentsPanel";
 
 export interface CmsTabProps {
   canCRUD:           boolean;
@@ -56,15 +57,16 @@ export const CATEGORIES = [
   { value: "milestones",      label: "Milestones",      color: "#C46B1A" },
 ];
 
-type Tab = "posts" | "ads" | "officers" | "logs" | "settings" | "fee-schedules";
+type Tab = "posts" | "ads" | "officers" | "documents" | "logs" | "settings" | "fee-schedules";
 
 const TAB_TITLES: Record<Tab, string> = {
-  posts:          "Content Management",
-  ads:            "Ads Manager",
-  officers:       "Officers & BOD",
-  logs:           "Audit Logs",
-  settings:       "Site Settings",
-  "fee-schedules": "Fee Schedules",
+  posts:            "Content Management",
+  ads:              "Ads Manager",
+  officers:         "Officers & BOD",
+  documents:        "Documents & Resources",
+  logs:             "Audit Logs",
+  settings:         "Site Settings",
+  "fee-schedules":  "Fee Schedules",
 };
 
 export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, currentRole }: CmsTabProps) {
@@ -94,6 +96,7 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, c
     { id: "posts",          label: "Posts",         icon: FileText,     show: true      },
     { id: "ads",            label: "Ads",           icon: Megaphone,    show: canCRUD   },
     { id: "officers",       label: "Officers",      icon: Users,        show: canCRUD   },
+    { id: "documents",      label: "Documents",     icon: FolderOpen,   show: canCRUD   },
     { id: "logs",           label: "Audit Logs",    icon: ScrollText,   show: isAdmin   },
     { id: "settings",       label: "Settings",      icon: Settings,     show: canCRUD   },
     { id: "fee-schedules",  label: "Fee Schedules", icon: CalendarDays, show: isAdmin   },
@@ -144,6 +147,15 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, c
       )}
       {activeTab === "officers" && (
         <OfficersTab canCRUD={canCRUD} supabase={supabase} />
+      )}
+      {activeTab === "documents" && (
+        <DocumentsPanel
+          canCRUD={canCRUD}
+          supabase={supabase}
+          userId={userId}
+          currentMemberName={currentMemberName}
+          currentRole={currentRole}
+        />
       )}
       {activeTab === "logs" && (
         <LogsTab supabase={supabase} />
