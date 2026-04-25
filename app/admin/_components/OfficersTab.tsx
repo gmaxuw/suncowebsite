@@ -294,7 +294,7 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
                   <img src={photoPreview} alt="Preview" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                   <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--gold-lt)" }}>
-                    {form.name ? form.name.split(" ").slice(0, 2).map(p => p[0]).join("").toUpperCase() : "?"}
+                    {form.name?.trim() ? form.name.trim().split(" ").filter(p => p.length > 0).slice(0, 2).map(p => p[0]).join("").toUpperCase() : "?"}
                   </span>
                 )}
               </div>
