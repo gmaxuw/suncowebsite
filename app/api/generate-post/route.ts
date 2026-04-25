@@ -34,7 +34,7 @@ Write naturally for Filipino readers. Include practical tips, reference Philippi
 
 Respond ONLY with valid JSON (no markdown, no backticks, no preamble):
 {
-  "content": "Full article body with natural paragraphs separated by double newlines. Minimum 600 words. Include subheadings by writing them as lines ending with a colon. Write in a clear, warm, informative tone.",
+  "content": "Full article body with natural paragraphs separated by double newlines. Minimum 600 words. Include subheadings by writing them as lines ending with a colon. Write in a clear, warm, informative tone. Do NOT include a Conclusion section or any closing summary paragraph — end naturally after the last main point.",
   "excerpt": "Compelling 150-160 character excerpt for preview cards and meta descriptions.",
   "seo_title": "SEO-optimized title under 60 characters that includes primary keyword",
   "seo_description": "Meta description 150-160 characters with primary keyword and clear call to action",
