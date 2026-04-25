@@ -883,7 +883,7 @@ export default function DashboardPage() {
                         <img src={officer.photo_url} alt={officer.name} style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover", border: `2.5px solid ${i === 0 ? "#C9A84C" : "rgba(0,0,0,0.1)"}`, margin: "0 auto 0.7rem", display: "block" }} />
                       ) : (
                         <div style={{ width: 60, height: 60, borderRadius: "50%", background: i === 0 ? "rgba(201,168,76,0.2)" : "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 0.7rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: i === 0 ? "#C9A84C" : "#0D3320" }}>
-                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                          {(officer.name || "").trim() ? officer.name.trim().split(" ").filter((p: string) => p.length > 0).slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() : "?"}
                         </div>
                       )}
                       <p style={{ fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: i === 0 ? "rgba(255,255,255,0.45)" : "#BBB", marginBottom: 4, fontWeight: 600 }}>{officer.role}</p>
@@ -904,7 +904,7 @@ export default function DashboardPage() {
                         <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                       ) : (
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.9rem", fontWeight: 700, color: "#0D3320" }}>
-                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                          {(officer.name || "").trim() ? officer.name.trim().split(" ").filter((p: string) => p.length > 0).slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() : "?"}
                         </div>
                       )}
                       <div>
@@ -927,7 +927,7 @@ export default function DashboardPage() {
                         <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
                       ) : (
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.9rem", fontWeight: 700, color: "#0D3320" }}>
-                          {officer.name.split(" ").slice(0, 2).map((p: string) => p[0]).join("").toUpperCase()}
+                          {(officer.name || "").trim() ? officer.name.trim().split(" ").filter((p: string) => p.length > 0).slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() : "?"}
                         </div>
                       )}
                       <div>
@@ -1049,3 +1049,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+
