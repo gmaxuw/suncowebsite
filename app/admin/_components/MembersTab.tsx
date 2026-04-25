@@ -31,11 +31,12 @@ interface Props {
 
 type ModalTab = "profile" | "payments" | "submissions" | "actions";
 
-const PAYMENT_TYPES = [
-  { type: "lifetime", label: "Lifetime Membership", amount: 200 },
-  { type: "aof",      label: "Annual Operating Fund (AOF)", amount: 100 },
-  { type: "mas",      label: "Mortuary Assistance (MAS)",   amount: 740 },
+const PAYMENT_TYPE_META = [
+  { type: "lifetime", label: "Lifetime Membership",         color: "#6B3FA0" },
+  { type: "aof",      label: "Annual Operating Fund (AOF)", color: "#2B5FA8" },
+  { type: "mas",      label: "Mortuary Assistance (MAS)",   color: "#2E8B44" },
 ];
+type FeeSchedule = { id: string; year: number; fee_lifetime: number; fee_aof: number; fee_mas: number; resolution_no: string | null; };
 
 // ── CRASH FIX: Added "active" and "non-active" lowercase fallbacks ──
 const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }> = {
@@ -111,6 +112,9 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const [payOR,             setPayOR]             = useState("");
   const [payDate,           setPayDate]           = useState(new Date().toISOString().split("T")[0]);
   const [paySaving,         setPaySaving]         = useState(false);
+  const [feeSchedule,       setFeeSchedule]       = useState<FeeSchedule | null>(null);
+  const [feeScheduleLoading,setFeeScheduleLoading]= useState(false);
+  const [feeScheduleError,  setFeeScheduleError]  = useState(false);
 
   // Edit payment modal
   const [editingPayment, setEditingPayment] = useState<any>(null);
@@ -161,6 +165,28 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       role:        currentRole || "unknown",
       action, module: "members", details,
     });
+  };
+
+ // ── Fetch fee schedule by year ──
+  const fetchFeeSchedule = async (yr: number) => {
+    setFeeScheduleLoading(true);
+    setFeeScheduleError(false);
+    setFeeSchedule(null);
+    const { data } = await supabase.from("fee_schedules")
+      .select("id,year,fee_lifetime,fee_aof,fee_mas,resolution_no")
+      .eq("year", yr).maybeSingle();
+    if (data) setFeeSchedule(data);
+    else setFeeScheduleError(true);
+    setFeeScheduleLoading(false);
+    setPayTypes([]);
+  };
+
+  const getAmount = (type: string): number => {
+    if (!feeSchedule) return 0;
+    if (type === "lifetime") return Number(feeSchedule.fee_lifetime);
+    if (type === "aof")      return Number(feeSchedule.fee_aof);
+    if (type === "mas")      return Number(feeSchedule.fee_mas);
+    return 0;
   };
 
   // ── Load member payments + submissions ──
@@ -326,14 +352,16 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     if (!payOR.trim()) { alert("Enter the Official Receipt (OR) number."); return; }
     setPaySaving(true);
 
+    if (!feeSchedule) { alert("No fee schedule found for this year. Set it up in CMS → Fee Schedules."); setPaySaving(false); return; }
     const inserts = payTypes.map(type => ({
-      member_id:      selected.id,
-      year:           payYear,
+      member_id:       selected.id,
+      year:            payYear,
       type,
-      amount:         PAYMENT_TYPES.find(p => p.type === type)?.amount || 0,
-      date_paid:      payDate,
-      receipt_number: payTypes.length > 1 ? `${payOR.trim()}-${type.toUpperCase()}` : payOR.trim(),
-      recorded_by:    currentMemberName || "Officer",
+      amount:          getAmount(type),
+      date_paid:       payDate,
+      receipt_number:  payTypes.length > 1 ? `${payOR.trim()}-${type.toUpperCase()}` : payOR.trim(),
+      recorded_by:     currentMemberName || "Officer",
+      fee_schedule_id: feeSchedule.id,
     }));
 
     const { error } = await supabase.from("payments").insert(inserts);
@@ -852,7 +880,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                   {canCRUD && (
                     <div style={{ marginBottom: "1.2rem" }}>
                       {!showPayForm ? (
-                        <button onClick={() => setShowPayForm(true)}
+                     <button onClick={() => { setShowPayForm(true); fetchFeeSchedule(payYear); }}
                           style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.6rem 1.2rem", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
                           <PlusCircle size={14} /> Record Payment
                         </button>
@@ -865,7 +893,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                           <div className="pay-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginBottom: "0.8rem" }}>
                             <div>
                               <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Payment Year</label>
-                              <select value={payYear} onChange={e => setPayYear(Number(e.target.value))} style={inputCls}>
+                              <select value={payYear} onChange={e => { setPayYear(Number(e.target.value)); fetchFeeSchedule(Number(e.target.value)); }} style={inputCls}>
                                 {Array.from({ length: 16 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
                               </select>
                             </div>
@@ -876,21 +904,25 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                           </div>
                           <div style={{ marginBottom: "0.8rem" }}>
                             <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>Payment Type(s)</label>
-                            {PAYMENT_TYPES.map(({ type, label, amount }) => {
+                            {feeScheduleLoading && <p style={{ fontSize: "0.72rem", color: "var(--muted)", padding: "0.3rem 0" }}>⏳ Loading rates for {payYear}...</p>}
+                            {feeScheduleError && <div style={{ fontSize: "0.72rem", color: "#C0392B", fontWeight: 600, background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 7, padding: "0.5rem 0.8rem", marginBottom: 6 }}>⚠ No fee schedule for {payYear}. Go to CMS → Fee Schedules.</div>}
+                            {!feeScheduleLoading && feeSchedule && <div style={{ fontSize: "0.7rem", color: "#2E8B44", fontWeight: 600, background: "rgba(46,139,68,0.07)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 7, padding: "0.45rem 0.8rem", marginBottom: 8 }}>📋 {feeSchedule.resolution_no || `Fee schedule for ${payYear}`}</div>}
+                            {PAYMENT_TYPE_META.map(({ type, label, color }) => {
                               const paid = isAlreadyPaid(type);
                               const sel  = payTypes.includes(type);
+                              const amt  = getAmount(type);
                               return (
-                                <button key={type} disabled={paid}
+                                <button key={type} disabled={paid || !feeSchedule}
                                   onClick={() => setPayTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type])}
-                                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "0.6rem 0.8rem", borderRadius: 8, border: `1.5px solid ${sel ? "var(--green-lt)" : "rgba(26,92,42,0.12)"}`, background: sel ? "rgba(46,139,68,0.07)" : paid ? "rgba(0,0,0,0.03)" : "white", cursor: paid ? "not-allowed" : "pointer", marginBottom: 6, fontFamily: "'DM Sans',sans-serif", opacity: paid ? 0.5 : 1, textAlign: "left" }}>
+                                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "0.6rem 0.8rem", borderRadius: 8, border: `1.5px solid ${sel ? color : "rgba(26,92,42,0.12)"}`, background: sel ? `${color}10` : paid ? "rgba(0,0,0,0.03)" : "white", cursor: paid || !feeSchedule ? "not-allowed" : "pointer", marginBottom: 6, fontFamily: "'DM Sans',sans-serif", opacity: paid || (!feeSchedule && !feeScheduleLoading) ? 0.5 : 1, textAlign: "left" }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${sel ? "var(--green-lt)" : "rgba(26,92,42,0.2)"}`, background: sel ? "var(--green-lt)" : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${sel ? color : "rgba(26,92,42,0.2)"}`, background: sel ? color : "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                       {sel && <Check size={10} color="white" />}
                                     </div>
                                     <span style={{ fontSize: "0.82rem", color: "var(--green-dk)", fontWeight: 500 }}>{label}</span>
                                   </div>
                                   <span style={{ fontSize: "0.82rem", fontWeight: 700, color: paid ? "var(--muted)" : "var(--green-dk)", flexShrink: 0, marginLeft: 8 }}>
-                                    {paid ? "✓ Paid" : `₱${amount}`}
+                                    {paid ? "✓ Paid" : feeSchedule ? `₱${amt.toLocaleString()}` : "—"}
                                   </span>
                                 </button>
                               );
@@ -903,7 +935,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
                           {payTypes.length > 0 && (
                             <div style={{ background: "var(--green-dk)", borderRadius: 8, padding: "0.7rem 1rem", marginBottom: "0.8rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.6)" }}>Total to record</span>
-                              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.1rem", fontWeight: 700, color: "#C9A84C" }}>₱{payTypes.reduce((s, t) => s + (PAYMENT_TYPES.find(p => p.type === t)?.amount || 0), 0).toLocaleString()}</span>
+                              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.1rem", fontWeight: 700, color: "#C9A84C" }}>₱{payTypes.reduce((s, t) => s + getAmount(t), 0).toLocaleString()}</span>
                             </div>
                           )}
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
