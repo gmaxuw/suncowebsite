@@ -27,7 +27,7 @@ export default function PostsList({ canCRUD, supabase, onEdit, onNew }: Props) {
     setLoading(true);
     const { data } = await supabase
       .from("posts")
-      .select("id,title,slug,excerpt,thumbnail_url,category,tags,status,featured,author_name,views,created_at,published_at,seo_title")
+      .select("id,title,slug,excerpt,content,thumbnail_url,category,tags,status,featured,author_name,views,created_at,published_at,seo_title,seo_description,seo_keywords,reading_time")
       .order("created_at", { ascending: false });
     setPosts(data || []);
     setLoading(false);
