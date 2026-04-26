@@ -51,6 +51,28 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
   const [activeTab,  setActiveTab]  = useState<EditorTab>("content");
   const fileRef = useRef<HTMLInputElement>(null);
 
+                const contentImgRef = useRef<HTMLInputElement>(null);
+                const [contentImgUploading, setContentImgUploading] = useState(false);
+
+              const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setContentImgUploading(true);
+                try {
+                  const blob = await compressToWebP(file);
+                  const filename = `content/img-${Date.now()}.webp`;
+                  const { error } = await supabase.storage.from("articles").upload(filename, blob, { contentType:"image/webp", upsert:true });
+                  if (error) throw error;
+                  const { data: urlData } = supabase.storage.from("articles").getPublicUrl(filename);
+                  const altText = prompt("Enter alt text / caption for this image (optional):") || "";
+                  const tag = `\n\n[img:${urlData.publicUrl}|${altText}]\n\n`;
+                  setForm(prev => ({ ...prev, content: (prev.content || "") + tag }));
+                } catch (err: any) { alert("Image upload failed: " + err.message); }
+                setContentImgUploading(false);
+              };
+
+
+
   const wordCount = (form.content || "").split(/\s+/).filter(Boolean).length;
   const readTime  = Math.max(1, Math.ceil(wordCount / 200));
 
@@ -419,6 +441,25 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
                     style={{ lineHeight:1.6 }}
                   />
                 </div>
+
+                                              {/* Image insert button */}
+                                              <div style={{ display:"flex", gap:"0.5rem", marginBottom:"0.5rem" }}>
+                                                <input
+                                                  ref={contentImgRef}
+                                                  type="file"
+                                                  accept="image/png,image/jpeg,image/webp"
+                                                  onChange={handleContentImageUpload}
+                                                  style={{ display:"none" }}
+                                                />
+                                                <button
+                                                  onClick={() => contentImgRef.current?.click()}
+                                                  disabled={contentImgUploading}
+                                                  style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(26,92,42,0.07)", border:"1.5px solid rgba(26,92,42,0.15)", color:"#1A5C2A", padding:"0.45rem 0.9rem", borderRadius:8, fontSize:"0.78rem", fontWeight:600, cursor: contentImgUploading ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                                                  <Image size={13} /> {contentImgUploading ? "Uploading..." : "Insert Image"}
+                                                </button>
+                                                <p style={{ fontSize:"0.68rem", color:"#AAA", alignSelf:"center" }}>Inserts at end of content — move it where needed</p>
+                                              </div>
+
 
                 {/* Content */}
                 <div className="pe-field">

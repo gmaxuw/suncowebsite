@@ -39,6 +39,15 @@ function formatBody(content: string): string {
     .map(para => para.trim())
     .filter(Boolean)
     .map((para, i) => {
+      // Inline image tag: [img:URL|alt text]
+      if (para.match(/^\[img:.+\]$/)) {
+        const inner = para.slice(5, -1);
+        const [url, alt] = inner.split("|");
+        return `<figure class="article-figure">
+          <img src="${url.trim()}" alt="${(alt || "").trim()}" loading="lazy" class="article-image" />
+          ${alt ? `<figcaption class="article-caption">${alt.trim()}</figcaption>` : ""}
+        </figure>`;
+      }
       if (para.endsWith(":") && para.length < 100 && !para.includes("\n"))
         return `<h3 class="article-subheading">${para}</h3>`;
       if (i === 0)
@@ -372,6 +381,12 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
         .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
         .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
         .article-list li { margin-bottom: 0.4rem; }
+
+              .article-figure { margin: 2rem 0; text-align: center; }
+              .article-image { max-width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); display: block; margin: 0 auto; }
+              .article-caption { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; color: #888; margin-top: 0.6rem; font-style: italic; }
+
+
         .recent-card:hover .recent-title { color: #C9A84C !important; }
         .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
         .post-nav-links { display: flex; align-items: center; gap: 1.5rem; }
