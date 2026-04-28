@@ -1,4 +1,9 @@
 "use client";
+// ─────────────────────────────────────────────
+// ArticleSlideshow.tsx
+// Auto-playing slideshow for article inline images
+// Used by PostPageClient to render [slideshow:...] tags
+// ─────────────────────────────────────────────
 import { useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -47,7 +52,7 @@ export default function ArticleSlideshow({ slides }: { slides: Slide[] }) {
           />
         ))}
 
-        {/* Gradient overlay */}
+        {/* Gradient overlay for controls */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(0,0,0,0.25) 0%, transparent 15%, transparent 85%, rgba(0,0,0,0.25) 100%)", pointerEvents: "none" }} />
 
         {/* Prev / Next */}
