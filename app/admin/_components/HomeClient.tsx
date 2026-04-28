@@ -416,7 +416,11 @@ export default function HomeClient({ settings, officers, programs, articles }: P
                   </div>
                   <div style={{ padding: "1.3rem" }}>
                     <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
-                      {new Date(article.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                      {(() => {
+  const d = new Date(article.created_at);
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+})()}
                     </div>
                     <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
                       {article.title}
