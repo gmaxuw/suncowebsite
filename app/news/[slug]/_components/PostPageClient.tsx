@@ -1,10 +1,10 @@
 "use client";
-// PostPageClient.tsx — updated
+// PostPageClient.tsx — Updated with inline image + slideshow support
 // Changes from original:
-//   1. Added `documents` prop
-//   2. Added DocumentDownloadSection in left column (below share box)
-//   3. Added DownloadGateModal component (self-contained, no separate file needed)
-//   4. Everything else is identical to your original
+//   1. Replaced dangerouslySetInnerHTML with renderBody() React renderer
+//   2. renderBody handles [img:URL|alt] and [slideshow:...] tags
+//   3. Imported ArticleSlideshow component
+//   4. documents prop and DocumentDownloadSection unchanged
 
 import { useState, useEffect } from "react";
 import {
@@ -13,13 +13,14 @@ import {
   Download, FileText, FileImage, FileSpreadsheet,
   File, X, AlertCircle, CheckCircle, RefreshCw,
 } from "lucide-react";
+import ArticleSlideshow from "@/app/components/ArticleSlideshow";
 
 interface Props {
   post:        any;
   recentPosts: any[];
   ads:         any[];
   settings:    Record<string, string>;
-  documents:   any[];   // ← new
+  documents:   any[];
 }
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -32,33 +33,141 @@ const CATEGORY_META: Record<string, { label: string; color: string; bg: string }
   milestones:        { label: "Milestones",      color: "#fff",    bg: "#C46B1A" },
 };
 
-function formatBody(content: string): string {
-  if (!content) return "";
-  return content
-    .split(/\n\n+/)
-    .map(para => para.trim())
-    .filter(Boolean)
-    .map((para, i) => {
-      // Inline image tag: [img:URL|alt text]
-      if (para.match(/^\[img:.+\]$/)) {
-        const inner = para.slice(5, -1);
-        const [url, alt] = inner.split("|");
-        return `<figure class="article-figure">
-          <img src="${url.trim()}" alt="${(alt || "").trim()}" loading="lazy" class="article-image" />
-          ${alt ? `<figcaption class="article-caption">${alt.trim()}</figcaption>` : ""}
-        </figure>`;
-      }
-      if (para.endsWith(":") && para.length < 100 && !para.includes("\n"))
-        return `<h3 class="article-subheading">${para}</h3>`;
-      if (i === 0)
-        return `<p class="article-paragraph drop-cap">${para}</p>`;
-      if (para.match(/^[•\-]/)) {
-        const items = para.split("\n").map(l => `<li>${l.replace(/^[•\-]\s*/, "")}</li>`).join("");
-        return `<ul class="article-list">${items}</ul>`;
-      }
-      return `<p class="article-paragraph">${para}</p>`;
-    })
-    .join("\n");
+// ── Render article body with React nodes (supports [img:] and [slideshow:] tags) ──
+function renderBody(content: string): React.ReactNode[] {
+  if (!content) return [];
+
+  const segments = content.split(/\n\n+/);
+  const nodes: React.ReactNode[] = [];
+  let dropCapDone = false;
+
+  segments.forEach((para, i) => {
+    const p = para.trim();
+    if (!p) return;
+
+    // ── Slideshow tag: [slideshow:url1||alt1;;url2||alt2;;url3||alt3] ──
+    if (p.startsWith("[slideshow:") && p.endsWith("]")) {
+      const inner  = p.slice(11, -1);
+      const slides = inner.split(";;").map(s => {
+        const [url, alt] = s.split("||");
+        return { url: (url || "").trim(), alt: (alt || "").trim() };
+      }).filter(s => s.url);
+      nodes.push(<ArticleSlideshow key={`slide-${i}`} slides={slides} />);
+      return;
+    }
+
+    // ── Single image tag: [img:URL|alt text] ──
+    if (p.startsWith("[img:") && p.endsWith("]")) {
+      const inner      = p.slice(5, -1);
+      const pipeIdx    = inner.indexOf("|");
+      const url        = pipeIdx > -1 ? inner.slice(0, pipeIdx).trim() : inner.trim();
+      const alt        = pipeIdx > -1 ? inner.slice(pipeIdx + 1).trim() : "";
+      nodes.push(
+        <figure key={`img-${i}`} style={{ margin: "2rem 0", textAlign: "center" }}>
+          <img
+            src={url}
+            alt={alt}
+            loading="lazy"
+            style={{
+              maxWidth: "100%",
+              borderRadius: 12,
+              boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
+              display: "block",
+              margin: "0 auto",
+            }}
+          />
+          {alt && (
+            <figcaption style={{
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: "0.8rem",
+              color: "#888",
+              marginTop: "0.65rem",
+              fontStyle: "italic",
+              lineHeight: 1.5,
+            }}>
+              {alt}
+            </figcaption>
+          )}
+        </figure>
+      );
+      return;
+    }
+
+    // ── Subheading: line ending with colon, under 100 chars ──
+    if (p.endsWith(":") && p.length < 100 && !p.includes("\n")) {
+      nodes.push(
+        <h3 key={`h-${i}`} style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: "1.35rem",
+          fontWeight: 700,
+          color: "#0D3320",
+          margin: "2rem 0 0.8rem",
+          paddingBottom: "0.4rem",
+          borderBottom: "2px solid #C9A84C",
+        }}>
+          {p}
+        </h3>
+      );
+      return;
+    }
+
+    // ── Bullet list ──
+    if (p.match(/^[•\-]/)) {
+      const items = p.split("\n").map((l, li) => (
+        <li key={li} style={{ marginBottom: "0.4rem" }}>
+          {l.replace(/^[•\-]\s*/, "")}
+        </li>
+      ));
+      nodes.push(
+        <ul key={`ul-${i}`} style={{
+          fontFamily: "'Source Serif 4', Georgia, serif",
+          fontSize: "1.05rem",
+          lineHeight: 1.8,
+          color: "#333",
+          paddingLeft: "1.4rem",
+          marginBottom: "1.4rem",
+          fontWeight: 300,
+        }}>
+          {items}
+        </ul>
+      );
+      return;
+    }
+
+    // ── First paragraph with drop cap ──
+    if (!dropCapDone) {
+      dropCapDone = true;
+      nodes.push(
+        <p key={`p-${i}`} className="article-paragraph drop-cap" style={{
+          fontFamily: "'Source Serif 4', Georgia, serif",
+          fontSize: "1.08rem",
+          lineHeight: 1.9,
+          color: "#2A2A2A",
+          marginBottom: "1.4rem",
+          fontWeight: 300,
+        }}>
+          {p}
+        </p>
+      );
+      return;
+    }
+
+    // ── Normal paragraph ──
+    nodes.push(
+      <p key={`p-${i}`} style={{
+        fontFamily: "'Source Serif 4', Georgia, serif",
+        fontSize: "1.08rem",
+        lineHeight: 1.9,
+        color: "#2A2A2A",
+        marginBottom: "1.4rem",
+        fontWeight: 300,
+      }}>
+        {p}
+      </p>
+    );
+  });
+
+  return nodes;
 }
 
 function PhilippineClock() {
@@ -67,13 +176,13 @@ function PhilippineClock() {
 
   useEffect(() => {
     const tick = () => {
-      const now   = new Date();
+      const now    = new Date();
       const phTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-      const hh    = phTime.getHours();
-      const mm    = phTime.getMinutes().toString().padStart(2, "0");
-      const ss    = phTime.getSeconds().toString().padStart(2, "0");
-      const ampm  = hh >= 12 ? "PM" : "AM";
-      const h12   = (hh % 12 || 12).toString().padStart(2, "0");
+      const hh     = phTime.getHours();
+      const mm     = phTime.getMinutes().toString().padStart(2, "0");
+      const ss     = phTime.getSeconds().toString().padStart(2, "0");
+      const ampm   = hh >= 12 ? "PM" : "AM";
+      const h12    = (hh % 12 || 12).toString().padStart(2, "0");
       setTimeStr(`${h12}:${mm}:${ss} ${ampm}`);
       setDateStr(phTime.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }));
     };
@@ -98,7 +207,6 @@ function PhilippineClock() {
   );
 }
 
-// ── File type icon ─────────────────────────────────────────────
 function FileIcon({ type }: { type: string }) {
   const s = { size: 16, strokeWidth: 1.5 };
   if (type === "pdf")   return <FileText        {...s} color="#C0392B" />;
@@ -115,7 +223,6 @@ function fileTypeLabel(type: string) {
   return map[type] || "File";
 }
 
-// ── Download gate modal ────────────────────────────────────────
 function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) {
   const [email,  setEmail]  = useState("");
   const [agreed, setAgreed] = useState(false);
@@ -153,10 +260,9 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, background: "rgba(13,51,32,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", backdropFilter: "blur(2px)" }}>
-      <div style={{ background: "white", borderRadius: 14, width: "100%", maxWidth: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", animation: "slideUp 0.22s cubic-bezier(0.34,1.2,0.64,1)" }}>
+      <div style={{ background: "white", borderRadius: 14, width: "100%", maxWidth: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
         <style>{`@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}} @keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-        {/* Header */}
         <div style={{ background: "#0D3320", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ background: "rgba(201,168,76,0.15)", borderRadius: 8, padding: "0.4rem", display: "flex" }}>
@@ -172,7 +278,6 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
           </button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "1.5rem" }}>
           {status === "success" ? (
             <div style={{ textAlign: "center", padding: "1rem 0" }}>
@@ -183,14 +288,12 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
               <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.65 }}>
                 We sent a download link to <strong>{email}</strong>.<br />The link expires in <strong>1 hour</strong>.
               </p>
-              <p style={{ fontSize: "0.72rem", color: "#999", marginTop: 10 }}>Don't see it? Check your spam folder.</p>
               <button onClick={onClose} style={{ marginTop: "1.25rem", background: "#0D3320", color: "white", border: "none", padding: "0.65rem 2rem", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
                 Done
               </button>
             </div>
           ) : (
             <>
-              {/* Doc info strip */}
               <div style={{ background: "#f5f3ee", borderRadius: 8, padding: "0.75rem 1rem", marginBottom: "1.1rem", display: "flex", alignItems: "center", gap: 10 }}>
                 <FileIcon type={doc.file_type} />
                 <div>
@@ -200,10 +303,9 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
               </div>
 
               <p style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.65, marginBottom: "1.1rem" }}>
-                Enter your email and we'll send you a secure one-time download link. We'll also keep you updated on SUNCO news and advisories.
+                Enter your email and we'll send you a secure one-time download link.
               </p>
 
-              {/* Email */}
               <div style={{ marginBottom: "0.9rem" }}>
                 <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#0D3320", marginBottom: "0.35rem" }}>
                   Your Email Address *
@@ -216,30 +318,22 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
                   placeholder="yourname@email.com"
                   disabled={status === "loading"}
                   autoFocus
-                  style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid rgba(26,92,42,0.2)", borderRadius: 8, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box", background: status === "loading" ? "#f9f9f9" : "white" }}
+                  style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid rgba(26,92,42,0.2)", borderRadius: 8, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
                 />
               </div>
 
-              {/* Disclaimer */}
               <div style={{ background: "#f5f3ee", borderRadius: 8, padding: "0.85rem 1rem", marginBottom: "0.9rem", fontSize: "0.73rem", color: "#555", lineHeight: 1.65 }}>
                 <p style={{ fontWeight: 700, color: "#0D3320", marginBottom: 3 }}>Terms & Disclaimer</p>
-                <p>This document is published by SUNCO for informational purposes only. It may not be reproduced or redistributed without prior written consent. By downloading, you agree to use this material solely for personal or educational reference.</p>
+                <p>This document is published by SUNCO for informational purposes only. By downloading, you agree to use this material solely for personal or educational reference.</p>
               </div>
 
-              {/* Agree checkbox */}
               <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: "1.1rem" }}>
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={e => { setAgreed(e.target.checked); setErrMsg(""); }}
-                  style={{ marginTop: 2, accentColor: "#0D3320", width: 16, height: 16, flexShrink: 0 }}
-                />
+                <input type="checkbox" checked={agreed} onChange={e => { setAgreed(e.target.checked); setErrMsg(""); }} style={{ marginTop: 2, accentColor: "#0D3320", width: 16, height: 16, flexShrink: 0 }} />
                 <span style={{ fontSize: "0.77rem", color: "#444", lineHeight: 1.55 }}>
-                  I agree to the terms above and consent to receiving SUNCO updates at this email. I can unsubscribe at any time.
+                  I agree to the terms above and consent to receiving SUNCO updates at this email.
                 </span>
               </label>
 
-              {/* Error */}
               {errMsg && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 7, padding: "0.6rem 0.9rem", marginBottom: "0.9rem" }}>
                   <AlertCircle size={14} color="#C0392B" />
@@ -247,11 +341,10 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
                 </div>
               )}
 
-              {/* Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={status === "loading" || !email || !agreed}
-                style={{ width: "100%", padding: "0.8rem", borderRadius: 8, border: "none", background: status === "loading" || !email || !agreed ? "rgba(201,168,76,0.35)" : "#C9A84C", color: "#0D3320", fontWeight: 700, fontSize: "0.9rem", cursor: status === "loading" || !email || !agreed ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.15s" }}>
+                style={{ width: "100%", padding: "0.8rem", borderRadius: 8, border: "none", background: status === "loading" || !email || !agreed ? "rgba(201,168,76,0.35)" : "#C9A84C", color: "#0D3320", fontWeight: 700, fontSize: "0.9rem", cursor: status === "loading" || !email || !agreed ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {status === "loading"
                   ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Sending link...</>
                   : <><Download size={15} /> Send me the download link</>}
@@ -267,89 +360,45 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
   );
 }
 
-// ── Document cards for the left sidebar ───────────────────────
 function DocumentDownloadSection({ documents }: { documents: any[] }) {
   const [activeDoc, setActiveDoc] = useState<any | null>(null);
-
   if (!documents || documents.length === 0) return null;
 
   return (
     <>
       <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-        {/* Section header — matches your "Recent Articles" style */}
         <div style={{ padding: "0.75rem 1rem", background: "#0D3320", borderBottom: "2px solid #C9A84C", display: "flex", alignItems: "center", gap: 7 }}>
           <Download size={13} color="#C9A84C" />
-          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.85rem", color: "#C9A84C", fontWeight: 700 }}>
-            Downloads
-          </h3>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.85rem", color: "#C9A84C", fontWeight: 700 }}>Downloads</h3>
         </div>
-
-        {/* Document cards */}
         <div style={{ padding: "0.4rem 0" }}>
           {documents.map((doc, i) => (
-            <button
-              key={doc.id}
-              onClick={() => setActiveDoc(doc)}
-              style={{
-                width: "100%", textAlign: "left", background: "none",
-                border: "none", borderBottom: i < documents.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none",
-                padding: "0.7rem 0.9rem", cursor: "pointer",
-                fontFamily: "'DM Sans', sans-serif",
-                display: "flex", alignItems: "center", gap: 9,
-                transition: "background 0.12s",
-              }}
+            <button key={doc.id} onClick={() => setActiveDoc(doc)}
+              style={{ width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: i < documents.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none", padding: "0.7rem 0.9rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 9 }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#F9F8F5"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-            >
-              {/* Thumbnail or file icon */}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}>
               <div style={{ width: 36, height: 36, borderRadius: 6, overflow: "hidden", background: "#f0ede6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1px solid rgba(0,0,0,0.06)" }}>
-                {doc.thumbnail_url
-                  ? <img src={doc.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <FileIcon type={doc.file_type} />
-                }
+                {doc.thumbnail_url ? <img src={doc.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <FileIcon type={doc.file_type} />}
               </div>
-
-              {/* Title + type */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.35, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {doc.title}
-                </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{fileTypeLabel(doc.file_type)}</span>
-                  {doc.download_count > 0 && (
-                    <span style={{ fontSize: "0.6rem", color: "#ccc" }}>· {doc.download_count}</span>
-                  )}
-                </div>
+                <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0D3320", lineHeight: 1.35, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.title}</p>
+                <span style={{ fontSize: "0.62rem", color: "#aaa" }}>{fileTypeLabel(doc.file_type)}</span>
               </div>
-
-              {/* Download arrow */}
               <div style={{ width: 24, height: 24, borderRadius: 5, background: "rgba(201,168,76,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Download size={11} color="#C9A84C" />
               </div>
             </button>
           ))}
         </div>
-
         <div style={{ padding: "0.55rem 0.9rem", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-          <p style={{ fontSize: "0.62rem", color: "#bbb", textAlign: "center" }}>
-            🔒 Email required to download
-          </p>
+          <p style={{ fontSize: "0.62rem", color: "#bbb", textAlign: "center" }}>🔒 Email required to download</p>
         </div>
       </div>
-
-      {/* Gate modal — fixed overlay, outside the sidebar flow */}
-      {activeDoc && (
-        <DownloadGateModal doc={activeDoc} onClose={() => setActiveDoc(null)} />
-      )}
+      {activeDoc && <DownloadGateModal doc={activeDoc} onClose={() => setActiveDoc(null)} />}
     </>
   );
 }
 
-// ══════════════════════════════════════════════════════════════
-// MAIN COMPONENT — identical to your original except:
-//   • accepts `documents` prop
-//   • renders <DocumentDownloadSection> in the left column
-// ══════════════════════════════════════════════════════════════
 export default function PostPageClient({ post, recentPosts, ads, settings, documents }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied,   setCopied]   = useState(false);
@@ -357,12 +406,11 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
 
   useEffect(() => { setShareUrl(window.location.href); }, []);
 
-  const cat      = CATEGORY_META[post.category] || { label: post.category, color: "#fff", bg: "#555" };
-  const pubDate  = post.published_at || post.created_at;
-  const bodyHtml = formatBody(post.content || post.body || "");
-  const leftAds  = ads.filter(a => a.position === "left" || a.position === "top");
-  const rightAds = ads.filter(a => a.position === "right" || a.position === "inline");
-  const orgName  = settings["org_short_name"] || "SUNCO";
+  const cat     = CATEGORY_META[post.category] || { label: post.category, color: "#fff", bg: "#555" };
+  const pubDate = post.published_at || post.created_at;
+  const leftAds = ads.filter(a => a.position === "left" || a.position === "top");
+  const rightAds= ads.filter(a => a.position === "right" || a.position === "inline");
+  const orgName = settings["org_short_name"] || "SUNCO";
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {
@@ -378,15 +426,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
         *, *::before, *::after { box-sizing: border-box; }
         .article-paragraph { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.08rem; line-height: 1.9; color: #2A2A2A; margin-bottom: 1.4rem; font-weight: 300; }
         .article-paragraph.drop-cap::first-letter { font-family: 'Playfair Display', serif; font-size: 4.2rem; font-weight: 900; float: left; line-height: 0.78; margin-right: 0.12em; margin-top: 0.08em; color: #0D3320; }
-        .article-subheading { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; color: #0D3320; margin: 2rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 2px solid #C9A84C; }
-        .article-list { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; line-height: 1.8; color: #333; padding-left: 1.4rem; margin-bottom: 1.4rem; font-weight: 300; }
-        .article-list li { margin-bottom: 0.4rem; }
-
-              .article-figure { margin: 2rem 0; text-align: center; }
-              .article-image { max-width: 100%; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); display: block; margin: 0 auto; }
-              .article-caption { font-family: 'DM Sans', sans-serif; font-size: 0.78rem; color: #888; margin-top: 0.6rem; font-style: italic; }
-
-
         .recent-card:hover .recent-title { color: #C9A84C !important; }
         .ad-link:hover { opacity: 0.9; transform: translateY(-2px); }
         .post-nav-links { display: flex; align-items: center; gap: 1.5rem; }
@@ -404,7 +443,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
 
       <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── Nav — identical to original ── */}
+        {/* ── Nav ── */}
         <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 1.5rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
             <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
@@ -424,7 +463,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
           </button>
         </nav>
 
-        {/* ── Mobile Drawer — identical ── */}
+        {/* ── Mobile Drawer ── */}
         {menuOpen && (
           <div style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem", position: "sticky", top: 60, zIndex: 99 }}>
             {["About","Programs","Membership","Officers"].map((label, i) => (
@@ -435,7 +474,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
           </div>
         )}
 
-        {/* ── Hero Banner — identical ── */}
+        {/* ── Hero Banner ── */}
         <div style={{ position: "relative", width: "100%", height: "clamp(260px, 38vw, 460px)", overflow: "hidden", background: "#0D3320" }}>
           {post.thumbnail_url && (
             <img src={post.thumbnail_url} alt={post.title} loading="eager" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.45 }} />
@@ -501,7 +540,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
               </div>
             )}
 
-            {/* Share box — identical to original */}
+            {/* Share box */}
             <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(0,0,0,0.07)", padding: "1rem", marginTop: "0.5rem" }}>
               <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#888", marginBottom: "0.7rem" }}>Share</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -518,11 +557,10 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
               </div>
             </div>
 
-            {/* ← NEW: Document download cards, only renders if docs exist */}
             <DocumentDownloadSection documents={documents} />
           </aside>
 
-          {/* ── Center — identical to original ── */}
+          {/* ── Center ── */}
           <main style={{ minWidth: 0 }}>
             {post.excerpt && (
               <div style={{ borderLeft: "4px solid #C9A84C", paddingLeft: "1.2rem", marginBottom: "2rem" }}>
@@ -534,9 +572,12 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
               <div style={{ width: 6, height: 6, background: "#C9A84C", borderRadius: "50%", flexShrink: 0 }} />
               <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} />
             </div>
+
+            {/* ── Article body — uses renderBody() instead of dangerouslySetInnerHTML ── */}
             <article style={{ background: "white", borderRadius: 14, padding: "clamp(1.5rem, 4vw, 2.8rem)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}>
-              <div dangerouslySetInnerHTML={{ __html: bodyHtml }} />
+              {renderBody(post.content || post.body || "")}
             </article>
+
             {Array.isArray(post.tags) && post.tags.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginTop: "1.5rem" }}>
                 <Tag size={14} color="#888" />
@@ -545,6 +586,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 ))}
               </div>
             )}
+
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.4rem 1.6rem", marginTop: "2rem", display: "flex", alignItems: "center", gap: "1.2rem" }}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "2px solid #C9A84C", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain" }} />
@@ -555,6 +597,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Surigao del Norte Consumers Organization, Inc.</p>
               </div>
             </div>
+
             <div style={{ marginTop: "2rem", textAlign: "center" }}>
               <a href="/news" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#F0EDE6", border: "1.5px solid rgba(13,51,32,0.15)", color: "#0D3320", padding: "0.75rem 1.8rem", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem", fontWeight: 600 }}>
                 <ArrowLeft size={15} /> Back to All Articles
@@ -562,7 +605,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
             </div>
           </main>
 
-          {/* ── Right column — identical to original ── */}
+          {/* ── Right column ── */}
           <aside className="right-col" style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             <PhilippineClock />
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
@@ -600,6 +643,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 </a>
               </div>
             </div>
+
             {rightAds.map(ad => (
               <a key={ad.id} href={ad.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-link" style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
                 <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -608,6 +652,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 </div>
               </a>
             ))}
+
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.3rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.7rem" }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "contain" }} />

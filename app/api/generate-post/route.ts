@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { title, category, context } = await req.json();
+    const { title, category, context, photo_count } = await req.json();
 
     if (!title?.trim()) {
       return NextResponse.json({ error: "Title is required." }, { status: 400 });
@@ -29,6 +29,7 @@ Write a complete, SEO-optimized article for:
 Title: "${title}"
 Category: ${category || "news"}
 ${context ? `Additional context: ${context}` : ""}
+${photo_count > 0 ? `Photos in article: ${photo_count}. Generate ${photo_count} descriptive, SEO-friendly alt texts / captions for each photo (under 125 characters each) that relate to the article topic.` : ""}
 
 Write naturally for Filipino readers. Include practical tips, reference Philippine consumer laws where relevant, and highlight SUNCO's mission in Surigao del Norte.
 
@@ -40,15 +41,16 @@ Respond ONLY with valid JSON (no markdown, no backticks, no preamble):
   "seo_description": "Meta description 150-160 characters with primary keyword and clear call to action",
   "seo_keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6"],
   "tags": ["tag1", "tag2", "tag3", "tag4"],
-  "reading_time": 5
+  "reading_time": 5,
+  "photo_alts": ["Descriptive alt text for photo 1 related to the article topic", "Alt text for photo 2", "...up to 10 — only include if photo_count > 0, otherwise empty array"]
 }`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Content-Type":         "application/json",
-        "x-api-key":            apiKey,
-        "anthropic-version":    "2023-06-01",
+        "Content-Type":      "application/json",
+        "x-api-key":         apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model:      "claude-sonnet-4-20250514",
@@ -62,8 +64,8 @@ Respond ONLY with valid JSON (no markdown, no backticks, no preamble):
       return NextResponse.json({ error: "Claude API error: " + err }, { status: response.status });
     }
 
-    const data = await response.json();
-    const raw  = data.content?.find((b: any) => b.type === "text")?.text || "";
+    const data  = await response.json();
+    const raw   = data.content?.find((b: any) => b.type === "text")?.text || "";
     const clean = raw.replace(/```json|```/g, "").trim();
 
     let parsed;

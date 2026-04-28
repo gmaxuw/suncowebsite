@@ -9,6 +9,7 @@ import {
   Eye, EyeOff, Zap, BookOpen, Hash, Camera,
 } from "lucide-react";
 import { CATEGORIES, type Post } from "../CmsTab";
+import PhotoManager, { type ArticlePhoto } from "./PhotoManager";
 
 interface Props {
   supabase:           any;
@@ -49,29 +50,33 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
   const [aiPrompt,   setAiPrompt]   = useState("");
   const [tagInput,   setTagInput]   = useState("");
   const [activeTab,  setActiveTab]  = useState<EditorTab>("content");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [photos,     setPhotos]     = useState<ArticlePhoto[]>([]);
+  const fileRef    = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
-                const contentImgRef = useRef<HTMLInputElement>(null);
-                const [contentImgUploading, setContentImgUploading] = useState(false);
+  const contentImgRef = useRef<HTMLInputElement>(null);
+  const [contentImgUploading, setContentImgUploading] = useState(false);
 
-              const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setContentImgUploading(true);
-                try {
-                  const blob = await compressToWebP(file);
-                  const filename = `content/img-${Date.now()}.webp`;
-                  const { error } = await supabase.storage.from("articles").upload(filename, blob, { contentType:"image/webp", upsert:true });
-                  if (error) throw error;
-                  const { data: urlData } = supabase.storage.from("articles").getPublicUrl(filename);
-                  const altText = prompt("Enter alt text / caption for this image (optional):") || "";
-                  const tag = `\n\n[img:${urlData.publicUrl}|${altText}]\n\n`;
-                  setForm(prev => ({ ...prev, content: (prev.content || "") + tag }));
-                } catch (err: any) { alert("Image upload failed: " + err.message); }
-                setContentImgUploading(false);
-              };
+  const handleInsertIntoContent = (tag: string) => {
+    setForm(prev => ({ ...prev, content: (prev.content || "") + tag }));
+  };
 
-
+  const handleContentImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setContentImgUploading(true);
+    try {
+      const blob = await compressToWebP(file);
+      const filename = `content/img-${Date.now()}.webp`;
+      const { error } = await supabase.storage.from("articles").upload(filename, blob, { contentType: "image/webp", upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("articles").getPublicUrl(filename);
+      const altText = prompt("Enter alt text / caption for this image (optional):") || "";
+      const tag = `\n\n[img:${urlData.publicUrl}|${altText}]\n\n`;
+      setForm(prev => ({ ...prev, content: (prev.content || "") + tag }));
+    } catch (err: any) { alert("Image upload failed: " + err.message); }
+    setContentImgUploading(false);
+  };
 
   const wordCount = (form.content || "").split(/\s+/).filter(Boolean).length;
   const readTime  = Math.max(1, Math.ceil(wordCount / 200));
@@ -131,7 +136,12 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
       const res = await fetch("/api/generate-post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title.trim(), category: form.category, context: aiPrompt.trim() }),
+        body: JSON.stringify({
+          title:       form.title.trim(),
+          category:    form.category,
+          context:     aiPrompt.trim(),
+          photo_count: photos.length,
+        }),
       });
       const parsed = await res.json();
       if (!res.ok) throw new Error(parsed.error || "Generation failed");
@@ -145,6 +155,13 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
         tags:            parsed.tags            || prev.tags,
         reading_time:    parsed.reading_time    || prev.reading_time,
       }));
+      // Update photo alt texts if AI returned them
+      if (parsed.photo_alts && Array.isArray(parsed.photo_alts)) {
+        setPhotos(prev => prev.map((p, i) => ({
+          ...p,
+          alt: parsed.photo_alts[i] || p.alt,
+        })));
+      }
       setShowAI(false);
       setActiveTab("seo");
     } catch (err: any) { setAiError("Generation failed: " + err.message); }
@@ -163,13 +180,14 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
       title: form.title.trim(), slug: form.slug.trim(), excerpt,
       content: form.content.trim(), category: form.category,
       tags: form.tags, status, featured: form.featured,
-      thumbnail_url:   form.thumbnail_url   || null,
-      author_name:     form.author_name     || currentMemberName || "SUNCO Admin",
-      reading_time:    form.reading_time    || readTime,
-      seo_title:       (form.seo_title || "").trim()       || form.title.trim(),
-      seo_description: (form.seo_description || "").trim() || excerpt,
-      seo_keywords:    form.seo_keywords,
-      updated_at:      new Date().toISOString(),
+      thumbnail_url:    form.thumbnail_url   || null,
+      author_name:      form.author_name     || currentMemberName || "SUNCO Admin",
+      reading_time:     form.reading_time    || readTime,
+      seo_title:        (form.seo_title || "").trim()       || form.title.trim(),
+      seo_description:  (form.seo_description || "").trim() || excerpt,
+      seo_keywords:     form.seo_keywords,
+      article_photos:   JSON.stringify(photos),
+      updated_at:       new Date().toISOString(),
     };
     if (published_at) payload.published_at = published_at;
     const { error } = isEditing
@@ -442,24 +460,31 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
                   />
                 </div>
 
-                                              {/* Image insert button */}
-                                              <div style={{ display:"flex", gap:"0.5rem", marginBottom:"0.5rem" }}>
-                                                <input
-                                                  ref={contentImgRef}
-                                                  type="file"
-                                                  accept="image/png,image/jpeg,image/webp"
-                                                  onChange={handleContentImageUpload}
-                                                  style={{ display:"none" }}
-                                                />
-                                                <button
-                                                  onClick={() => contentImgRef.current?.click()}
-                                                  disabled={contentImgUploading}
-                                                  style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(26,92,42,0.07)", border:"1.5px solid rgba(26,92,42,0.15)", color:"#1A5C2A", padding:"0.45rem 0.9rem", borderRadius:8, fontSize:"0.78rem", fontWeight:600, cursor: contentImgUploading ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                                                  <Image size={13} /> {contentImgUploading ? "Uploading..." : "Insert Image"}
-                                                </button>
-                                                <p style={{ fontSize:"0.68rem", color:"#AAA", alignSelf:"center" }}>Inserts at end of content — move it where needed</p>
-                                              </div>
+                {/* ── PhotoManager ── */}
+                <PhotoManager
+                  supabase={supabase}
+                  photos={photos}
+                  onChange={setPhotos}
+                  onInsert={handleInsertIntoContent}
+                />
 
+                {/* Image insert button (quick single upload) */}
+                <div style={{ display:"flex", gap:"0.5rem", marginBottom:"0.5rem" }}>
+                  <input
+                    ref={contentImgRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleContentImageUpload}
+                    style={{ display:"none" }}
+                  />
+                  <button
+                    onClick={() => contentImgRef.current?.click()}
+                    disabled={contentImgUploading}
+                    style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(26,92,42,0.07)", border:"1.5px solid rgba(26,92,42,0.15)", color:"#1A5C2A", padding:"0.45rem 0.9rem", borderRadius:8, fontSize:"0.78rem", fontWeight:600, cursor: contentImgUploading ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                    <Image size={13} /> {contentImgUploading ? "Uploading..." : "Insert Image"}
+                  </button>
+                  <p style={{ fontSize:"0.68rem", color:"#AAA", alignSelf:"center" }}>Inserts at end of content — move it where needed</p>
+                </div>
 
                 {/* Content */}
                 <div className="pe-field">
@@ -468,6 +493,7 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
                     <span style={{ fontSize:"0.65rem", color:"#BBB", fontWeight:600 }}>~{readTime} min read</span>
                   </div>
                   <textarea
+                    ref={contentRef}
                     className="pe-textarea"
                     value={form.content}
                     onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}

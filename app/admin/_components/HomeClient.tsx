@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
+import MembershipForm from "@/app/components/MembershipForm";
 
 interface Props {
   settings: Record<string, string>;
@@ -268,47 +269,24 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               ))}
             </div>
 
-            {/* Join Form */}
-            <div id="contact" className="resp-sticky" style={{ background: "white", borderRadius: 10, padding: "2.2rem", border: "1px solid rgba(212,160,23,0.2)", boxShadow: "0 4px 30px rgba(26,92,42,0.08)", position: "sticky", top: 80 }}>
-              <h3 className="playfair" style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--green-dk)", marginBottom: "0.3rem" }}>Join SUNCO Today</h3>
-              <p style={{ fontSize: "0.8rem", color: "var(--muted)", marginBottom: "1.6rem", lineHeight: 1.5 }}>
-                Fill in your details and our officers will contact you to complete your registration.
-              </p>
-              <div className="resp-grid-2-sm">
-                {[["First Name","Juan"],["Last Name","dela Cruz"]].map(([label, ph]) => (
-                  <div key={label}>
-                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.4rem" }}>{label}</label>
-                    <input type="text" placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none", boxSizing: "border-box" }} />
-                  </div>
-                ))}
-              </div>
-              {[
-                { label: "Complete Address", type: "text", ph: "Barangay, Municipality, Surigao del Norte" },
-                { label: "Contact Number", type: "tel", ph: "09XX XXX XXXX" },
-                { label: "Email Address", type: "email", ph: "juan@email.com" },
-              ].map(({ label, type, ph }) => (
-                <div key={label} style={{ marginTop: "0.8rem" }}>
-                  <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.4rem" }}>{label}</label>
-                  <input type={type} placeholder={ph} style={{ width: "100%", padding: "0.7rem 0.9rem", border: "1.5px solid rgba(26,92,42,0.15)", borderRadius: 5, fontFamily: "'DM Sans',sans-serif", fontSize: "0.88rem", color: "var(--text)", background: "var(--cream)", outline: "none", boxSizing: "border-box" }} />
-                </div>
-              ))}
-              <div style={{ background: "var(--green-dk)", color: "white", borderRadius: 6, padding: "1rem 1.2rem", display: "flex", justifyContent: "space-between", alignItems: "center", margin: "1.2rem 0" }}>
-                <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>First Year Total</span>
-                <span className="playfair" style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--gold-lt)" }}>₱{firstYearTotal.toLocaleString()}</span>
-              </div>
-              <a href="/register" style={{ display: "block", width: "100%", background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.9rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, cursor: "pointer", textAlign: "center", textDecoration: "none" }}>
-                Submit Application
-              </a>
-              <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--muted)", marginTop: "0.8rem" }}>Our officers will follow up within 3–5 business days.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+{/* Join Form */}
+<MembershipForm
+  feeLifetime={Number(feeLifetime)}
+  feeAof={Number(feeAof)}
+  feeMas={Number(feeMas)}
+/>
+
+
+</div> {/* ← closes resp-grid-membership */}
+        </div> {/* ← closes resp-inner-pad */}
+      </section> {/* ← closes membership section */}
 
       {/* ── Senior Citizen Calculator ── */}
       <SeniorCitizenCalculator />
 
       {/* ── OFFICERS ── */}
+
+
       <section id="officers" className="resp-section-pad" style={{ padding: "6rem 0", background: "var(--cream)" }}>
         <div className="resp-inner-pad" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 2.5rem" }}>
           <div className="resp-officers-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
