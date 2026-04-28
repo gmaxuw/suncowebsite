@@ -476,7 +476,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
             </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-            <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.25)" }}>© {new Date().getFullYear()} {s("org_name","Surigao del Norte Consumers Organization, Inc.")}. All rights reserved.</p>
+            <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.25)" }}>© 2026 {s("org_name","Surigao del Norte Consumers Organization, Inc.")}. All rights reserved.</p>
             <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.1)", padding: "3px 10px", borderRadius: 3 }}>SEC Registered · Est. {s("org_established","2011")}</div>
           </div>
         </div>
