@@ -1,15 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 import MembershipForm from "@/app/components/MembershipForm";
-import { createClient } from "@supabase/supabase-js";
 
 
-const supabase = createClient(                           // ← add this
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,                // ← add this
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!            // ← add this
-); 
+
 
 
 interface Props {
@@ -22,6 +19,11 @@ interface Props {
 export default function HomeClient({ settings, officers, programs, articles }: Props) {
   const s = (key: string, fallback = "") => settings[key] || fallback;
   const [menuOpen, setMenuOpen] = useState(false);
+
+    const supabase = useMemo(() => createClient(   // ← add here
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ), []);
 
   const executives = officers.filter(o => o.role_type === "executive");
   const pios = officers.filter(o => o.role_type === "pio");
