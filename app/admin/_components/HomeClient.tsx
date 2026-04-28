@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 import MembershipForm from "@/app/components/MembershipForm";
@@ -19,7 +19,7 @@ interface Props {
 export default function HomeClient({ settings, officers, programs, articles }: Props) {
   const s = (key: string, fallback = "") => settings[key] || fallback;
   const [menuOpen, setMenuOpen] = useState(false);
-  const supabase = createClient();
+
 
   const executives = officers.filter(o => o.role_type === "executive");
   const pios = officers.filter(o => o.role_type === "pio");
@@ -277,7 +277,6 @@ export default function HomeClient({ settings, officers, programs, articles }: P
 
 {/* Join Form */}
 <MembershipForm
-  supabase={supabase}  
   feeLifetime={Number(feeLifetime)}
   feeAof={Number(feeAof)}
   feeMas={Number(feeMas)}

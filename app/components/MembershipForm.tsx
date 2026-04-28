@@ -14,13 +14,13 @@
 //   … replace the sticky <div id="contact"> block with <MembershipForm fees={…} />
 // ─────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 
 
 
 interface Props {
-  supabase: any;
   feeLifetime: number;
   feeAof: number;
   feeMas: number;
@@ -52,7 +52,8 @@ const labelStyle: React.CSSProperties = {
   marginBottom: "0.4rem",
 };
 
-export default function MembershipForm({ supabase, feeLifetime, feeAof, feeMas }: Props) {
+export default function MembershipForm({ feeLifetime, feeAof, feeMas }: Props) {
+  const [supabase] = useState(() => createClient());
   const firstYearTotal = feeLifetime + feeAof + feeMas;
 
   const [form, setForm] = useState({
