@@ -3,6 +3,14 @@ import { useState } from "react";
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 import MembershipForm from "@/app/components/MembershipForm";
+import { createClient } from "@supabase/supabase-js";
+
+
+const supabase = createClient(                           // ← add this
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,                // ← add this
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!            // ← add this
+); 
+
 
 interface Props {
   settings: Record<string, string>;
@@ -271,6 +279,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
 
 {/* Join Form */}
 <MembershipForm
+  supabase={supabase}  
   feeLifetime={Number(feeLifetime)}
   feeAof={Number(feeAof)}
   feeMas={Number(feeMas)}
