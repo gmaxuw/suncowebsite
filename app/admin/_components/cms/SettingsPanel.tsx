@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
 import {
-  Save, RefreshCw, Upload, Globe, DollarSign,
+  Save, RefreshCw, Upload, Globe,
   Info, Image, CheckCircle, AlertTriangle,
 } from "lucide-react";
 
@@ -25,7 +25,6 @@ type Setting = {
 const GROUPS = [
   { id: "hero",    label: "Hero Section",      icon: Image,       desc: "Main banner text, logo, and stats shown on the homepage." },
   { id: "about",   label: "About Section",     icon: Info,        desc: "Organization description and history timeline text." },
-  { id: "fees",    label: "Membership Fees",   icon: DollarSign,  desc: "Official fee amounts shown on the website and used in registration totals." },
   { id: "general", label: "Organization Info", icon: Globe,       desc: "Name, address, email and other official organization details." },
 ];
 

@@ -51,16 +51,24 @@ export default async function HomePage() {
   const supabase = createClient(cookieStore);
 
   // Fetch all data in parallel
-  const [settingsRes, officersRes, programsRes, articlesRes] = await Promise.all([
-    supabase.from("site_settings").select("key, value"),
-    supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
-    supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
-    supabase.from("posts").select("id, title, slug, excerpt, content, category, thumbnail_url, published_at, created_at").eq("status", "published").order("published_at", { ascending: false }).limit(6),
-  ]);
+const [settingsRes, officersRes, programsRes, articlesRes, feeRes] = await Promise.all([
+  supabase.from("site_settings").select("key, value"),
+  supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
+  supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
+  supabase.from("posts").select("id, title, slug, excerpt, content, category, thumbnail_url, published_at, created_at").eq("status", "published").order("published_at", { ascending: false }).limit(6),
+  supabase.from("fee_schedules").select("*").eq("year", new Date().getFullYear()).single(),  // ← add this
+]);
 
   // Build settings map
   const settingsMap: Record<string, string> = {};
   (settingsRes.data || []).forEach(s => { settingsMap[s.key] = s.value; });
+
+
+if (feeRes.data) {
+  settingsMap["fee_lifetime"] = String(feeRes.data.fee_lifetime);
+  settingsMap["fee_aof"]      = String(feeRes.data.fee_aof);
+  settingsMap["fee_mas"]      = String(feeRes.data.fee_mas);
+}
 
   return (
     <>

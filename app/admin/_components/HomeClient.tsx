@@ -44,8 +44,8 @@ export default function HomeClient({ settings, officers, programs, articles }: P
     ["/login", "Login"],
   ];
 
-  return (
-    <main>
+ return (
+  <main suppressHydrationWarning>
 
       {/* ── NAV ── */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--green-dk)", borderBottom: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2.5rem", height: "64px" }}>
