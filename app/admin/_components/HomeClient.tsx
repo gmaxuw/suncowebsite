@@ -416,7 +416,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
                   </div>
                   <div style={{ padding: "1.3rem" }}>
                     <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)", marginBottom: "0.5rem", letterSpacing: "0.06em" }}>
-                      {new Date(article.created_at).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" })}
+                      {new Date(article.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     </div>
                     <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
                       {article.title}
