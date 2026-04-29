@@ -436,7 +436,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
         middle_name: addForm.middle_name.trim() || null,
 approval_status: "approved",
 status:          addForm.status.toLowerCase(),
-user_id: null,
+
       });
       if (error) throw error;
       await loadMembers();
