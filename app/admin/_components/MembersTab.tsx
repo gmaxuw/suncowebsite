@@ -317,7 +317,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   // ── Approve / Reject ──
   const handleApprove = async () => {
     setActionSaving(true);
-    await supabase.from("members").update({ approval_status: "approved", status: "Active", date_joined: new Date().toISOString().split("T")[0] }).eq("id", selected.id);
+    await supabase.from("members").update({ approval_status: "approved", status: "active", date_joined: new Date().toISOString().split("T")[0] }).eq("id", selected.id);
     await logActivity("MEMBER_APPROVED", { for_member: `${selected.first_name} ${selected.last_name}`, member_id: selected.id, new_status: "Active" });
     await loadMembers();
     setSelected(null);
@@ -335,7 +335,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    await supabase.from("members").update({ status: newStatus }).eq("id", selected.id);
+    await supabase.from("members").update({ status: newStatus.toLowerCase() }).eq("id", selected.id);
     await logActivity("MEMBER_STATUS", { for_member: `${selected.first_name} ${selected.last_name}`, new_status: newStatus, previous_status: selected.status });
     setSelected((prev: any) => ({ ...prev, status: newStatus }));
     setMembers(prev => prev.map(m => m.id === selected.id ? { ...m, status: newStatus } : m));
@@ -434,8 +434,9 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
         first_name:  addForm.first_name.trim(),
         last_name:   addForm.last_name.trim(),
         middle_name: addForm.middle_name.trim() || null,
-        approval_status: "approved",
-        user_id: null,
+approval_status: "approved",
+status:          addForm.status.toLowerCase(),
+user_id: null,
       });
       if (error) throw error;
       await loadMembers();
