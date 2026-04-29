@@ -8,7 +8,7 @@ import RecordsTable from "@/app/admin/_components/reports/RecordsTable";
 import { useDelinquency } from "@/app/admin/hooks/useDelinquency";
 import { useReportsData } from "@/app/admin/hooks/useReportsData";
 import type { SummaryCardItem } from "@/types/reports.types";
-import type { ActiveTab, FeeSchedule } from "@/utils/export";
+import type { ActiveTab, FeeSchedule, OfficerRecord } from "@/utils/export";
 
 interface Props {
   canCRUD: boolean;
@@ -23,8 +23,11 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     getDelinquency
   );
 
-  // ── Fee schedules — needed for correct delinquent amount calculation ──
+  // ── Fee schedules — for correct delinquent amount calculation ──
   const [feeSchedules, setFeeSchedules] = useState<FeeSchedule[]>([]);
+
+  // ── Officers — for signature block in PDF & Excel ──
+  const [officers, setOfficers] = useState<OfficerRecord[]>([]);
 
   useEffect(() => {
     supabase
@@ -32,6 +35,13 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
       .select("year, fee_mas, fee_aof, fee_lifetime")
       .then(({ data }: { data: FeeSchedule[] | null }) => {
         if (data) setFeeSchedules(data);
+      });
+
+    supabase
+      .from("officers")
+      .select("name, role, role_type")
+      .then(({ data }: { data: OfficerRecord[] | null }) => {
+        if (data) setOfficers(data);
       });
   }, [supabase]);
 
@@ -106,6 +116,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
           paymentCount={payments.length}
           activeTab={activeTab}
           feeSchedules={feeSchedules}
+          officers={officers}
         />
         {canCRUD && (
           <ImportPanel

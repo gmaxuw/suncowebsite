@@ -810,9 +810,9 @@ export async function exportToPDF(
     ? (() => { doc.addPage(); return 20; })()
     : finalY;
 
-  const president = officers.find(o => o.role === "President")?.name || "_________";
-  const treasurer = officers.find(o => o.role === "Treasurer")?.name || "_________";
-  const auditor   = officers.find(o => o.role === "Auditor")?.name   || "_________";
+  const president = officers.find(o => o.role === "President")?.name || "___________________";
+  const treasurer = officers.find(o => o.role === "Treasurer")?.name || "___________________";
+  const auditor   = officers.find(o => o.role === "Auditor")?.name   || "___________________";
 
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "italic");

@@ -1,14 +1,9 @@
 // ─────────────────────────────────────────────────────────────
 // reports/ExportPanel.tsx
-//
-// CHANGE: Now accepts feeSchedules prop and forwards it to all
-//         export functions so delinquent amounts use the correct
-//         scheduled rate per year (not payment history guesses).
-//
 // Replace: D:\suncowebsite\app\admin\_components\reports\ExportPanel.tsx
 // ─────────────────────────────────────────────────────────────
 import { useState } from "react";
-import type { ActiveTab, FeeSchedule } from "@/utils/export";
+import type { ActiveTab, FeeSchedule, OfficerRecord } from "@/utils/export";
 
 interface ExportRecord {
   no: number;
@@ -33,9 +28,10 @@ interface Props {
   memberCount: number;
   paymentCount: number;
   activeTab: ActiveTab;
-  /** Pass the full fee_schedules array from Supabase so delinquent
-   *  amounts are calculated from actual BOD-approved rates per year. */
+  /** Fee schedules from Supabase — used for correct delinquent amounts */
   feeSchedules: FeeSchedule[];
+  /** Officers from Supabase — used for signature block in PDF & Excel */
+  officers: OfficerRecord[];
 }
 
 const TAB_LABELS: Record<ActiveTab, string> = {
@@ -52,6 +48,7 @@ export default function ExportPanel({
   paymentCount,
   activeTab,
   feeSchedules,
+  officers,
 }: Props) {
   const [exporting, setExporting] = useState("");
 
@@ -61,8 +58,8 @@ export default function ExportPanel({
       "@/utils/export"
     );
     if (type === "csv")   exportToCSV(records, filename, activeTab, feeSchedules);
-    if (type === "excel") exportToExcel(records, filename, activeTab, feeSchedules);
-    if (type === "pdf")   exportToPDF(records, filename, activeTab, feeSchedules);
+    if (type === "excel") exportToExcel(records, filename, activeTab, feeSchedules, officers);
+    if (type === "pdf")   await exportToPDF(records, filename, activeTab, feeSchedules, officers);
     setExporting("");
   };
 
