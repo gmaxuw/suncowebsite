@@ -316,9 +316,9 @@ export function exportToExcel(
   rows.push([]);
   rows.push(["Prepared and certified by:"]);
   rows.push([]);
-  rows.push([treasurer, "", president, "", auditor]);
+  rows.push([treasurer.toUpperCase(), "", president.toUpperCase(), "", auditor.toUpperCase()]);
   rows.push(["Treasurer", "", "President", "", "Auditor"]);
-  rows.push(["Date: _______________", "", "Date: _______________", "", "Date: _______________"]);
+  rows.push([`Date: ${exportDate()}`, "", `Date: ${exportDate()}`, "", `Date: ${exportDate()}`]);
 
   // ── Write sheet ──
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -840,11 +840,11 @@ export async function exportToPDF(
     doc.setLineWidth(0.3);
     doc.line(x + 8, lineY, x + colW - 8, lineY);
 
-    // Name — bold green
+    // Name — bold green ALL CAPS
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...GREEN_DK);
-    doc.text(name, cx, nameY, { align: "center" });
+    doc.text(name.toUpperCase(), cx, nameY, { align: "center" });
 
     // Title — italic muted
     doc.setFont("helvetica", "italic");
@@ -852,10 +852,10 @@ export async function exportToPDF(
     doc.setTextColor(100, 100, 100);
     doc.text(title, cx, titY, { align: "center" });
 
-    // Date line
+    // Date — actual export date/time
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
-    doc.text("Date: _______________", cx, dateY, { align: "center" });
+    doc.text(`Date: ${exportDate()}`, cx, dateY, { align: "center" });
   });
 
   // ── Page numbers ──────────────────────────────────────────
