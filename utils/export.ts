@@ -1,14 +1,13 @@
 // ─────────────────────────────────────────────────────────────
-// utils/export.ts  —  SUNCO Export Utility  (FIXED)
+// utils/export.ts  —  SUNCO Export Utility  (FIXED v2)
 //
-// Fixes applied:
-//  1. Paper size → 8.5 × 13 in (Long Bond / Legal)
-//  2. Current year (2026) column now always included
-//  3. Years before a member's join year → "N/A" (not delinquent)
-//  4. Delinquent summary row per year: count + total amount owed
-//  5. Grand-total delinquent row at the very bottom
-//  6. MAS tab → "Mortuary Assistance Services (MAS)" label
-//  7. Tab filtering strictly respected for all export formats
+// FIXES in this version:
+//  1. Delinquent amounts now use fee_schedules rates (NOT payment history)
+//  2. FeeSchedule type added; feeSchedules param passed to all export fns
+//  3. getRate() helper resolves correct MAS/AOF/Lifetime fee per year
+//  4. Falls back to nearest earlier year's rate if exact year not found
+//  5. 2022 MAS delinquent now correctly shows PHP 440.00 × count
+//  6. ExportPanel must pass feeSchedules prop (see bottom of this file)
 //
 // Replace: D:\suncowebsite\utils\export.ts
 // ─────────────────────────────────────────────────────────────
@@ -38,35 +37,36 @@ export interface MemberRecord {
   name: string;
   status: string;
   member_id_code: string;
-  date_joined: string; // e.g. "2025-10"  or "2022"
+  date_joined: string;
   payments: PaymentRecord[];
   years_delinquent: number;
   total_amount: number;
+}
+
+/** Mirrors the fee_schedules table row */
+export interface FeeSchedule {
+  year: number;
+  fee_mas: number;
+  fee_aof: number;
+  fee_lifetime: number;
 }
 
 export type ActiveTab = "all" | "mas" | "aof" | "lifetime";
 
 // ── Helpers ───────────────────────────────────────────────────
 
-/** Parse join year from date_joined (handles "2025-10", "2022", "2022-01-15") */
 function joinYear(member: MemberRecord): number {
   const raw = String(member.date_joined || "").trim();
   const y = parseInt(raw.slice(0, 4), 10);
   return isNaN(y) ? 0 : y;
 }
 
-/** Return the current calendar year — used as the latest column */
 function currentYear(): number {
-  return new Date().getFullYear(); // 2026
+  return new Date().getFullYear();
 }
 
-/**
- * Build the full year range to display.
- * Always starts from the earliest payment/join year and ends at currentYear().
- */
 function getAllYears(members: MemberRecord[]): number[] {
   const years = new Set<number>();
-  // always include current year so 2026 column is never missing
   years.add(currentYear());
   members.forEach((m) => {
     m.payments.forEach((p) => years.add(p.year));
@@ -94,18 +94,42 @@ function exportDate() {
   });
 }
 
-/** ₱ for Excel / CSV (Unicode supported) */
 function peso(amount: number) {
   return amount > 0
     ? `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
     : "—";
 }
 
-/** PHP prefix for PDF (avoids jsPDF Latin-1 ± glitch) */
 function pesoPDF(amount: number) {
   return amount > 0
     ? `PHP ${amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`
     : "—";
+}
+
+// ─────────────────────────────────────────────────────────────
+// KEY FIX: getRate()
+//
+// Returns the scheduled fee for a given year and payment type.
+// If the exact year isn't in fee_schedules, walks backwards to
+// find the nearest earlier year (e.g. if 2022 is missing, uses 2021).
+// Falls back to 0 only if no earlier schedule exists at all.
+// ─────────────────────────────────────────────────────────────
+function getRate(
+  feeSchedules: FeeSchedule[],
+  year: number,
+  type: "mas" | "aof" | "lifetime"
+): number {
+  // Sort descending so we find the closest year ≤ target first
+  const sorted = [...feeSchedules].sort((a, b) => b.year - a.year);
+
+  for (const s of sorted) {
+    if (s.year <= year) {
+      if (type === "mas")      return s.fee_mas      || 0;
+      if (type === "aof")      return s.fee_aof      || 0;
+      if (type === "lifetime") return s.fee_lifetime || 0;
+    }
+  }
+  return 0; // no schedule found at all
 }
 
 // ── Tab label map ─────────────────────────────────────────────
@@ -134,7 +158,8 @@ function orgHeader(label: string): any[][] {
 export function exportToExcel(
   members: MemberRecord[],
   filename = "SUNCO-Records",
-  activeTab: ActiveTab = "all"
+  activeTab: ActiveTab = "all",
+  feeSchedules: FeeSchedule[] = []
 ) {
   const wb = XLSX.utils.book_new();
   const years = getAllYears(members);
@@ -149,7 +174,6 @@ export function exportToExcel(
 
   const rows: any[][] = [...orgHeader(TAB_LABELS[type])];
 
-  // Header row
   const header: any[] = ["NO.", "NAME", "STATUS", "MEMBER ID", "DATE JOINED"];
   if (type === "all") {
     years.forEach((yr) =>
@@ -161,14 +185,12 @@ export function exportToExcel(
   header.push("YRS DELINQUENT", "TOTAL PAID");
   rows.push(header);
 
-  // Data rows
   members.forEach((m) => {
     const jy = joinYear(m);
     const row: any[] = [m.no, m.name, m.status, m.member_id_code, m.date_joined];
 
     years.forEach((yr) => {
       if (jy > 0 && yr < jy) {
-        // Year is before the member joined → N/A
         if (type === "all") row.push("N/A", "N/A", "N/A", "N/A");
         else row.push("N/A", "N/A");
         return;
@@ -195,7 +217,7 @@ export function exportToExcel(
     rows.push(row);
   });
 
-  // ── Totals row ──
+  // Totals row
   const totalsRow: any[] = ["", "TOTAL", "", "", ""];
   years.forEach((yr) => {
     if (type === "all") {
@@ -223,57 +245,56 @@ export function exportToExcel(
   totalsRow.push("", grandTotal);
   rows.push(totalsRow);
 
-  // ── Delinquent summary row(s) ──
-  rows.push([]); // spacer
+  rows.push([]);
 
-  // Count & amount delinquent per year
+  // ── Delinquent rows — using fee schedule rates ──
   const delinqCountRow: any[] = ["", "DELINQUENT MEMBERS (count)", "", "", ""];
-  const delinqAmtRow: any[] = ["", "DELINQUENT AMOUNT OWED", "", "", ""];
+  const delinqAmtRow: any[]   = ["", "DELINQUENT AMOUNT OWED", "", "", ""];
 
   years.forEach((yr) => {
-    const relevantTypes = type === "all" ? ["mas", "aof"] : [type];
-
-    let countUnpaid = 0;
-    let amtOwed = 0;
-
-    members.forEach((m) => {
-      const jy = joinYear(m);
-      if (jy > 0 && yr < jy) return; // not a member yet
-      relevantTypes.forEach((t) => {
-        const p = paymentsByYearType(m.payments, yr, t)[0];
-        if (!p) {
-          countUnpaid++;
-          // Estimate owed: use latest payment of same type as reference
-          const latest = m.payments
-            .filter((pp) => pp.type === t)
-            .sort((a, b) => b.year - a.year)[0];
-          amtOwed += latest?.amount || 0;
-        }
-      });
-    });
+    const relevantTypes = type === "all" ? (["mas", "aof"] as const) : ([type] as const);
 
     if (type === "all") {
-      delinqCountRow.push("", countUnpaid || "", "", "");
-      delinqAmtRow.push("", amtOwed || "", "", "");
+      let countMas = 0, countAof = 0, amtMas = 0, amtAof = 0;
+      members.forEach((m) => {
+        const jy = joinYear(m);
+        if (jy > 0 && yr < jy) return;
+        const mas = paymentsByYearType(m.payments, yr, "mas")[0];
+        const aof = paymentsByYearType(m.payments, yr, "aof")[0];
+        if (!mas) { countMas++; amtMas += getRate(feeSchedules, yr, "mas"); }
+        if (!aof) { countAof++; amtAof += getRate(feeSchedules, yr, "aof"); }
+      });
+      delinqCountRow.push("", countMas || "", "", countAof || "");
+      delinqAmtRow.push("", amtMas || "", "", amtAof || "");
     } else {
-      delinqCountRow.push("", countUnpaid || "");
-      delinqAmtRow.push("", amtOwed || "");
+      let count = 0, amt = 0;
+      members.forEach((m) => {
+        const jy = joinYear(m);
+        if (jy > 0 && yr < jy) return;
+        const p = paymentsByYearType(m.payments, yr, type as string)[0];
+        if (!p) {
+          count++;
+          amt += getRate(feeSchedules, yr, type as "mas" | "aof" | "lifetime");
+        }
+      });
+      delinqCountRow.push("", count || "");
+      delinqAmtRow.push("", amt || "");
     }
   });
 
-  const grandDelinqAmt = members.reduce((s, m) => {
-    const relevantTypes = type === "all" ? ["mas", "aof"] : [type];
-    let owed = 0;
-    relevantTypes.forEach((t) => {
-      const latest = m.payments
-        .filter((p) => p.type === t)
-        .sort((a, b) => b.year - a.year)[0];
-      if (latest && m.years_delinquent > 0) {
-        owed += latest.amount * m.years_delinquent;
-      }
+  // Grand delinquent total — sum per member per unpaid year using schedule rate
+  let grandDelinqAmt = 0;
+  members.forEach((m) => {
+    const jy = joinYear(m);
+    const relevantTypes = type === "all" ? (["mas", "aof"] as const) : ([type] as const);
+    getAllYears(members).forEach((yr) => {
+      if (jy > 0 && yr < jy) return;
+      relevantTypes.forEach((t) => {
+        const p = paymentsByYearType(m.payments, yr, t)[0];
+        if (!p) grandDelinqAmt += getRate(feeSchedules, yr, t as "mas" | "aof" | "lifetime");
+      });
     });
-    return s + owed;
-  }, 0);
+  });
 
   delinqCountRow.push("", "");
   delinqAmtRow.push("", grandDelinqAmt || "");
@@ -281,7 +302,6 @@ export function exportToExcel(
   rows.push(delinqAmtRow);
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
-
   const baseCols = [
     { wch: 5 }, { wch: 28 }, { wch: 12 }, { wch: 15 }, { wch: 14 },
   ];
@@ -301,7 +321,8 @@ export function exportToExcel(
 export function exportToCSV(
   members: MemberRecord[],
   filename = "SUNCO-Records",
-  activeTab: ActiveTab = "all"
+  activeTab: ActiveTab = "all",
+  feeSchedules: FeeSchedule[] = []
 ) {
   const years = getAllYears(members);
   const type = activeTab;
@@ -372,9 +393,9 @@ export function exportToCSV(
 export function exportToPDF(
   members: MemberRecord[],
   filename = "SUNCO-Records",
-  activeTab: ActiveTab = "all"
+  activeTab: ActiveTab = "all",
+  feeSchedules: FeeSchedule[] = []
 ) {
-  // 8.5 × 13 inches in mm
   const PAGE_W = 215.9;
   const PAGE_H = 330.2;
 
@@ -384,21 +405,18 @@ export function exportToPDF(
     format: [PAGE_W, PAGE_H],
   });
 
-  // In landscape: width = PAGE_H, height = PAGE_W
-  const PRINT_W = PAGE_H; // 330.2 mm  (landscape width)
+  const PRINT_W = PAGE_H;
 
   const years = getAllYears(members);
   const type = activeTab;
 
-  // ── Colour palette ────────────────────────────────────────
   const GREEN_DK: [number, number, number] = [13, 51, 32];
   const GOLD: [number, number, number]     = [201, 168, 76];
   const CREAM: [number, number, number]    = [245, 237, 216];
   const YELLOW: [number, number, number]   = [255, 253, 210];
   const RED_LIGHT: [number, number, number]= [255, 230, 230];
 
-  // ── Logo placeholder (circle with "S") ───────────────────
-
+  // Logo
   const LOGO_X = 14;
   const LOGO_Y = 4;
   const LOGO_R = 11;
@@ -409,13 +427,12 @@ export function exportToPDF(
   doc.setTextColor(...GREEN_DK);
   doc.text("S", LOGO_X + LOGO_R - 3.5, LOGO_Y + LOGO_R + 5);
 
-  // ── Header block ─────────────────────────────────────────
+  // Header
   const HEADER_H = 36;
   doc.setFillColor(...GREEN_DK);
   doc.rect(0, 0, PRINT_W, HEADER_H, "F");
 
-  const TEXT_X = LOGO_X + LOGO_R * 2 + 4; // start text after logo
-
+  const TEXT_X = LOGO_X + LOGO_R * 2 + 4;
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...GOLD);
@@ -435,7 +452,7 @@ export function exportToPDF(
   doc.setTextColor(200, 200, 200);
   doc.text(`As of: ${exportDate()}`, TEXT_X, 32);
 
-  // ── Build table data ──────────────────────────────────────
+  // ── Build table ───────────────────────────────────────────
   let head: string[][];
   let body: any[][];
   let totalsRow: any[];
@@ -450,6 +467,7 @@ export function exportToPDF(
   };
 
   if (type === "all") {
+    // ── ALL tab: MAS + AOF columns per year ──────────────────
     const yearHeaders = years.flatMap((yr) => [`${yr}\nMAS`, `${yr}\nAOF`]);
     head = [["No.", "Name", "Status", "Joined", ...yearHeaders, "Delinquent", "Total"]];
 
@@ -486,27 +504,49 @@ export function exportToPDF(
     const grandT = members.reduce((s, m) => s + m.total_amount, 0);
     totalsRow.push("", pesoPDF(grandT));
 
-    // Delinquent count per year
+    // ── DELINQUENT rows — fee schedule rates ────────────────
     delinqCountRow = ["", "DELINQUENT MEMBERS (#)", "", ""];
     delinqAmtRow   = ["", "DELINQUENT AMOUNT OWED", "", ""];
+
     years.forEach((yr) => {
       let countMas = 0, countAof = 0, amtMas = 0, amtAof = 0;
       members.forEach((m) => {
         const jy = joinYear(m);
+        if (jy > 0 && yr < jy) return; // not a member yet — skip
+        const mas = paymentsByYearType(m.payments, yr, "mas")[0];
+        const aof = paymentsByYearType(m.payments, yr, "aof")[0];
+        if (!mas) {
+          countMas++;
+          amtMas += getRate(feeSchedules, yr, "mas"); // ← fee schedule rate
+        }
+        if (!aof) {
+          countAof++;
+          amtAof += getRate(feeSchedules, yr, "aof"); // ← fee schedule rate
+        }
+      });
+      delinqCountRow.push(
+        countMas > 0 ? `${countMas}` : "—",
+        countAof > 0 ? `${countAof}` : "—"
+      );
+      delinqAmtRow.push(
+        amtMas > 0 ? pesoPDF(amtMas) : "—",
+        amtAof > 0 ? pesoPDF(amtAof) : "—"
+      );
+    });
+
+    // Grand total delinquent — iterate every unpaid slot per member
+    let grandDelinqAmt = 0;
+    members.forEach((m) => {
+      const jy = joinYear(m);
+      years.forEach((yr) => {
         if (jy > 0 && yr < jy) return;
         const mas = paymentsByYearType(m.payments, yr, "mas")[0];
         const aof = paymentsByYearType(m.payments, yr, "aof")[0];
-        if (!mas) { countMas++; const ref = m.payments.filter(p=>p.type==="mas").sort((a,b)=>b.year-a.year)[0]; amtMas += ref?.amount || 0; }
-        if (!aof) { countAof++; const ref = m.payments.filter(p=>p.type==="aof").sort((a,b)=>b.year-a.year)[0]; amtAof += ref?.amount || 0; }
+        if (!mas) grandDelinqAmt += getRate(feeSchedules, yr, "mas");
+        if (!aof) grandDelinqAmt += getRate(feeSchedules, yr, "aof");
       });
-      delinqCountRow.push(countMas > 0 ? `${countMas}` : "—", countAof > 0 ? `${countAof}` : "—");
-      delinqAmtRow.push(amtMas > 0 ? pesoPDF(amtMas) : "—", amtAof > 0 ? pesoPDF(amtAof) : "—");
     });
-    const grandDelinqAmt = members.reduce((s, m) => {
-      const refMas = m.payments.filter(p=>p.type==="mas").sort((a,b)=>b.year-a.year)[0];
-      const refAof = m.payments.filter(p=>p.type==="aof").sort((a,b)=>b.year-a.year)[0];
-      return s + (refMas?.amount || 0) * m.years_delinquent + (refAof?.amount || 0) * m.years_delinquent;
-    }, 0);
+
     delinqCountRow.push("", "");
     delinqAmtRow.push("", grandDelinqAmt > 0 ? pesoPDF(grandDelinqAmt) : "—");
 
@@ -521,7 +561,7 @@ export function exportToPDF(
     colStyles[lastCol + 1] = { cellWidth: 26, halign: "right" };
 
   } else {
-    // ── MAS / AOF / Lifetime ─────────────────────────────────
+    // ── MAS / AOF / Lifetime — single column per year ───────
     const yearHeaders = years.map((yr) => `${yr}`);
     head = [["No.", "Name", "Status", "Joined", ...yearHeaders, "Delinquent", "Total"]];
 
@@ -557,9 +597,10 @@ export function exportToPDF(
     );
     totalsRow.push("", pesoPDF(grandT));
 
-    // Delinquent per year
+    // ── DELINQUENT rows — fee schedule rates ────────────────
     delinqCountRow = ["", "DELINQUENT MEMBERS (#)", "", ""];
     delinqAmtRow   = ["", "DELINQUENT AMOUNT OWED", "", ""];
+
     years.forEach((yr) => {
       let count = 0, amt = 0;
       members.forEach((m) => {
@@ -568,17 +609,24 @@ export function exportToPDF(
         const p = paymentsByYearType(m.payments, yr, type)[0];
         if (!p) {
           count++;
-          const ref = m.payments.filter(pp=>pp.type===type).sort((a,b)=>b.year-a.year)[0];
-          amt += ref?.amount || 0;
+          amt += getRate(feeSchedules, yr, type as "mas" | "aof" | "lifetime");
         }
       });
       delinqCountRow.push(count > 0 ? `${count}` : "—");
       delinqAmtRow.push(amt > 0 ? pesoPDF(amt) : "—");
     });
-    const grandDelinqAmt = members.reduce((s, m) => {
-      const ref = m.payments.filter(p=>p.type===type).sort((a,b)=>b.year-a.year)[0];
-      return s + (ref?.amount || 0) * m.years_delinquent;
-    }, 0);
+
+    // Grand total delinquent
+    let grandDelinqAmt = 0;
+    members.forEach((m) => {
+      const jy = joinYear(m);
+      years.forEach((yr) => {
+        if (jy > 0 && yr < jy) return;
+        const p = paymentsByYearType(m.payments, yr, type)[0];
+        if (!p) grandDelinqAmt += getRate(feeSchedules, yr, type as "mas" | "aof" | "lifetime");
+      });
+    });
+
     delinqCountRow.push("", "");
     delinqAmtRow.push("", grandDelinqAmt > 0 ? pesoPDF(grandDelinqAmt) : "—");
 
@@ -595,7 +643,6 @@ export function exportToPDF(
   const lastDataCol =
     type === "all" ? 4 + years.length * 2 : 4 + years.length;
 
-  // ── Render table ─────────────────────────────────────────
   const allRows = [...body, totalsRow, delinqCountRow, delinqAmtRow];
 
   autoTable(doc, {
@@ -614,28 +661,23 @@ export function exportToPDF(
       const isDelinqC = data.row.index === body.length + 1;
       const isDelinqA = data.row.index === body.length + 2;
 
-      // TOTAL row
       if (isTotal) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fillColor = [220, 235, 220];
         data.cell.styles.textColor = GREEN_DK;
       }
-
-      // Delinquent count row
       if (isDelinqC) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fillColor = RED_LIGHT;
         data.cell.styles.textColor = [160, 20, 20];
       }
-
-      // Delinquent amount row
       if (isDelinqA) {
         data.cell.styles.fontStyle = "bold";
         data.cell.styles.fillColor = [255, 215, 215];
         data.cell.styles.textColor = [140, 0, 0];
       }
 
-      // N/A cells — grey out
+      // N/A — grey
       if (
         data.section === "body" &&
         data.row.index < body.length &&
@@ -648,7 +690,7 @@ export function exportToPDF(
         data.cell.styles.fontStyle = "italic";
       }
 
-      // Unpaid "—" cells — yellow highlight
+      // Unpaid "—" — yellow
       if (
         data.section === "body" &&
         data.row.index < body.length &&
@@ -674,7 +716,7 @@ export function exportToPDF(
     },
   });
 
-  // ── Page numbers + confidential footer ───────────────────
+  // Page numbers
   const pageCount = (doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -683,7 +725,6 @@ export function exportToPDF(
     doc.text(
       `Page ${i} of ${pageCount}  —  SUNCO CONFIDENTIAL  —  ${ORG_SEC}`,
       14,
-      // landscape height = PAGE_W
       PAGE_W - 4
     );
   }

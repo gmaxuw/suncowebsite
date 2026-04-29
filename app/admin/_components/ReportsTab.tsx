@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SummaryCards from "@/app/admin/_components/reports/SummaryCards";
 import ExportPanel  from "@/app/admin/_components/reports/ExportPanel";
 import ImportPanel  from "@/app/admin/_components/reports/ImportPanel";
@@ -8,7 +8,7 @@ import RecordsTable from "@/app/admin/_components/reports/RecordsTable";
 import { useDelinquency } from "@/app/admin/hooks/useDelinquency";
 import { useReportsData } from "@/app/admin/hooks/useReportsData";
 import type { SummaryCardItem } from "@/types/reports.types";
-import type { ActiveTab } from "@/utils/export";
+import type { ActiveTab, FeeSchedule } from "@/utils/export";
 
 interface Props {
   canCRUD: boolean;
@@ -22,6 +22,18 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
     supabase,
     getDelinquency
   );
+
+  // ── Fee schedules — needed for correct delinquent amount calculation ──
+  const [feeSchedules, setFeeSchedules] = useState<FeeSchedule[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("fee_schedules")
+      .select("year, fee_mas, fee_aof, fee_lifetime")
+      .then(({ data }: { data: FeeSchedule[] | null }) => {
+        if (data) setFeeSchedules(data);
+      });
+  }, [supabase]);
 
   // ── Lifted from RecordsTable so ExportPanel knows which tab is active ──
   const [activeTab, setActiveTab] = useState<ActiveTab>("all");
@@ -93,6 +105,7 @@ export default function ReportsTab({ canCRUD, supabase }: Props) {
           memberCount={members.length}
           paymentCount={payments.length}
           activeTab={activeTab}
+          feeSchedules={feeSchedules}
         />
         {canCRUD && (
           <ImportPanel

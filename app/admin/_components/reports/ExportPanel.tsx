@@ -1,12 +1,14 @@
 // ─────────────────────────────────────────────────────────────
 // reports/ExportPanel.tsx
 //
-// Export buttons for Excel, CSV, PDF.
-// Receives pre-built records, a filename, and the activeTab from parent.
+// CHANGE: Now accepts feeSchedules prop and forwards it to all
+//         export functions so delinquent amounts use the correct
+//         scheduled rate per year (not payment history guesses).
+//
 // Replace: D:\suncowebsite\app\admin\_components\reports\ExportPanel.tsx
 // ─────────────────────────────────────────────────────────────
 import { useState } from "react";
-import type { ActiveTab } from "@/utils/export";
+import type { ActiveTab, FeeSchedule } from "@/utils/export";
 
 interface ExportRecord {
   no: number;
@@ -30,8 +32,10 @@ interface Props {
   filename: string;
   memberCount: number;
   paymentCount: number;
-  /** Which tab is currently active in the parent — controls what gets exported */
   activeTab: ActiveTab;
+  /** Pass the full fee_schedules array from Supabase so delinquent
+   *  amounts are calculated from actual BOD-approved rates per year. */
+  feeSchedules: FeeSchedule[];
 }
 
 const TAB_LABELS: Record<ActiveTab, string> = {
@@ -47,6 +51,7 @@ export default function ExportPanel({
   memberCount,
   paymentCount,
   activeTab,
+  feeSchedules,
 }: Props) {
   const [exporting, setExporting] = useState("");
 
@@ -55,9 +60,9 @@ export default function ExportPanel({
     const { exportToCSV, exportToExcel, exportToPDF } = await import(
       "@/utils/export"
     );
-    if (type === "csv")   exportToCSV(records, filename, activeTab);
-    if (type === "excel") exportToExcel(records, filename, activeTab);
-    if (type === "pdf")   exportToPDF(records, filename, activeTab);
+    if (type === "csv")   exportToCSV(records, filename, activeTab, feeSchedules);
+    if (type === "excel") exportToExcel(records, filename, activeTab, feeSchedules);
+    if (type === "pdf")   exportToPDF(records, filename, activeTab, feeSchedules);
     setExporting("");
   };
 
