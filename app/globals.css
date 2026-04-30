@@ -48,7 +48,7 @@ em { color: inherit; }
 
 /* Mobile hamburger button — hidden on desktop */
 .nav-hamburger {
-  display: none;
+  display: none !important;
   background: none;
   border: none;
   cursor: pointer;
@@ -105,9 +105,9 @@ em { color: inherit; }
 }
 
 @media (max-width: 768px) {
-  /* Nav */
-  .nav-hamburger          { display: flex; }
-  .resp-nav-links         { display: none; }
+  .nav-hamburger { display: flex !important; }
+  .resp-nav-links { display: none !important; }
+  /* rest stays the same */
 
   /* Grids → single column */
   .resp-grid-hero         { grid-template-columns: 1fr; gap: 2rem; }
