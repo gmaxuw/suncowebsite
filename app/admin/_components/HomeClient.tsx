@@ -56,6 +56,7 @@ const navLinks = [
 ];
 
  return (
+  <div style={{ position: "relative" }}>
   <main suppressHydrationWarning>
 
 {/* ── NAV ── */}
@@ -514,5 +515,6 @@ const navLinks = [
       </footer>
 
     </main>
+  </div>
   );
 }
