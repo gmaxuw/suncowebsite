@@ -56,7 +56,7 @@ const navLinks = [
 
       {/* ── NAV ── */}
       <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--green-dk)", borderBottom: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2.5rem", height: "64px" }}>
-        <a href="#" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
           <img src={s("hero_logo_url", "/images/sunco-logo.png")} alt={`${s("org_short_name", "SUNCO")} Seal`} width={40} height={40}
             style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "contain" }} />
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>{s("org_short_name", "SUNCO")}</span>
