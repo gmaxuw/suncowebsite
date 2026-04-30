@@ -53,14 +53,16 @@ em { color: inherit; }
   cursor: pointer;
   color: white;
   padding: 0.5rem;
-  flex-direction: column;
-  gap: 5px;
-  align-items: center;
-  justify-content: center;
   min-width: 44px;
   min-height: 44px;
+  align-items: center;
+  justify-content: center;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+@media (max-width: 768px) {
+  .nav-hamburger { display: flex !important; }
 }
 
 /* ── NAV DRAWER — hidden by default ── */

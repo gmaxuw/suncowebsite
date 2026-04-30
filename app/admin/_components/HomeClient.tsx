@@ -20,11 +20,15 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const s = (key: string, fallback = "") => settings[key] || fallback;
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const [authUser, setAuthUser] = useState<any>(null);
-  const supabase = createClient();
+const [authUser, setAuthUser] = useState<any>(null);
+const [authLoading, setAuthLoading] = useState(true);
+const supabase = createClient();
 
-  useEffect(() => {
-  supabase.auth.getUser().then(({ data }) => setAuthUser(data.user));
+useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => {
+    setAuthUser(data.user);
+    setAuthLoading(false);
+  });
 }, []);
 
 
@@ -48,7 +52,7 @@ const navLinks = [
   ["#membership", "Membership"],
   ["#officers", "Officers"],
   ["#news", "News"],
-  ...(authUser ? [["/dashboard", "My Account"]] : [["/login", "Login"]]),
+  ...(!authLoading ? (authUser ? [["/dashboard", "My Account"]] : [["/login", "Login"]]) : []),
 ];
 
  return (
@@ -77,20 +81,6 @@ const navLinks = [
   className="nav-hamburger"
   onClick={() => setMenuOpen(o => !o)}
   aria-label="Toggle menu"
-  style={{
-    minWidth: "44px",
-    minHeight: "44px",
-    width: "44px",
-    height: "44px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    WebkitTapHighlightColor: "transparent",
-    touchAction: "manipulation",
-  }}
 >
   {menuOpen ? <X size={24} color="white" /> : <Menu size={24} color="white" />}
 </button>
