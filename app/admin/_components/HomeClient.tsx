@@ -58,41 +58,57 @@ const navLinks = [
  return (
   <main suppressHydrationWarning>
 
-      {/* ── NAV ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--green-dk)", borderBottom: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2.5rem", height: "64px" }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
-          <img src={s("hero_logo_url", "/images/sunco-logo.png")} alt={`${s("org_short_name", "SUNCO")} Seal`} width={40} height={40}
-            style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "contain" }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>{s("org_short_name", "SUNCO")}</span>
-        </a>
+{/* ── NAV ── */}
+<nav style={{ position: "sticky", top: 0, zIndex: 100, background: "var(--green-dk)", borderBottom: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 1.2rem", height: "64px" }}>
+  <a href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+    <img src={s("hero_logo_url", "/images/sunco-logo.png")} alt="SUNCO" width={40} height={40} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "contain" }} />
+    <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--gold-lt)", letterSpacing: "0.04em" }}>{s("org_short_name", "SUNCO")}</span>
+  </a>
 
-        {/* Desktop nav links */}
-        <div className="resp-nav-links">
-          {navLinks.map(([href, label]) => (
-            <a key={href} href={href} style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>
-              {label}
-            </a>
-          ))}
-          {!authUser && <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>Join Now</a>}
-        </div>
+  {/* Desktop nav */}
+  <div className="resp-nav-links">
+    {[["#about","About"],["#programs","Programs"],["#membership","Membership"],["#officers","Officers"],["#news","News"]].map(([href, label]) => (
+      <a key={href} href={href} style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>{label}</a>
+    ))}
+    {!authLoading && authUser
+      ? <a href="/dashboard" style={{ background: "rgba(212,160,23,0.15)", color: "var(--gold-lt)", border: "1px solid rgba(212,160,23,0.3)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>My Account</a>
+      : !authLoading && <a href="/login" style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>Login</a>
+    }
+    {!authLoading && !authUser && <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>Join Now</a>}
+  </div>
 
-        {/* Mobile hamburger */}
- <button
-  className="nav-hamburger"
-  onClick={() => setMenuOpen(o => !o)}
-  aria-label="Toggle menu"
->
-  {menuOpen ? <X size={24} color="white" /> : <Menu size={24} color="white" />}
-</button>
-      </nav>
+  {/* Hamburger — CSS controls visibility */}
+  <button className="nav-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu">
+    {menuOpen ? <X size={24} color="white" /> : <Menu size={24} color="white" />}
+  </button>
+</nav>
 
-      {/* Mobile drawer */}
-      <div className={`nav-drawer${menuOpen ? " open" : ""}`}>
-        {navLinks.map(([href, label]) => (
-          <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
-        ))}
-        {!authUser && <a href="/register" className="join-btn" onClick={() => setMenuOpen(false)}>Join Now</a>}
-      </div>
+{/* Mobile drawer — position:absolute, NOT fixed */}
+{menuOpen && (
+  <div style={{
+    position: "absolute",
+    top: "64px",
+    left: 0,
+    right: 0,
+    background: "var(--green-dk)",
+    borderBottom: "3px solid var(--gold)",
+    zIndex: 99,
+    display: "flex",
+    flexDirection: "column",
+    padding: "1rem 1.5rem 1.5rem",
+  }}>
+    {[["#about","About"],["#programs","Programs"],["#membership","Membership"],["#officers","Officers"],["#news","News"]].map(([href, label]) => (
+      <a key={href} href={href} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: "0.88rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "block" }}>{label}</a>
+    ))}
+    {!authLoading && authUser
+      ? <a href="/dashboard" onClick={() => setMenuOpen(false)} style={{ color: "var(--gold-lt)", textDecoration: "none", fontSize: "0.88rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "block" }}>My Account</a>
+      : !authLoading && <a href="/login" onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: "0.88rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "block" }}>Login</a>
+    }
+    {!authLoading && !authUser && (
+      <a href="/register" onClick={() => setMenuOpen(false)} style={{ marginTop: "0.8rem", background: "var(--gold)", color: "var(--green-dk)", textAlign: "center", padding: "0.75rem", borderRadius: 4, fontWeight: 600, textDecoration: "none", display: "block" }}>Join Now</a>
+    )}
+  </div>
+)}
 
       {/* ── HERO ── */}
       <section style={{ minHeight: "92vh", display: "flex", alignItems: "center", background: "var(--green-dk)", position: "relative", overflow: "hidden" }}>
