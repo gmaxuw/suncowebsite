@@ -23,8 +23,21 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    const { data: member } = await supabase
+      .from("members")
+      .select("approval_status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (member?.approval_status === "approved") {
       router.push("/dashboard");
+    } else {
+      router.push("/pending");
     }
+  }
+}
   };
 
   return (

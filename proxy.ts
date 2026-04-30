@@ -26,6 +26,17 @@ export default async function proxy(request: NextRequest) {
 
   await supabase.auth.getUser();
 
+  // 👇 THIS IS THE ONLY NEW PART — blocks unauthenticated users
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const isProtected =
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/admin");
+
+  if (isProtected && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   return response;
 }
 
