@@ -66,13 +66,17 @@ export default function HomeClient({ settings, officers, programs, articles }: P
         </div>
 
         {/* Mobile hamburger */}
-        <button className="nav-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Toggle menu">
-          {menuOpen ? <X size={22} color="white" /> : (
-            <>
-              <span /><span /><span />
-            </>
-          )}
-        </button>
+ <button
+  className="nav-hamburger"
+  onClick={() => setMenuOpen(o => !o)}
+  aria-label="Toggle menu"
+  style={{ minWidth: 44, minHeight: 44 }}
+>
+  {menuOpen
+    ? <X size={22} color="white" />
+    : <Menu size={22} color="white" />
+  }
+</button>
       </nav>
 
       {/* Mobile drawer */}
