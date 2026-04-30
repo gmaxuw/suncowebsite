@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Shield, Users, BookOpen, Heart, Megaphone, ChevronRight, MapPin, Mail, Menu, X } from "lucide-react";
 import SeniorCitizenCalculator from "@/app/components/SeniorCitizenCalculator";
 import MembershipForm from "@/app/components/MembershipForm";
-
+import { createClient } from "@/utils/supabase/client";
 
 
 
@@ -19,6 +19,13 @@ interface Props {
 export default function HomeClient({ settings, officers, programs, articles }: Props) {
   const s = (key: string, fallback = "") => settings[key] || fallback;
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [authUser, setAuthUser] = useState<any>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => setAuthUser(data.user));
+}, []);
 
 
   const executives = officers.filter(o => o.role_type === "executive");
@@ -35,14 +42,14 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const feeMas = s("fee_mas", "740");
   const firstYearTotal = Number(feeLifetime) + Number(feeAof) + Number(feeMas);
 
-  const navLinks = [
-    ["#about", "About"],
-    ["#programs", "Programs"],
-    ["#membership", "Membership"],
-    ["#officers", "Officers"],
-    ["#news", "News"],
-    ["/login", "Login"],
-  ];
+const navLinks = [
+  ["#about", "About"],
+  ["#programs", "Programs"],
+  ["#membership", "Membership"],
+  ["#officers", "Officers"],
+  ["#news", "News"],
+  ...(authUser ? [["/dashboard", "My Account"]] : [["/login", "Login"]]),
+];
 
  return (
   <main suppressHydrationWarning>
@@ -62,7 +69,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               {label}
             </a>
           ))}
-          <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>Join Now</a>
+          {!authUser && <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>Join Now</a>}
         </div>
 
         {/* Mobile hamburger */}
@@ -94,7 +101,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
         {navLinks.map(([href, label]) => (
           <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}</a>
         ))}
-        <a href="/register" className="join-btn" onClick={() => setMenuOpen(false)}>Join Now</a>
+        {!authUser && <a href="/register" className="join-btn" onClick={() => setMenuOpen(false)}>Join Now</a>}
       </div>
 
       {/* ── HERO ── */}
