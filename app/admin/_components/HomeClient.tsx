@@ -70,12 +70,22 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   className="nav-hamburger"
   onClick={() => setMenuOpen(o => !o)}
   aria-label="Toggle menu"
-  style={{ minWidth: 44, minHeight: 44 }}
+  style={{
+    minWidth: "44px",
+    minHeight: "44px",
+    width: "44px",
+    height: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    WebkitTapHighlightColor: "transparent",
+    touchAction: "manipulation",
+  }}
 >
-  {menuOpen
-    ? <X size={22} color="white" />
-    : <Menu size={22} color="white" />
-  }
+  {menuOpen ? <X size={24} color="white" /> : <Menu size={24} color="white" />}
 </button>
       </nav>
 
