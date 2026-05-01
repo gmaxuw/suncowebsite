@@ -1,10 +1,13 @@
 "use client";
 // ─────────────────────────────────────────────
 // CmsTab.tsx
-// Tabs: Posts | Ads | Officers | Documents | Logs | Settings | Fee Schedules
+// Tabs: Posts | Ads | Officers | Documents | Logs | Settings | Fee Schedules | Reports | Financial
 // ─────────────────────────────────────────────
 import { useState } from "react";
-import { FileText, Megaphone, PlusCircle, Settings, Users, ScrollText, CalendarDays, FolderOpen } from "lucide-react";
+import {
+  FileText, Megaphone, PlusCircle, Settings, Users,
+  ScrollText, CalendarDays, FolderOpen, BarChart2, Landmark,
+} from "lucide-react";
 import PostsList         from "./cms/PostsList";
 import PostEditor        from "./cms/PostEditor";
 import AdsManager        from "./cms/AdsManager";
@@ -13,31 +16,33 @@ import FeeSchedulesPanel from "./cms/FeeSchedulesPanel";
 import OfficersTab       from "./OfficersTab";
 import LogsTab           from "./LogsTab";
 import DocumentsPanel    from "./cms/DocumentsPanel";
+import ReportsTab        from "./ReportsTab";
+import FinancialTab      from "./financial/FinancialTab";
 
 export interface CmsTabProps {
-  canCRUD:           boolean;
-  supabase:          any;
-  userId:            string;
+  canCRUD:            boolean;
+  supabase:           any;
+  userId:             string;
   currentMemberName?: string;
-  currentRole?:      string;
+  currentRole?:       string;
 }
 
 export type Post = {
-  id?:              string;
-  title:            string;
-  slug:             string;
-  excerpt:          string;
-  content:          string;
-  category:         string;
-  tags:             string[];
-  status:           string;
-  featured:         boolean;
-  thumbnail_url:    string;
-  author_name:      string;
-  reading_time:     number;
-  seo_title:        string;
-  seo_description:  string;
-  seo_keywords:     string[];
+  id?:             string;
+  title:           string;
+  slug:            string;
+  excerpt:         string;
+  content:         string;
+  category:        string;
+  tags:            string[];
+  status:          string;
+  featured:        boolean;
+  thumbnail_url:   string;
+  author_name:     string;
+  reading_time:    number;
+  seo_title:       string;
+  seo_description: string;
+  seo_keywords:    string[];
 };
 
 export const EMPTY_POST: Post = {
@@ -57,25 +62,33 @@ export const CATEGORIES = [
   { value: "milestones",      label: "Milestones",      color: "#C46B1A" },
 ];
 
-type Tab = "posts" | "ads" | "officers" | "documents" | "logs" | "settings" | "fee-schedules";
+type Tab =
+  | "posts" | "ads" | "officers" | "documents"
+  | "logs"  | "settings" | "fee-schedules"
+  | "reports" | "financial";
 
 const TAB_TITLES: Record<Tab, string> = {
-  posts:            "Content Management",
-  ads:              "Ads Manager",
-  officers:         "Officers & BOD",
-  documents:        "Documents & Resources",
-  logs:             "Audit Logs",
-  settings:         "Site Settings",
-  "fee-schedules":  "Fee Schedules",
+  posts:           "Content Management",
+  ads:             "Ads Manager",
+  officers:        "Officers & BOD",
+  documents:       "Documents & Resources",
+  logs:            "Audit Logs",
+  settings:        "Site Settings",
+  "fee-schedules": "Fee Schedules",
+  reports:         "Reports & Records",
+  financial:       "Financial Reports",
 };
 
-export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, currentRole }: CmsTabProps) {
+export default function CmsTab({
+  canCRUD, supabase, userId, currentMemberName, currentRole,
+}: CmsTabProps) {
   const [activeTab,   setActiveTab]   = useState<Tab>("posts");
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showEditor,  setShowEditor]  = useState(false);
   const [refreshKey,  setRefreshKey]  = useState(0);
 
   const isAdmin = currentRole === "admin";
+  const isAdminOrTreasurer = currentRole === "admin" || currentRole === "treasurer";
 
   const openNew = () => {
     setEditingPost({ ...EMPTY_POST, author_name: currentMemberName || "" });
@@ -93,45 +106,47 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, c
   };
 
   const TABS = [
-    { id: "posts",          label: "Posts",         icon: FileText,     show: true      },
-    { id: "ads",            label: "Ads",           icon: Megaphone,    show: canCRUD   },
-    { id: "officers",       label: "Officers",      icon: Users,        show: canCRUD   },
-    { id: "documents",      label: "Documents",     icon: FolderOpen,   show: canCRUD   },
-    { id: "logs",           label: "Audit Logs",    icon: ScrollText,   show: isAdmin   },
-    { id: "settings",       label: "Settings",      icon: Settings,     show: canCRUD   },
-    { id: "fee-schedules",  label: "Fee Schedules", icon: CalendarDays, show: isAdmin   },
+    { id: "posts",          label: "Posts",            icon: FileText,    show: true                },
+    { id: "ads",            label: "Ads",              icon: Megaphone,   show: canCRUD             },
+    { id: "officers",       label: "Officers",         icon: Users,       show: canCRUD             },
+    { id: "documents",      label: "Documents",        icon: FolderOpen,  show: canCRUD             },
+    { id: "logs",           label: "Audit Logs",       icon: ScrollText,  show: isAdmin             },
+    { id: "settings",       label: "Settings",         icon: Settings,    show: canCRUD             },
+    { id: "fee-schedules",  label: "Fee Schedules",    icon: CalendarDays,show: isAdmin             },
+    { id: "reports",        label: "Reports",          icon: BarChart2,   show: isAdmin             },
+    { id: "financial",      label: "Financial",        icon: Landmark,    show: isAdminOrTreasurer  },
   ].filter(t => t.show) as { id: Tab; label: string; icon: any; show: boolean }[];
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* ── Header ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.2rem", flexWrap: "wrap", gap: "0.8rem" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.2rem", flexWrap:"wrap", gap:"0.8rem" }}>
         <div>
-          <p style={{ fontSize: "0.7rem", color: "var(--muted)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "0.25rem" }}>Admin Panel</p>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.8rem", fontWeight: 700, color: "var(--green-dk)" }}>
+          <p style={{ fontSize:"0.7rem", color:"var(--muted)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"0.25rem" }}>Admin Panel</p>
+          <h1 style={{ fontFamily:"'Playfair Display', serif", fontSize:"1.8rem", fontWeight:700, color:"var(--green-dk)" }}>
             {TAB_TITLES[activeTab]}
           </h1>
         </div>
         {canCRUD && activeTab === "posts" && (
-          <button onClick={openNew} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.7rem 1.4rem", borderRadius: 6, fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+          <button onClick={openNew} style={{ display:"flex", alignItems:"center", gap:6, background:"var(--gold)", color:"var(--green-dk)", border:"none", padding:"0.7rem 1.4rem", borderRadius:6, fontSize:"0.82rem", fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
             <PlusCircle size={15} /> New Post
           </button>
         )}
       </div>
 
       {/* ── Tab switcher ── */}
-      <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1.5rem", background: "white", padding: "0.35rem", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", width: "fit-content", flexWrap: "wrap" }}>
+      <div style={{ display:"flex", gap:"0.25rem", marginBottom:"1.5rem", background:"white", padding:"0.35rem", borderRadius:10, border:"1px solid rgba(26,92,42,0.08)", width:"fit-content", flexWrap:"wrap" }}>
         {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
             style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "0.48rem 1rem", borderRadius: 7, border: "none",
+              display:"flex", alignItems:"center", gap:6,
+              padding:"0.48rem 1rem", borderRadius:7, border:"none",
               background: activeTab === id ? "var(--green-dk)" : "transparent",
-              color: activeTab === id ? "white" : "var(--muted)",
-              fontSize: "0.78rem", fontWeight: activeTab === id ? 600 : 500,
-              cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
-              whiteSpace: "nowrap",
+              color:      activeTab === id ? "white" : "var(--muted)",
+              fontSize:"0.78rem", fontWeight: activeTab === id ? 600 : 500,
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+              whiteSpace:"nowrap",
             }}>
             <Icon size={13} /> {label}
           </button>
@@ -150,10 +165,8 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, c
       )}
       {activeTab === "documents" && (
         <DocumentsPanel
-          canCRUD={canCRUD}
-          supabase={supabase}
-          userId={userId}
-          currentMemberName={currentMemberName}
+          canCRUD={canCRUD} supabase={supabase}
+          userId={userId} currentMemberName={currentMemberName}
           currentRole={currentRole}
         />
       )}
@@ -165,6 +178,23 @@ export default function CmsTab({ canCRUD, supabase, userId, currentMemberName, c
       )}
       {activeTab === "fee-schedules" && (
         <FeeSchedulesPanel supabase={supabase} />
+      )}
+      {activeTab === "reports" && (
+        <ReportsTab
+          canCRUD={canCRUD}
+          supabase={supabase}
+        />
+      )}
+      {activeTab === "financial" && (
+        <FinancialTab
+          canCRUD={isAdminOrTreasurer}
+          supabase={supabase}
+          currentUser={{
+            id:   userId,
+            name: currentMemberName || "Admin",
+            role: currentRole || "admin",
+          }}
+        />
       )}
 
       {/* ── Post editor overlay ── */}
