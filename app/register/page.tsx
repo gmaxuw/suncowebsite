@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, CheckCircle2, Clock } from "lucide-react";
@@ -35,10 +35,22 @@ export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [fees, setFees] = useState({ fee_lifetime: 100, fee_aof: 240, fee_mas: 500, year: new Date().getFullYear() });
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    supabase
+      .from("fee_schedules")
+      .select("fee_lifetime, fee_aof, fee_mas, year")
+      .eq("year", currentYear)
+      .single()
+      .then(({ data }) => { if (data) setFees(data); });
+  }, []);
+
   const update = (field: string, value: any) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const totalFee = 200 + 100 + (form.include_mas ? 740 : 0);
+  const totalFee = fees.fee_lifetime + fees.fee_aof + (form.include_mas ? fees.fee_mas : 0);
 
   const handleSubmit = async () => {
     if (loading) return;
@@ -346,9 +358,9 @@ export default function RegisterPage() {
               <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "1.2rem", marginTop: "1.2rem" }}>
                 <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "0.8rem" }}>Membership Fees</p>
                 {[
-                  ["Lifetime Membership", "₱200", true],
-                  ["Annual Operating Fee (AOF)", "₱100", true],
-                  ["Mortuary Assistance (MAS)", "₱740", form.include_mas],
+                  ["Lifetime Membership", `₱${fees.fee_lifetime}`, true],
+                  ["Annual Operating Fee (AOF)", `₱${fees.fee_aof}`, true],
+                  ["Mortuary Assistance (MAS)", `₱${fees.fee_mas}`, form.include_mas],
                 ].map(([label, amount, included]) => (
                   <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: "0.4rem", opacity: included ? 1 : 0.4 }}>
                     <span style={{ color: "rgba(255,255,255,0.6)" }}>{label as string}</span>
