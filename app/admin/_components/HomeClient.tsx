@@ -41,9 +41,9 @@ useEffect(() => {
     return parts.slice(0, 2).map((p: string) => p[0]).join("").toUpperCase();
   };
 
-  const feeLifetime = s("fee_lifetime", "200");
-  const feeAof = s("fee_aof", "100");
-  const feeMas = s("fee_mas", "740");
+const feeLifetime = s("fee_lifetime", "0");
+const feeAof = s("fee_aof", "0");
+const feeMas = s("fee_mas", "0");
   const firstYearTotal = Number(feeLifetime) + Number(feeAof) + Number(feeMas);
 
 const navLinks = [

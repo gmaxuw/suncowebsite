@@ -35,7 +35,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [fees, setFees] = useState({ fee_lifetime: 100, fee_aof: 240, fee_mas: 500, year: new Date().getFullYear() });
+  const [fees, setFees] = useState({ fee_lifetime: 0, fee_aof: 0, fee_mas: 0, year: new Date().getFullYear() });
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();

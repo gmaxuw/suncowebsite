@@ -2,7 +2,7 @@
 // ─────────────────────────────────────────────
 // cms/SettingsPanel.tsx
 // Site settings panel — embedded inside CmsTab
-// Groups: Hero · About · Fees · Org Info
+// Groups: Hero · About · Org Info
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
 import {
@@ -30,32 +30,29 @@ const GROUPS = [
 
 // Human-friendly labels for known keys
 const KEY_LABELS: Record<string, { label: string; hint: string; multiline?: boolean; type?: string }> = {
-  hero_logo_url:     { label: "Logo / Seal URL",            hint: "Auto-filled when you upload a logo above." },
-  hero_eyebrow:      { label: "Eyebrow Text",               hint: "Small text above the headline, e.g. 'Surigao del Norte · Est. 2011'" },
-  hero_title_line1:  { label: "Headline — Line 1",          hint: "First line of the large hero headline." },
-  hero_title_highlight: { label: "Headline — Highlighted Word", hint: "The italic golden word in the headline." },
-  hero_title_line2:  { label: "Headline — Line 2",          hint: "Second line." },
-  hero_title_line3:  { label: "Headline — Line 3",          hint: "Third line." },
-  hero_subtitle:     { label: "Subtitle / Tagline",         hint: "Italic text below the headline, e.g. 'SEC Registered · DTI Partner'" },
-  hero_description:  { label: "Hero Description",           hint: "Paragraph text in the hero section.", multiline: true },
-  hero_stat1_num:    { label: "Stat 1 — Number",            hint: "e.g. 2011" },
-  hero_stat1_label:  { label: "Stat 1 — Label",             hint: "e.g. Year Founded" },
-  hero_stat2_num:    { label: "Stat 2 — Number",            hint: "e.g. SEC" },
-  hero_stat2_label:  { label: "Stat 2 — Label",             hint: "e.g. Registered Org." },
-  hero_stat3_num:    { label: "Stat 3 — Number",            hint: "e.g. DTI" },
-  hero_stat3_label:  { label: "Stat 3 — Label",             hint: "e.g. Accredited Partner" },
-  about_title:       { label: "About — Section Headline",   hint: "Main heading for the About section.", multiline: true },
-  about_p1:          { label: "About — Paragraph 1",        hint: "First paragraph of the about text.", multiline: true },
-  about_p2:          { label: "About — Paragraph 2",        hint: "Second paragraph.", multiline: true },
-  about_p3:          { label: "About — Paragraph 3",        hint: "Third paragraph.", multiline: true },
-  fee_lifetime:      { label: "Lifetime Membership Fee (₱)", hint: "One-time fee paid upon joining.", type: "number" },
-  fee_aof:           { label: "Annual Operating Fund — AOF (₱)", hint: "Paid every year.", type: "number" },
-  fee_mas:           { label: "Mortuary Assistance — MAS (₱)", hint: "Annual mutual aid contribution.", type: "number" },
-  org_name:          { label: "Full Organization Name",     hint: "e.g. Surigao del Norte Consumers Organization, Inc." },
-  org_short_name:    { label: "Short Name / Abbreviation",  hint: "e.g. SUNCO" },
-  org_established:   { label: "Year Established",           hint: "e.g. 2011", type: "number" },
-  org_address:       { label: "Office Address",             hint: "Full address for the footer.", multiline: true },
-  org_email:         { label: "Email Address",              hint: "Public contact email.", type: "email" },
+  hero_logo_url:        { label: "Logo / Seal URL",                hint: "Auto-filled when you upload a logo above." },
+  hero_eyebrow:         { label: "Eyebrow Text",                   hint: "Small text above the headline, e.g. 'Surigao del Norte · Est. 2011'" },
+  hero_title_line1:     { label: "Headline — Line 1",              hint: "First line of the large hero headline." },
+  hero_title_highlight: { label: "Headline — Highlighted Word",    hint: "The italic golden word in the headline." },
+  hero_title_line2:     { label: "Headline — Line 2",              hint: "Second line." },
+  hero_title_line3:     { label: "Headline — Line 3",              hint: "Third line." },
+  hero_subtitle:        { label: "Subtitle / Tagline",             hint: "Italic text below the headline, e.g. 'SEC Registered · DTI Partner'" },
+  hero_description:     { label: "Hero Description",               hint: "Paragraph text in the hero section.", multiline: true },
+  hero_stat1_num:       { label: "Stat 1 — Number",                hint: "e.g. 2011" },
+  hero_stat1_label:     { label: "Stat 1 — Label",                 hint: "e.g. Year Founded" },
+  hero_stat2_num:       { label: "Stat 2 — Number",                hint: "e.g. SEC" },
+  hero_stat2_label:     { label: "Stat 2 — Label",                 hint: "e.g. Registered Org." },
+  hero_stat3_num:       { label: "Stat 3 — Number",                hint: "e.g. DTI" },
+  hero_stat3_label:     { label: "Stat 3 — Label",                 hint: "e.g. Accredited Partner" },
+  about_title:          { label: "About — Section Headline",       hint: "Main heading for the About section.", multiline: true },
+  about_p1:             { label: "About — Paragraph 1",            hint: "First paragraph of the about text.", multiline: true },
+  about_p2:             { label: "About — Paragraph 2",            hint: "Second paragraph.", multiline: true },
+  about_p3:             { label: "About — Paragraph 3",            hint: "Third paragraph.", multiline: true },
+  org_name:             { label: "Full Organization Name",         hint: "e.g. Surigao del Norte Consumers Organization, Inc." },
+  org_short_name:       { label: "Short Name / Abbreviation",      hint: "e.g. SUNCO" },
+  org_established:      { label: "Year Established",               hint: "e.g. 2011", type: "number" },
+  org_address:          { label: "Office Address",                 hint: "Full address for the footer.", multiline: true },
+  org_email:            { label: "Email Address",                  hint: "Public contact email.", type: "email" },
 };
 
 export default function SettingsPanel({ supabase }: Props) {
@@ -66,19 +63,6 @@ export default function SettingsPanel({ supabase }: Props) {
   const [activeGroup,   setActiveGroup]   = useState("hero");
   const [logoUploading, setLogoUploading] = useState(false);
 
-
-
-
-
-  
-
-
-
-
-
-
-
-                        
   const loadSettings = async () => {
     setLoading(true);
     const { data } = await supabase.from("site_settings").select("*").order("group_name");
@@ -86,8 +70,6 @@ export default function SettingsPanel({ supabase }: Props) {
     setLoading(false);
   };
 
-
-  
   useEffect(() => { loadSettings(); }, []);
 
   const update = (key: string, value: string) =>
@@ -163,7 +145,7 @@ export default function SettingsPanel({ supabase }: Props) {
 
   return (
     <div>
-      {/* ── Save status banner ── */}
+      {/* ── Save status banners ── */}
       {saveStatus === "saved" && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(46,139,68,0.1)", border: "1px solid rgba(46,139,68,0.3)", borderRadius: 8, padding: "0.85rem 1.2rem", marginBottom: "1.5rem" }}>
           <CheckCircle size={16} color="#2E8B44" />
@@ -174,19 +156,6 @@ export default function SettingsPanel({ supabase }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 8, padding: "0.85rem 1.2rem", marginBottom: "1.5rem" }}>
           <AlertTriangle size={16} color="#C0392B" />
           <p style={{ fontSize: "0.88rem", color: "#C0392B", fontWeight: 600 }}>Save failed. Please try again.</p>
-        </div>
-      )}
-
-      {/* ── Fees warning ── */}
-      {activeGroup === "fees" && (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.35)", borderRadius: 10, padding: "1rem 1.2rem", marginBottom: "1.5rem" }}>
-          <AlertTriangle size={16} color="#A66C00" style={{ marginTop: 2, flexShrink: 0 }} />
-          <div>
-            <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "#A66C00", marginBottom: 3 }}>Important — Fee Changes</p>
-            <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>
-              Changing these values will update what is shown on the public website <strong>and</strong> the total calculation in the membership registration form. Make sure these match your official approved rates.
-            </p>
-          </div>
         </div>
       )}
 
@@ -214,8 +183,9 @@ export default function SettingsPanel({ supabase }: Props) {
 
         {/* ── Right: Settings form ── */}
         <div>
-          {/* Section header */}
           <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden", marginBottom: "1rem" }}>
+
+            {/* Section header */}
             <div style={{ padding: "1.2rem 1.5rem", background: "var(--green-dk)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: "#C9A84C", marginBottom: 3 }}>{activeGroupMeta.label}</h2>
@@ -254,10 +224,10 @@ export default function SettingsPanel({ supabase }: Props) {
                 <p style={{ color: "var(--muted)", fontSize: "0.88rem", textAlign: "center", padding: "2rem" }}>No settings found for this section.</p>
               ) : groupSettings.map(s => {
                 const meta = KEY_LABELS[s.key];
-                const label  = meta?.label  || s.label || s.key;
-                const hint   = meta?.hint   || "";
-                const isMulti = meta?.multiline || (!meta && s.value && s.value.length > 80);
-                const inputType = meta?.type || "text";
+                const label     = meta?.label     || s.label || s.key;
+                const hint      = meta?.hint      || "";
+                const isMulti   = meta?.multiline || (!meta && s.value && s.value.length > 80);
+                const inputType = meta?.type      || "text";
 
                 return (
                   <div key={s.key}>
