@@ -131,15 +131,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // ── INSERT ROLE ──
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .upsert({ user_id: userId, role: "member" }, { onConflict: "user_id" });
-
-      if (roleError) {
-        console.error("ROLE INSERT ERROR:", roleError);
-        // Non-blocking, continue
-      }
+      // Role is auto-assigned by database trigger
 
       // ── INSERT PAYMENT RECORDS ──
       const currentYear = new Date().getFullYear();
