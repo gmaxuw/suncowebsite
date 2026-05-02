@@ -1,12 +1,13 @@
 "use client";
 // ─────────────────────────────────────────────────────────────
-// TransactionsPanel.tsx — Mobile-responsive income & expenditure
+// TransactionsPanel.tsx — With receipt filter + thumbnail preview
 // Place at: D:\suncowebsite\app\admin\_components\financial\TransactionsPanel.tsx
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useState, useRef } from "react";
 import {
   Plus, Trash2, Edit3, Upload, X, CheckCircle,
-  AlertTriangle, RefreshCw, TrendingUp, TrendingDown, Filter,
+  AlertTriangle, RefreshCw, TrendingUp, TrendingDown,
+  Filter, Paperclip, Eye, EyeOff,
 } from "lucide-react";
 import { useWindowWidth } from "@/app/admin/hooks/useWindowWidth";
 
@@ -29,9 +30,9 @@ interface Transaction {
 }
 
 const CATEGORIES: Record<string, { income: string[]; expense: string[] }> = {
-  mas:  { income:  ["Other MAS Income"], expense: ["Burial Claim","Death Reimbursement","Other MAS Expense"] },
-  aof:  { income:  ["Facility/Equipment Rental Income","Donation","Other AOF Income"], expense: ["Office Supplies","Rental Expense","Utilities","Events / Activities","Salaries / Allowances","Repairs & Maintenance","Other Operational Expense"] },
-  cash: { income:  ["Replenishment from Bank","Other Cash Income"], expense: ["Transportation","Office Supplies","Miscellaneous","Other Petty Cash Expense"] },
+  mas:  { income: ["Other MAS Income"], expense: ["Burial Claim","Death Reimbursement","Other MAS Expense"] },
+  aof:  { income: ["Facility/Equipment Rental Income","Donation","Other AOF Income"], expense: ["Office Supplies","Rental Expense","Utilities","Events / Activities","Salaries / Allowances","Repairs & Maintenance","Other Operational Expense"] },
+  cash: { income: ["Replenishment from Bank","Other Cash Income"], expense: ["Transportation","Office Supplies","Miscellaneous","Other Petty Cash Expense"] },
 };
 
 const inputStyle: React.CSSProperties = {
@@ -51,6 +52,9 @@ function fmtDate(d: string) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-PH",{year:"numeric",month:"short",day:"numeric"});
 }
+function isImageUrl(url: string) {
+  return /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);
+}
 
 const EMPTY_FORM = {
   account_id:"", direction:"expense" as "income"|"expense",
@@ -58,21 +62,79 @@ const EMPTY_FORM = {
   transaction_date: new Date().toISOString().slice(0,10), reference_no:"",
 };
 
+// ── Receipt thumbnail component ───────────────────────────────
+function ReceiptThumb({ url, size = 48 }: { url: string; size?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const isPDF = url.toLowerCase().includes(".pdf") || !isImageUrl(url);
+
+  return (
+    <>
+      <button
+        onClick={() => isPDF ? window.open(url,"_blank") : setExpanded(true)}
+        title="View receipt"
+        style={{
+          display:"flex", alignItems:"center", justifyContent:"center",
+          width:size, height:size, borderRadius:8, overflow:"hidden",
+          border:"2px solid rgba(46,139,68,0.3)", cursor:"pointer",
+          background:"rgba(46,139,68,0.05)", flexShrink:0, padding:0,
+          position:"relative",
+        }}
+      >
+        {isPDF ? (
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:2 }}>
+            <Paperclip size={size > 40 ? 16 : 11} color="#2E8B44"/>
+            <span style={{ fontSize:"0.5rem",fontWeight:700,color:"#2E8B44",fontFamily:"'DM Sans',sans-serif" }}>PDF</span>
+          </div>
+        ) : (
+          <img
+            src={url} alt="Receipt"
+            style={{ width:"100%",height:"100%",objectFit:"cover" }}
+            loading="lazy"
+          />
+        )}
+      </button>
+
+      {/* Lightbox for images */}
+      {expanded && !isPDF && (
+        <div
+          onClick={() => setExpanded(false)}
+          style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:"1.5rem" }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative",maxWidth:"90vw",maxHeight:"90vh" }}>
+            <button
+              onClick={() => setExpanded(false)}
+              style={{ position:"absolute",top:-14,right:-14,background:"white",border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:1 }}
+            >
+              <X size={14}/>
+            </button>
+            <img src={url} alt="Receipt" style={{ maxWidth:"85vw",maxHeight:"85vh",borderRadius:10,objectFit:"contain",display:"block" }}/>
+            <a href={url} target="_blank" rel="noreferrer"
+              style={{ display:"block",textAlign:"center",marginTop:10,fontSize:"0.78rem",color:"white",textDecoration:"underline" }}>
+              Open full size ↗
+            </a>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function TransactionsPanel({ supabase, canCRUD }: Props) {
   const { isMobile } = useWindowWidth();
-  const [accounts,     setAccounts]     = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [showForm,     setShowForm]     = useState(false);
-  const [editing,      setEditing]      = useState<Transaction | null>(null);
-  const [saving,       setSaving]       = useState(false);
-  const [uploading,    setUploading]    = useState(false);
-  const [status,       setStatus]       = useState<"idle"|"saved"|"error">("idle");
-  const [form,         setForm]         = useState({ ...EMPTY_FORM });
-  const [receiptFile,  setReceiptFile]  = useState<string | null>(null);
-  const [filterAcct,   setFilterAcct]   = useState("all");
-  const [filterDir,    setFilterDir]    = useState("all");
-  const [showFilters,  setShowFilters]  = useState(false);
+  const [accounts,       setAccounts]       = useState<Account[]>([]);
+  const [transactions,   setTransactions]   = useState<Transaction[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [showForm,       setShowForm]       = useState(false);
+  const [editing,        setEditing]        = useState<Transaction | null>(null);
+  const [saving,         setSaving]         = useState(false);
+  const [uploading,      setUploading]      = useState(false);
+  const [status,         setStatus]         = useState<"idle"|"saved"|"error">("idle");
+  const [form,           setForm]           = useState({ ...EMPTY_FORM });
+  const [receiptFile,    setReceiptFile]    = useState<string | null>(null);
+  const [filterAcct,     setFilterAcct]     = useState("all");
+  const [filterDir,      setFilterDir]      = useState("all");
+  const [filterReceipts, setFilterReceipts] = useState(false);
+  const [showFilters,    setShowFilters]    = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
@@ -120,10 +182,11 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
       const ext = isImage ? "webp" : "pdf";
       const fname = `receipt-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("receipts").upload(`financial/${fname}`, uploadFile, { upsert:true });
-      if (!error) {
+      if (error) { alert("Upload failed: " + error.message); }
+      else {
         const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(`financial/${fname}`);
         setReceiptFile(urlData.publicUrl);
-      } else { alert("Upload failed: " + error.message); }
+      }
     } catch (err: any) { alert("Error: " + err.message); }
     setUploading(false);
   };
@@ -153,25 +216,68 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
   };
 
   const filtered = transactions.filter(t => {
-    if (filterAcct !== "all" && t.account_id !== filterAcct) return false;
-    if (filterDir  !== "all" && t.direction  !== filterDir)  return false;
+    if (filterAcct     !== "all" && t.account_id !== filterAcct) return false;
+    if (filterDir      !== "all" && t.direction  !== filterDir)  return false;
+    if (filterReceipts && !t.receipt_url)                        return false;
     return true;
   });
 
+  const withReceipts = transactions.filter(t => !!t.receipt_url).length;
   const totalIncome  = filtered.filter(t=>t.direction==="income").reduce((s,t)=>s+t.amount,0);
   const totalExpense = filtered.filter(t=>t.direction==="expense").reduce((s,t)=>s+t.amount,0);
 
+  // ── Filter bar component (shared mobile/desktop) ──────────
+  const FilterBar = () => (
+    <div style={{ display:"flex",flexDirection:isMobile?"column":"row",gap:"0.6rem",alignItems:isMobile?"stretch":"center",flexWrap:"wrap" }}>
+      <select value={filterAcct} onChange={e=>setFilterAcct(e.target.value)}
+        style={{ ...inputStyle,width:isMobile?"100%":"auto",padding:"0.45rem 0.8rem",fontSize:"0.78rem" }}>
+        <option value="all">All Accounts</option>
+        {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+      <select value={filterDir} onChange={e=>setFilterDir(e.target.value)}
+        style={{ ...inputStyle,width:isMobile?"100%":"auto",padding:"0.45rem 0.8rem",fontSize:"0.78rem" }}>
+        <option value="all">All Types</option>
+        <option value="income">Income Only</option>
+        <option value="expense">Expense Only</option>
+      </select>
+      {/* Receipts toggle */}
+      <button
+        onClick={()=>setFilterReceipts(p=>!p)}
+        style={{
+          display:"flex", alignItems:"center", gap:6,
+          padding:"0.45rem 0.9rem", borderRadius:8, cursor:"pointer",
+          border:`1.5px solid ${filterReceipts?"#2E8B44":"rgba(26,92,42,0.2)"}`,
+          background: filterReceipts ? "rgba(46,139,68,0.08)" : "white",
+          color: filterReceipts ? "#2E8B44" : "var(--muted)",
+          fontSize:"0.78rem", fontWeight: filterReceipts ? 700 : 500,
+          fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap",
+        }}
+      >
+        <Paperclip size={13}/>
+        {filterReceipts ? "Showing receipts only" : "Show receipts only"}
+        {!filterReceipts && withReceipts > 0 && (
+          <span style={{ background:"#2E8B44",color:"white",borderRadius:10,fontSize:"0.6rem",padding:"1px 6px",fontWeight:700 }}>
+            {withReceipts}
+          </span>
+        )}
+      </button>
+      <span style={{ fontSize:"0.72rem",color:"var(--muted)",whiteSpace:"nowrap" }}>
+        {filtered.length} result{filtered.length!==1?"s":""}
+      </span>
+    </div>
+  );
+
   return (
     <div>
-      {status === "saved" && (
+      {status==="saved" && (
         <div style={{ display:"flex",alignItems:"center",gap:10,background:"rgba(46,139,68,0.1)",border:"1px solid rgba(46,139,68,0.3)",borderRadius:8,padding:"0.85rem 1.2rem",marginBottom:"1.5rem" }}>
-          <CheckCircle size={16} color="#2E8B44" />
+          <CheckCircle size={16} color="#2E8B44"/>
           <p style={{ fontSize:"0.88rem",color:"#2E8B44",fontWeight:600 }}>Transaction saved.</p>
         </div>
       )}
-      {status === "error" && (
+      {status==="error" && (
         <div style={{ display:"flex",alignItems:"center",gap:10,background:"rgba(192,57,43,0.08)",border:"1px solid rgba(192,57,43,0.25)",borderRadius:8,padding:"0.85rem 1.2rem",marginBottom:"1.5rem" }}>
-          <AlertTriangle size={16} color="#C0392B" />
+          <AlertTriangle size={16} color="#C0392B"/>
           <p style={{ fontSize:"0.88rem",color:"#C0392B",fontWeight:600 }}>Save failed. Please try again.</p>
         </div>
       )}
@@ -180,7 +286,7 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
       <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem" }}>
         <div>
           <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:isMobile?"1rem":"1.1rem",fontWeight:700,color:"var(--green-dk)" }}>Manual Transactions</h2>
-          {!isMobile && <p style={{ fontSize:"0.72rem",color:"var(--muted)",marginTop:3 }}>Member payments are auto-fed from the payments system.</p>}
+          {!isMobile && <p style={{ fontSize:"0.72rem",color:"var(--muted)",marginTop:3 }}>Member payment collections are auto-fed from the payments system.</p>}
         </div>
         {canCRUD && (
           <button onClick={openNew} style={{ display:"flex",alignItems:"center",gap:6,background:"var(--gold)",color:"var(--green-dk)",border:"none",padding:isMobile?"0.6rem 0.9rem":"0.7rem 1.4rem",borderRadius:8,fontSize:isMobile?"0.75rem":"0.82rem",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap" }}>
@@ -192,9 +298,9 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
       {/* Summary cards */}
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:isMobile?"0.5rem":"1rem",marginBottom:"1.2rem" }}>
         {[
-          { label: isMobile?"Income":"Total Income",  value:totalIncome,  color:"#2E8B44", icon:TrendingUp },
-          { label:"Expenses",                          value:totalExpense, color:"#C0392B", icon:TrendingDown },
-          { label:"Net",                               value:totalIncome-totalExpense, color:totalIncome>=totalExpense?"#2E8B44":"#C0392B", icon:TrendingUp },
+          { label:isMobile?"Income":"Total Income", value:totalIncome,  color:"#2E8B44", icon:TrendingUp   },
+          { label:"Expenses",                        value:totalExpense, color:"#C0392B", icon:TrendingDown },
+          { label:"Net",                             value:totalIncome-totalExpense, color:totalIncome>=totalExpense?"#2E8B44":"#C0392B", icon:TrendingUp },
         ].map(({label,value,color,icon:Icon})=>(
           <div key={label} style={{ background:"white",borderRadius:10,border:"1px solid rgba(26,92,42,0.08)",padding:isMobile?"0.75rem":"1rem 1.2rem" }}>
             <div style={{ display:"flex",alignItems:"center",gap:5,marginBottom:4 }}>
@@ -206,39 +312,28 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
         ))}
       </div>
 
-      {/* Filters — collapsible on mobile */}
+      {/* Auditor receipt info banner */}
+      {withReceipts > 0 && (
+        <div style={{ display:"flex",alignItems:"center",gap:10,background:"rgba(46,139,68,0.06)",border:"1px solid rgba(46,139,68,0.2)",borderRadius:8,padding:"0.75rem 1rem",marginBottom:"1rem" }}>
+          <Paperclip size={14} color="#2E8B44"/>
+          <p style={{ fontSize:"0.78rem",color:"#2E8B44" }}>
+            <strong>{withReceipts}</strong> transaction{withReceipts!==1?"s have":" has"} attached receipts. Use the <strong>Show receipts only</strong> filter to review them.
+          </p>
+        </div>
+      )}
+
+      {/* Filters */}
       {isMobile ? (
         <div style={{ marginBottom:"1rem" }}>
           <button onClick={()=>setShowFilters(p=>!p)} style={{ display:"flex",alignItems:"center",gap:6,background:"white",border:"1px solid rgba(26,92,42,0.15)",color:"var(--green-dk)",padding:"0.5rem 1rem",borderRadius:8,fontSize:"0.78rem",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%",justifyContent:"center" }}>
-            <Filter size={13}/> {showFilters?"Hide Filters":"Show Filters"} · {filtered.length} results
+            <Filter size={13}/> {showFilters?"Hide Filters":"Show Filters"}
+            {filterReceipts && <span style={{ background:"#2E8B44",color:"white",borderRadius:10,fontSize:"0.6rem",padding:"1px 6px",fontWeight:700 }}>📎</span>}
           </button>
-          {showFilters && (
-            <div style={{ display:"flex",flexDirection:"column",gap:"0.5rem",marginTop:"0.75rem" }}>
-              <select value={filterAcct} onChange={e=>setFilterAcct(e.target.value)} style={{ ...inputStyle,fontSize:"0.82rem" }}>
-                <option value="all">All Accounts</option>
-                {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              <select value={filterDir} onChange={e=>setFilterDir(e.target.value)} style={{ ...inputStyle,fontSize:"0.82rem" }}>
-                <option value="all">All Types</option>
-                <option value="income">Income Only</option>
-                <option value="expense">Expense Only</option>
-              </select>
-            </div>
-          )}
+          {showFilters && <div style={{ marginTop:"0.75rem" }}><FilterBar/></div>}
         </div>
       ) : (
-        <div style={{ display:"flex",gap:"0.75rem",marginBottom:"1.2rem",alignItems:"center" }}>
-          <Filter size={14} color="var(--muted)"/>
-          <select value={filterAcct} onChange={e=>setFilterAcct(e.target.value)} style={{ ...inputStyle,width:"auto",padding:"0.45rem 0.8rem",fontSize:"0.78rem" }}>
-            <option value="all">All Accounts</option>
-            {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select value={filterDir} onChange={e=>setFilterDir(e.target.value)} style={{ ...inputStyle,width:"auto",padding:"0.45rem 0.8rem",fontSize:"0.78rem" }}>
-            <option value="all">All Types</option>
-            <option value="income">Income Only</option>
-            <option value="expense">Expense Only</option>
-          </select>
-          <span style={{ fontSize:"0.72rem",color:"var(--muted)" }}>{filtered.length} transactions</span>
+        <div style={{ marginBottom:"1.2rem" }}>
+          <FilterBar/>
         </div>
       )}
 
@@ -249,32 +344,48 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ padding:"2.5rem",textAlign:"center",color:"var(--muted)",background:"rgba(26,92,42,0.03)",borderRadius:10,border:"1.5px dashed rgba(26,92,42,0.12)" }}>
-          <p style={{ fontSize:"0.88rem",fontWeight:600 }}>No transactions found.</p>
-          <p style={{ fontSize:"0.75rem",marginTop:4 }}>Add income or expense entries above.</p>
+          <p style={{ fontSize:"0.88rem",fontWeight:600 }}>
+            {filterReceipts ? "No transactions with receipts found." : "No transactions found."}
+          </p>
+          <p style={{ fontSize:"0.75rem",marginTop:4 }}>
+            {filterReceipts ? "Upload receipts when adding transactions." : "Add income or expense entries above."}
+          </p>
         </div>
       ) : isMobile ? (
         /* ── Mobile: card list ── */
         <div style={{ display:"flex",flexDirection:"column",gap:"0.65rem" }}>
           {filtered.map(t=>(
             <div key={t.id} style={{ background:"white",borderRadius:10,border:"1px solid rgba(26,92,42,0.08)",borderLeft:`4px solid ${t.direction==="income"?"#2E8B44":"#C0392B"}`,padding:"0.9rem 1rem" }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6 }}>
                 <div style={{ flex:1,minWidth:0 }}>
-                  <p style={{ fontSize:"0.82rem",fontWeight:700,color:"var(--green-dk)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                  <p style={{ fontSize:"0.82rem",fontWeight:700,color:"var(--green-dk)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>
                     {t.category}
                   </p>
                   <p style={{ fontSize:"0.7rem",color:"var(--muted)",marginTop:2 }}>
                     {t.bank_accounts?.name} · {fmtDate(t.transaction_date)}
                   </p>
                 </div>
-                <p style={{ fontSize:"0.92rem",fontWeight:800,color:t.direction==="income"?"#2E8B44":"#C0392B",flexShrink:0,marginLeft:8 }}>
+                {/* Receipt thumbnail */}
+                {t.receipt_url && (
+                  <ReceiptThumb url={t.receipt_url} size={44}/>
+                )}
+                <p style={{ fontSize:"0.92rem",fontWeight:800,color:t.direction==="income"?"#2E8B44":"#C0392B",flexShrink:0 }}>
                   {t.direction==="income"?"+":"−"}{peso(t.amount)}
                 </p>
               </div>
-              {t.description && <p style={{ fontSize:"0.72rem",color:"var(--muted)",marginBottom:4 }}>{t.description}</p>}
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                <div style={{ display:"flex",gap:6 }}>
-                  {t.reference_no && <span style={{ fontSize:"0.65rem",background:"rgba(26,92,42,0.07)",color:"var(--green-dk)",padding:"2px 7px",borderRadius:4 }}>{t.reference_no}</span>}
-                  {t.receipt_url && <a href={t.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize:"0.65rem",color:"var(--green-dk)",textDecoration:"underline" }}>Receipt</a>}
+
+              {t.description && (
+                <p style={{ fontSize:"0.72rem",color:"var(--muted)",marginBottom:4 }}>{t.description}</p>
+              )}
+
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4 }}>
+                <div style={{ display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
+                  {t.reference_no && (
+                    <span style={{ fontSize:"0.65rem",background:"rgba(26,92,42,0.07)",color:"var(--green-dk)",padding:"2px 7px",borderRadius:4 }}>{t.reference_no}</span>
+                  )}
+                  {!t.receipt_url && (
+                    <span style={{ fontSize:"0.65rem",color:"var(--muted)",fontStyle:"italic" }}>No receipt</span>
+                  )}
                 </div>
                 {canCRUD && !t.is_from_payments && (
                   <div style={{ display:"flex",gap:6 }}>
@@ -296,7 +407,7 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
           <table style={{ width:"100%",borderCollapse:"collapse",fontSize:"0.82rem" }}>
             <thead>
               <tr style={{ background:"var(--green-dk)",color:"white" }}>
-                {["Date","Account","Type","Category","Description","Reference","Amount","Receipt",""].map(h=>(
+                {["Receipt","Date","Account","Type","Category","Description","Reference","Amount",""].map(h=>(
                   <th key={h} style={{ padding:"0.75rem 1rem",textAlign:"left",fontSize:"0.65rem",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",whiteSpace:"nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -304,26 +415,32 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
             <tbody>
               {filtered.map((t,i)=>(
                 <tr key={t.id} style={{ background:i%2===1?"var(--warm)":"white",borderBottom:"1px solid rgba(26,92,42,0.05)" }}>
-                  <td style={{ padding:"0.75rem 1rem",whiteSpace:"nowrap" }}>{fmtDate(t.transaction_date)}</td>
-                  <td style={{ padding:"0.75rem 1rem" }}>
+                  {/* Receipt thumbnail — first column on desktop */}
+                  <td style={{ padding:"0.6rem 1rem" }}>
+                    {t.receipt_url
+                      ? <ReceiptThumb url={t.receipt_url} size={40}/>
+                      : <div style={{ width:40,height:40,borderRadius:8,border:"1.5px dashed rgba(26,92,42,0.15)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+                          <EyeOff size={12} color="rgba(26,92,42,0.25)"/>
+                        </div>
+                    }
+                  </td>
+                  <td style={{ padding:"0.6rem 1rem",whiteSpace:"nowrap" }}>{fmtDate(t.transaction_date)}</td>
+                  <td style={{ padding:"0.6rem 1rem" }}>
                     <div style={{ fontSize:"0.78rem",fontWeight:600,color:"var(--green-dk)" }}>{t.bank_accounts?.name}</div>
                     <div style={{ fontSize:"0.68rem",color:"var(--muted)" }}>{t.bank_accounts?.bank_name}</div>
                   </td>
-                  <td style={{ padding:"0.75rem 1rem" }}>
+                  <td style={{ padding:"0.6rem 1rem" }}>
                     <span style={{ display:"inline-flex",alignItems:"center",gap:4,fontSize:"0.68rem",fontWeight:700,padding:"2px 8px",borderRadius:4,background:t.direction==="income"?"rgba(46,139,68,0.1)":"rgba(192,57,43,0.1)",color:t.direction==="income"?"#2E8B44":"#C0392B" }}>
                       {t.direction==="income"?"+":"−"} {t.direction.toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ padding:"0.75rem 1rem" }}>{t.category}</td>
-                  <td style={{ padding:"0.75rem 1rem",color:"var(--muted)",fontSize:"0.78rem" }}>{t.description||"—"}</td>
-                  <td style={{ padding:"0.75rem 1rem",color:"var(--muted)",fontSize:"0.78rem" }}>{t.reference_no||"—"}</td>
-                  <td style={{ padding:"0.75rem 1rem",fontWeight:700,whiteSpace:"nowrap",color:t.direction==="income"?"#2E8B44":"#C0392B" }}>
+                  <td style={{ padding:"0.6rem 1rem" }}>{t.category}</td>
+                  <td style={{ padding:"0.6rem 1rem",color:"var(--muted)",fontSize:"0.78rem" }}>{t.description||"—"}</td>
+                  <td style={{ padding:"0.6rem 1rem",color:"var(--muted)",fontSize:"0.78rem" }}>{t.reference_no||"—"}</td>
+                  <td style={{ padding:"0.6rem 1rem",fontWeight:700,whiteSpace:"nowrap",color:t.direction==="income"?"#2E8B44":"#C0392B" }}>
                     {t.direction==="income"?"+":"−"}{peso(t.amount)}
                   </td>
-                  <td style={{ padding:"0.75rem 1rem" }}>
-                    {t.receipt_url?<a href={t.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize:"0.72rem",color:"var(--green-dk)",textDecoration:"underline" }}>View</a>:<span style={{ fontSize:"0.72rem",color:"var(--muted)" }}>—</span>}
-                  </td>
-                  <td style={{ padding:"0.75rem 1rem" }}>
+                  <td style={{ padding:"0.6rem 1rem" }}>
                     {canCRUD && !t.is_from_payments && (
                       <div style={{ display:"flex",gap:"0.4rem" }}>
                         <button onClick={()=>openEdit(t)} style={{ background:"none",border:"1px solid rgba(26,92,42,0.2)",color:"var(--green-dk)",padding:"0.25rem 0.5rem",borderRadius:4,fontSize:"0.68rem",cursor:"pointer" }}><Edit3 size={10}/></button>
@@ -341,7 +458,7 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
       {/* ── Form Modal ── */}
       {showForm && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:200,display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:"2rem" }}>
-          <div style={{ background:"white",borderRadius:isMobile?"16px 16px 0 0":14,maxWidth:560,width:"100%",maxHeight:isMobile?"92vh":"92vh",overflowY:"auto" }}>
+          <div style={{ background:"white",borderRadius:isMobile?"16px 16px 0 0":14,maxWidth:560,width:"100%",maxHeight:"92vh",overflowY:"auto" }}>
             <div style={{ padding:"1.2rem 1.4rem",borderBottom:"1px solid rgba(26,92,42,0.08)",display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--green-dk)",borderRadius:isMobile?"16px 16px 0 0":"14px 14px 0 0",position:"sticky",top:0,zIndex:1 }}>
               <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:"1rem",color:"var(--gold)",fontWeight:700 }}>
                 {editing?"Edit Transaction":"Add Transaction"}
@@ -406,23 +523,30 @@ export default function TransactionsPanel({ supabase, canCRUD }: Props) {
                 </div>
               </div>
 
-              {/* Receipt */}
+              {/* Receipt upload */}
               <div>
-                <label style={labelStyle}>Receipt / Document</label>
+                <label style={labelStyle}>Receipt / Supporting Document</label>
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" onChange={handleReceiptUpload} style={{ display:"none" }}/>
-                <div style={{ display:"flex",alignItems:"center",gap:"0.75rem",flexWrap:"wrap" }}>
-                  <button onClick={()=>fileRef.current?.click()} disabled={uploading}
-                    style={{ display:"flex",alignItems:"center",gap:6,background:"var(--warm)",border:"1.5px solid rgba(26,92,42,0.2)",color:"var(--green-dk)",padding:"0.55rem 1rem",borderRadius:6,fontSize:"0.78rem",fontWeight:500,cursor:uploading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif" }}>
-                    <Upload size={13}/> {uploading?"Uploading...":"Upload Receipt"}
-                  </button>
-                  {receiptFile && (
-                    <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                      <a href={receiptFile} target="_blank" rel="noreferrer" style={{ fontSize:"0.75rem",color:"var(--green-dk)",textDecoration:"underline" }}>View</a>
-                      <button onClick={()=>setReceiptFile(null)} style={{ background:"none",border:"none",color:"#C0392B",cursor:"pointer" }}><X size={12}/></button>
+
+                {/* Preview if already uploaded */}
+                {receiptFile && (
+                  <div style={{ marginBottom:"0.75rem",display:"flex",alignItems:"center",gap:10 }}>
+                    <ReceiptThumb url={receiptFile} size={56}/>
+                    <div>
+                      <p style={{ fontSize:"0.75rem",fontWeight:600,color:"#2E8B44",marginBottom:3 }}>Receipt uploaded</p>
+                      <div style={{ display:"flex",gap:8 }}>
+                        <a href={receiptFile} target="_blank" rel="noreferrer" style={{ fontSize:"0.72rem",color:"var(--green-dk)",textDecoration:"underline" }}>View full</a>
+                        <button onClick={()=>setReceiptFile(null)} style={{ background:"none",border:"none",color:"#C0392B",cursor:"pointer",fontSize:"0.72rem",textDecoration:"underline",padding:0 }}>Remove</button>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <p style={{ fontSize:"0.65rem",color:"var(--muted)",marginTop:4 }}>Auto-compressed. Deleted after 1 year.</p>
+                  </div>
+                )}
+
+                <button onClick={()=>fileRef.current?.click()} disabled={uploading}
+                  style={{ display:"flex",alignItems:"center",gap:6,background:"var(--warm)",border:"1.5px solid rgba(26,92,42,0.2)",color:"var(--green-dk)",padding:"0.55rem 1rem",borderRadius:6,fontSize:"0.78rem",fontWeight:500,cursor:uploading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif" }}>
+                  <Upload size={13}/> {uploading?"Uploading...":receiptFile?"Replace Receipt":"Upload Receipt"}
+                </button>
+                <p style={{ fontSize:"0.65rem",color:"var(--muted)",marginTop:4 }}>Images auto-compressed. Receipts auto-deleted after 1 year.</p>
               </div>
 
               {/* Buttons */}
