@@ -3,7 +3,7 @@
 // GeneratePanel.tsx — Mobile-responsive report generator
 // Place at: D:\suncowebsite\app\admin\_components\financial\GeneratePanel.tsx
 // ─────────────────────────────────────────────────────────────
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RefreshCw, CheckCircle, AlertTriangle, Eye, Lock } from "lucide-react";
 import { useWindowWidth } from "@/app/admin/hooks/useWindowWidth";
 
@@ -73,17 +73,38 @@ const TYPE_LABEL: Record<string,string> = {
 };
 
 export default function GeneratePanel({ supabase, canCRUD, currentUser }: Props) {
-  const { isMobile } = useWindowWidth();
-  const today = new Date().toISOString().slice(0,10);
-  const firstOfYear = `${new Date().getFullYear()}-01-01`;
+  const { isMobile }   = useWindowWidth();
+  const today          = new Date().toISOString().slice(0,10);
+  const firstOfYear    = `${new Date().getFullYear()}-01-01`;
 
-  const [periodFrom, setPeriodFrom] = useState(firstOfYear);
-  const [periodTo,   setPeriodTo]   = useState(today);
-  const [preview,    setPreview]    = useState<ReportPreview|null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [status,     setStatus]     = useState<"idle"|"saved"|"error">("idle");
-  const [errorMsg,   setErrorMsg]   = useState("");
+  const [periodFrom,    setPeriodFrom]    = useState(firstOfYear);
+  const [periodTo,      setPeriodTo]      = useState(today);
+  const [preview,       setPreview]       = useState<ReportPreview|null>(null);
+  const [loading,       setLoading]       = useState(false);
+  const [generating,    setGenerating]    = useState(false);
+  const [status,        setStatus]        = useState<"idle"|"saved"|"error">("idle");
+  const [errorMsg,      setErrorMsg]      = useState("");
+  const [lastReportEnd, setLastReportEnd] = useState<string|null>(null);
+
+  // Auto-set From Date to day after last report end date
+  useEffect(() => {
+    supabase
+      .from("financial_reports")
+      .select("period_to")
+      .order("period_to", { ascending: false })
+      .limit(1)
+      .then(({ data }: { data: { period_to: string }[] | null }) => {
+        if (data && data.length > 0) {
+          const lastEnd = new Date(data[0].period_to);
+          lastEnd.setDate(lastEnd.getDate() + 1);
+          const nextFrom = lastEnd.toISOString().slice(0, 10);
+          if (nextFrom <= today) {
+            setPeriodFrom(nextFrom);
+            setLastReportEnd(data[0].period_to);
+          }
+        }
+      });
+  }, []);
 
   const buildPreview = async () => {
     if (!periodFrom || !periodTo) { alert("Select both dates."); return; }
@@ -184,6 +205,13 @@ export default function GeneratePanel({ supabase, canCRUD, currentUser }: Props)
         <div style={{ padding:"1.2rem 1.5rem",background:"var(--warm)",borderBottom:"1px solid rgba(26,92,42,0.07)" }}>
           <h2 style={{ fontFamily:"'Playfair Display',serif",fontSize:isMobile?"0.95rem":"1rem",fontWeight:700,color:"var(--green-dk)" }}>Select Report Period</h2>
           <p style={{ fontSize:"0.72rem",color:"var(--muted)",marginTop:3 }}>All member payments and manual transactions within this range will be included.</p>
+          {lastReportEnd && (
+            <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:8,padding:"0.5rem 0.8rem",background:"rgba(201,168,76,0.12)",borderRadius:6,border:"1px solid rgba(201,168,76,0.3)" }}>
+              <span style={{ fontSize:"0.68rem",color:"#7A6020" }}>
+                📋 Auto-set from last report: previous period ended <strong>{fmtDate(lastReportEnd)}</strong>. From Date set to next day. You can still change this manually.
+              </span>
+            </div>
+          )}
         </div>
         <div style={{ padding:"1.2rem 1.5rem",display:"flex",flexDirection:isMobile?"column":"row",gap:"0.85rem",alignItems:isMobile?"stretch":"flex-end" }}>
           <div style={{ flex:1 }}>
