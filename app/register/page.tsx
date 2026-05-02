@@ -131,7 +131,7 @@ export default function RegisterPage() {
       // ── INSERT ROLE ──
       const { error: roleError } = await supabase
         .from("user_roles")
-        .insert({ user_id: userId, role: "member" });
+        .upsert({ user_id: userId, role: "member" }, { onConflict: "user_id" });
 
       if (roleError) {
         console.error("ROLE INSERT ERROR:", roleError);
