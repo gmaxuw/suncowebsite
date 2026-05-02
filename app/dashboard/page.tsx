@@ -718,9 +718,8 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                   hasMas: payments.some(p => p.year === y && p.type === "mas"),
                 });
               }
-              const hasLifetime = payments.some(p => p.type === "lifetime");
               setPaymentItems(allYears);
-              setHasLifetimePaid(hasLifetime);
+              setHasLifetimePaid(payments.some(p => p.type === "lifetime"));
               setShowPayment(true);
             }}
             style={{
@@ -1042,7 +1041,7 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                 unpaidYears={paymentItems}
                 hasLifetimePaid={hasLifetimePaid}
                 gcashNumber="0946-365-7331"
-                gcashName="SUNCO Inc."
+                gcashName="Gabriel Sacro"
                 onSuccess={() => { setShowPayment(false); }}
                 onCancel={() => setShowPayment(false)}
               />

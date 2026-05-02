@@ -55,7 +55,7 @@ async function handleXenditPay(_total: number, _memberId: string): Promise<void>
 
 export default function GCashPayment({
   supabase, memberId, userId, unpaidYears,
-  hasLifetimePaid = true,
+  hasLifetimePaid = false,
   availableServices = [],
   gcashNumber = "09XX-XXX-XXXX",
   gcashName   = "SUNCO Inc.",
