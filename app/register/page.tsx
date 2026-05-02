@@ -316,9 +316,9 @@ export default function RegisterPage() {
                                                   <label style={labelStyle}>Gender</label>
                                                   <select value={form.gender} onChange={e => update("gender", e.target.value)}
                                                     style={{ ...inputStyle, cursor: "pointer" }}>
-                                                    <option value="male">Male</option>
-                                                    <option value="female">Female</option>
-                                                    <option value="other">Other</option>
+                                                    <option value="male" style={{ color: "#000", background: "#fff" }}>Male</option>
+                                                    <option value="female" style={{ color: "#000", background: "#fff" }}>Female</option>
+                                                    <option value="other" style={{ color: "#000", background: "#fff" }}>Other</option>
                                                   </select>
                                                 </div>
                                                 <div style={{ marginBottom: "1rem" }}>
