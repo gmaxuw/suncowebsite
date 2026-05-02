@@ -42,8 +42,6 @@ interface Props {
   onCancel?: () => void;
 }
 
-const AOF_AMOUNT  = 100;
-const MAS_AMOUNT  = 740;
 const PLATFORM_FEE = 30;
 const PAYMENT_FEE  = 30;
 
@@ -63,6 +61,24 @@ export default function GCashPayment({
   paymentFee  = PAYMENT_FEE,
   onSuccess, onCancel,
 }: Props) {
+  const [aofAmount, setAofAmount] = useState(240);
+  const [masAmount, setMasAmount] = useState(500);
+
+  useState(() => {
+    const currentYear = new Date().getFullYear();
+    supabase
+      .from("fee_schedules")
+      .select("fee_aof, fee_mas")
+      .eq("year", currentYear)
+      .single()
+      .then(({ data }: any) => {
+        if (data) {
+          setAofAmount(Number(data.fee_aof));
+          setMasAmount(Number(data.fee_mas));
+        }
+      });
+  });
+
   const [step, setStep]         = useState<Step>("select");
   const [method, setMethod]     = useState<"gcash"|"xendit">("gcash");
   const [reference, setReference] = useState("");
@@ -81,7 +97,7 @@ export default function GCashPayment({
   const selectedYearEntries = Object.entries(yearSelections).filter(([_, v]) => v.aof || v.mas);
 
   const duesTotal = selectedYearEntries.reduce((sum, [_, v]) => {
-    return sum + (v.aof ? AOF_AMOUNT : 0) + (v.mas ? MAS_AMOUNT : 0);
+    return sum + (v.aof ? aofAmount : 0) + (v.mas ? masAmount : 0);
   }, 0);
 
   const servicesTotal = availableServices
@@ -147,7 +163,7 @@ export default function GCashPayment({
         year: Number(yr),
         aof: v.aof,
         mas: v.mas,
-        subtotal: (v.aof ? AOF_AMOUNT : 0) + (v.mas ? MAS_AMOUNT : 0),
+        subtotal: (v.aof ? aofAmount : 0) + (v.mas ? masAmount : 0),
       }));
 
       // 3. Build types list (all unique types selected)
@@ -206,7 +222,7 @@ export default function GCashPayment({
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {unpaidYears.map(due => {
               const sel = yearSelections[due.year] || { aof: false, mas: false };
-              const yearTotal = (sel.aof ? AOF_AMOUNT : 0) + (sel.mas ? MAS_AMOUNT : 0);
+              const yearTotal = (sel.aof ? aofAmount : 0) + (sel.mas ? masAmount : 0);
               const hasUnpaid = !due.hasAof || !due.hasMas;
               if (!hasUnpaid) return null;
 
@@ -240,7 +256,7 @@ export default function GCashPayment({
                             <p style={{ fontSize: "0.68rem", color: "#AAA", margin: 0 }}>Yearly organizational fee</p>
                           </div>
                         </div>
-                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: sel.aof ? "#0077FF" : "#555" }}>₱{AOF_AMOUNT.toLocaleString()}</span>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: sel.aof ? "#0077FF" : "#555" }}>₱{aofAmount.toLocaleString()}</span>
                       </label>
                     )}
                     {!due.hasMas && (
@@ -253,7 +269,7 @@ export default function GCashPayment({
                             <p style={{ fontSize: "0.68rem", color: "#AAA", margin: 0 }}>Annual mutual aid contribution</p>
                           </div>
                         </div>
-                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: sel.mas ? "#0077FF" : "#555" }}>₱{MAS_AMOUNT.toLocaleString()}</span>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 600, color: sel.mas ? "#0077FF" : "#555" }}>₱{masAmount.toLocaleString()}</span>
                       </label>
                     )}
                   </div>
@@ -361,9 +377,9 @@ export default function GCashPayment({
             <span>
               <strong style={{ color: "#0D3320" }}>{yr}</strong>
               {" — "}
-              {[v.aof && "AOF (₱100)", v.mas && "MAS (₱740)"].filter(Boolean).join(" + ")}
+              {[v.aof && `AOF (₱${aofAmount})`, v.mas && `MAS (₱${masAmount})`].filter(Boolean).join(" + ")}
             </span>
-            <span style={{ fontWeight: 600, color: "#0D3320" }}>₱{((v.aof ? 100 : 0) + (v.mas ? 740 : 0)).toLocaleString()}</span>
+            <span style={{ fontWeight: 600, color: "#0D3320" }}>₱{((v.aof ? aofAmount : 0) + (v.mas ? masAmount : 0)).toLocaleString()}</span>
           </div>
         ))}
         {selectedServices.map(id => {
@@ -483,7 +499,7 @@ export default function GCashPayment({
         {selectedYearEntries.map(([yr, v]) => (
           <div key={yr} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#555", padding: "0.2rem 0" }}>
             <span><strong style={{ color: "#0D3320" }}>{yr}</strong> — {[v.aof && "AOF", v.mas && "MAS"].filter(Boolean).join(" + ")}</span>
-            <span style={{ color: "#1A6B35", fontWeight: 600 }}>₱{((v.aof ? 100 : 0) + (v.mas ? 740 : 0)).toLocaleString()}</span>
+            <span style={{ color: "#1A6B35", fontWeight: 600 }}>₱{((v.aof ? aofAmount : 0) + (v.mas ? masAmount : 0)).toLocaleString()}</span>
           </div>
         ))}
       </div>
