@@ -32,7 +32,8 @@ interface Props {
   supabase: any;
   memberId: string;
   userId: string;
-  unpaidYears: DueYear[];          // years with missing payments
+  unpaidYears: DueYear[];
+  hasLifetimePaid?: boolean;          // years with missing payments
   availableServices?: ServiceItem[]; // extra services/products (Phase 2+)
   gcashNumber?: string;
   gcashName?: string;
@@ -54,6 +55,7 @@ async function handleXenditPay(_total: number, _memberId: string): Promise<void>
 
 export default function GCashPayment({
   supabase, memberId, userId, unpaidYears,
+  hasLifetimePaid = true,
   availableServices = [],
   gcashNumber = "09XX-XXX-XXXX",
   gcashName   = "SUNCO Inc.",
@@ -63,18 +65,20 @@ export default function GCashPayment({
 }: Props) {
   const [aofAmount, setAofAmount] = useState(240);
   const [masAmount, setMasAmount] = useState(500);
+  const [lifetimeAmount, setLifetimeAmount] = useState(100);
 
   useState(() => {
     const currentYear = new Date().getFullYear();
     supabase
       .from("fee_schedules")
-      .select("fee_aof, fee_mas")
+      .select("fee_aof, fee_mas, fee_lifetime")
       .eq("year", currentYear)
       .single()
       .then(({ data }: any) => {
         if (data) {
           setAofAmount(Number(data.fee_aof));
           setMasAmount(Number(data.fee_mas));
+          setLifetimeAmount(Number(data.fee_lifetime));
         }
       });
   });
@@ -96,7 +100,8 @@ export default function GCashPayment({
   // ── Computed totals ──
   const selectedYearEntries = Object.entries(yearSelections).filter(([_, v]) => v.aof || v.mas);
 
-  const duesTotal = selectedYearEntries.reduce((sum, [_, v]) => {
+  const lifetimeFee = !hasLifetimePaid ? lifetimeAmount : 0;
+  const duesTotal = lifetimeFee + selectedYearEntries.reduce((sum, [_, v]) => {
     return sum + (v.aof ? aofAmount : 0) + (v.mas ? masAmount : 0);
   }, 0);
 
@@ -218,7 +223,20 @@ export default function GCashPayment({
         </div>
       ) : (
         <div style={{ marginBottom: "1.2rem" }}>
-          <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0D3320", marginBottom: "0.6rem" }}>Annual Dues</p>
+          {/* Lifetime Fee — shown only for new members */}
+      {!hasLifetimePaid && (
+        <div style={{ marginBottom: "1.2rem" }}>
+          <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0D3320", marginBottom: "0.6rem" }}>One-Time Fees</p>
+          <div style={{ border: "1.5px solid #C9A84C", borderRadius: 10, padding: "0.75rem 1rem", background: "rgba(201,168,76,0.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0D3320", margin: 0 }}>Lifetime Membership Fee</p>
+              <p style={{ fontSize: "0.68rem", color: "#AAA", margin: 0 }}>One-time payment upon joining</p>
+            </div>
+            <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#C9A84C" }}>₱{lifetimeAmount}</span>
+          </div>
+        </div>
+      )}
+      <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#0D3320", marginBottom: "0.6rem" }}>Annual Dues</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {unpaidYears.map(due => {
               const sel = yearSelections[due.year] || { aof: false, mas: false };

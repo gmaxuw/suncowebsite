@@ -38,7 +38,8 @@ export default function DashboardPage() {
   const [loading,      setLoading]      = useState(true);
   const [activeTab,    setActiveTab]    = useState<"overview"|"payments"|"rights"|"officers">("overview");
   const [editOpen,     setEditOpen]     = useState(false);
-  const [showPayment,  setShowPayment]  = useState(false);
+const [showPayment, setShowPayment] = useState(false);
+const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
   const [paymentItems, setPaymentItems] = useState<any[]>([]);
   const [uploading,    setUploading]    = useState(false);
   const [saving,       setSaving]       = useState(false);
@@ -717,7 +718,9 @@ export default function DashboardPage() {
                   hasMas: payments.some(p => p.year === y && p.type === "mas"),
                 });
               }
+              const hasLifetime = payments.some(p => p.type === "lifetime");
               setPaymentItems(allYears);
+              setHasLifetimePaid(hasLifetime);
               setShowPayment(true);
             }}
             style={{
@@ -1037,6 +1040,7 @@ export default function DashboardPage() {
                 memberId={member.id}
                 userId={user?.id}
                 unpaidYears={paymentItems}
+                hasLifetimePaid={hasLifetimePaid}
                 gcashNumber="0946-365-7331"
                 gcashName="SUNCO Inc."
                 onSuccess={() => { setShowPayment(false); }}
