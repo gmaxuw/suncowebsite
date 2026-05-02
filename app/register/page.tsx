@@ -96,7 +96,7 @@ export default function RegisterPage() {
       }
 
       // ── INSERT MEMBER (capture the returned id) ──
-      const { data: memberData, error: memberError } = await supabase
+      const { error: memberError } = await supabase
         .from("members")
         .insert({
           user_id: userId,
@@ -128,8 +128,6 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-
-      const memberId = memberData.id;
 
       // ── INSERT ROLE ──
       const { error: roleError } = await supabase
