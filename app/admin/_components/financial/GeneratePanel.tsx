@@ -257,41 +257,107 @@ export default function GeneratePanel({ supabase, canCRUD, currentUser }: Props)
             </div>
           ))}
 
-          {/* Collections summary */}
+          {/* Collections Summary — Period + All-Time */}
           <div style={{ background:"white",borderRadius:12,border:"1px solid rgba(26,92,42,0.08)",marginBottom:"1rem",overflow:"hidden" }}>
             <div style={{ padding:"0.9rem 1.2rem",background:"rgba(26,92,42,0.05)",borderBottom:"1px solid rgba(26,92,42,0.07)" }}>
-              <h3 style={{ fontSize:"0.88rem",fontWeight:700,color:"var(--green-dk)" }}>Collections Summary</h3>
+              <h3 style={{ fontSize:"0.88rem",fontWeight:700,color:"var(--green-dk)" }}>Period Summary & All-Time Totals</h3>
+              <p style={{ fontSize:"0.7rem",color:"var(--muted)",marginTop:2 }}>{fmtDate(preview.periodFrom)} — {fmtDate(preview.periodTo)}</p>
             </div>
+
             <div style={{ padding:"1rem 1.2rem",display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:isMobile?"1.5rem":"2rem" }}>
-              {/* Period */}
+
+              {/* ── LEFT: This Period ── */}
               <div>
                 <p style={{ fontSize:"0.62rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted)",marginBottom:"0.75rem" }}>
                   This Period
                 </p>
+
+                {/* Inflows */}
+                <p style={{ fontSize:"0.6rem",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2E8B44",marginBottom:"0.3rem",marginTop:"0.2rem" }}>Inflows</p>
                 {[
-                  {label:"MAS Collections",value:preview.periodMas},
-                  {label:"AOF Collections",value:preview.periodAof},
-                  {label:"Lifetime Collections",value:preview.periodLifetime},
+                  { label:"(+) MAS Collections",      value: preview.periodMas      },
+                  { label:"(+) AOF Collections",      value: preview.periodAof      },
+                  { label:"(+) Lifetime Collections", value: preview.periodLifetime },
+                  // Manual income per account
+                  ...preview.accounts.map(s => ({
+                    label: `(+) ${s.account.name} — Other Income`,
+                    value: s.manualIncome,
+                    skip:  s.manualIncome === 0,
+                  })).filter(r => !r.skip),
                 ].map(({label,value})=>(
-                  <div key={label} style={{ display:"flex",justifyContent:"space-between",padding:"0.35rem 0",borderBottom:"1px solid rgba(26,92,42,0.05)" }}>
-                    <span style={{ fontSize:"0.78rem" }}>{label}</span>
-                    <span style={{ fontSize:"0.8rem",fontWeight:600,color:"#2E8B44" }}>{peso(value)}</span>
+                  <div key={label} style={{ display:"flex",justifyContent:"space-between",padding:"0.3rem 0",borderBottom:"1px solid rgba(26,92,42,0.04)" }}>
+                    <span style={{ fontSize:"0.77rem",color:"var(--text)" }}>{label}</span>
+                    <span style={{ fontSize:"0.78rem",fontWeight:600,color:"#2E8B44" }}>{peso(value)}</span>
                   </div>
                 ))}
-                <div style={{ display:"flex",justifyContent:"space-between",padding:"0.5rem 0",borderTop:"2px solid var(--green-dk)",marginTop:"0.4rem" }}>
-                  <span style={{ fontSize:"0.8rem",fontWeight:700 }}>Total</span>
-                  <span style={{ fontSize:"0.85rem",fontWeight:800,color:"var(--green-dk)" }}>{peso(preview.periodMas+preview.periodAof+preview.periodLifetime)}</span>
-                </div>
+
+                {/* Total inflows */}
+                {(() => {
+                  const manualIncome = preview.accounts.reduce((s,a)=>s+a.manualIncome,0);
+                  const totalInflows = preview.periodMas + preview.periodAof + preview.periodLifetime + manualIncome;
+                  return (
+                    <div style={{ display:"flex",justifyContent:"space-between",padding:"0.45rem 0",borderTop:"1.5px solid #2E8B44",marginTop:"0.3rem",marginBottom:"0.85rem" }}>
+                      <span style={{ fontSize:"0.8rem",fontWeight:700,color:"#2E8B44" }}>Total Inflows</span>
+                      <span style={{ fontSize:"0.85rem",fontWeight:800,color:"#2E8B44" }}>{peso(totalInflows)}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* Outflows */}
+                <p style={{ fontSize:"0.6rem",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:"#C0392B",marginBottom:"0.3rem" }}>Outflows</p>
+                {preview.accounts.map(s => {
+                  if (s.totalExpenses === 0) return null;
+                  return (
+                    <div key={s.account.id} style={{ display:"flex",justifyContent:"space-between",padding:"0.3rem 0",borderBottom:"1px solid rgba(192,57,43,0.06)" }}>
+                      <span style={{ fontSize:"0.77rem",color:"var(--text)" }}>
+                        (−) {s.account.name} Expenses
+                      </span>
+                      <span style={{ fontSize:"0.78rem",fontWeight:600,color:"#C0392B" }}>{peso(s.totalExpenses)}</span>
+                    </div>
+                  );
+                })}
+                {preview.accounts.every(s => s.totalExpenses === 0) && (
+                  <div style={{ padding:"0.3rem 0",fontSize:"0.75rem",color:"var(--muted)",fontStyle:"italic" }}>No expenses this period</div>
+                )}
+
+                {/* Total outflows */}
+                {(() => {
+                  const totalOutflows = preview.accounts.reduce((s,a)=>s+a.totalExpenses,0);
+                  return (
+                    <div style={{ display:"flex",justifyContent:"space-between",padding:"0.45rem 0",borderTop:"1.5px solid #C0392B",marginTop:"0.3rem",marginBottom:"0.85rem" }}>
+                      <span style={{ fontSize:"0.8rem",fontWeight:700,color:"#C0392B" }}>Total Outflows</span>
+                      <span style={{ fontSize:"0.85rem",fontWeight:800,color:"#C0392B" }}>{peso(totalOutflows)}</span>
+                    </div>
+                  );
+                })()}
+
+                {/* NET */}
+                {(() => {
+                  const manualIncome   = preview.accounts.reduce((s,a)=>s+a.manualIncome,0);
+                  const totalInflows   = preview.periodMas + preview.periodAof + preview.periodLifetime + manualIncome;
+                  const totalOutflows  = preview.accounts.reduce((s,a)=>s+a.totalExpenses,0);
+                  const net            = totalInflows - totalOutflows;
+                  const isPositive     = net >= 0;
+                  return (
+                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0.65rem 0.9rem",borderRadius:8,background: isPositive?"rgba(46,139,68,0.08)":"rgba(192,57,43,0.08)",border:`1.5px solid ${isPositive?"rgba(46,139,68,0.25)":"rgba(192,57,43,0.25)"}` }}>
+                      <span style={{ fontSize:"0.82rem",fontWeight:700,color: isPositive?"#2E8B44":"#C0392B" }}>Net This Period</span>
+                      <span style={{ fontSize:"1rem",fontWeight:800,color: isPositive?"#2E8B44":"#C0392B" }}>
+                        {isPositive ? "+" : "−"}{peso(Math.abs(net))}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
-              {/* All time */}
+
+              {/* ── RIGHT: All-Time Cumulative ── */}
               <div>
                 <p style={{ fontSize:"0.62rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted)",marginBottom:"0.75rem" }}>
                   All-Time Cumulative
                 </p>
                 {[
-                  {label:"Total MAS",value:preview.allTimeMas},
-                  {label:"Total AOF",value:preview.allTimeAof},
-                  {label:"Total Lifetime",value:preview.allTimeLifetime},
+                  { label:"Total MAS Collected",      value: preview.allTimeMas      },
+                  { label:"Total AOF Collected",      value: preview.allTimeAof      },
+                  { label:"Total Lifetime Collected", value: preview.allTimeLifetime },
                 ].map(({label,value})=>(
                   <div key={label} style={{ display:"flex",justifyContent:"space-between",padding:"0.35rem 0",borderBottom:"1px solid rgba(26,92,42,0.05)" }}>
                     <span style={{ fontSize:"0.78rem" }}>{label}</span>
@@ -299,11 +365,12 @@ export default function GeneratePanel({ supabase, canCRUD, currentUser }: Props)
                   </div>
                 ))}
                 <div style={{ display:"flex",justifyContent:"space-between",padding:"0.5rem 0",borderTop:"2px solid #2B5FA8",marginTop:"0.4rem" }}>
-                  <span style={{ fontSize:"0.8rem",fontWeight:700 }}>Total</span>
+                  <span style={{ fontSize:"0.8rem",fontWeight:700 }}>Total All-Time</span>
                   <span style={{ fontSize:"0.85rem",fontWeight:800,color:"#2B5FA8" }}>{peso(preview.allTimeMas+preview.allTimeAof+preview.allTimeLifetime)}</span>
                 </div>
               </div>
             </div>
+
             {preview.periodLifetime > 0 && (
               <div style={{ margin:"0 1.2rem 1rem",padding:"0.75rem 1rem",background:"rgba(201,168,76,0.08)",borderRadius:8,border:"1px solid rgba(201,168,76,0.25)",fontSize:"0.72rem",color:"#7A6020" }}>
                 ⚠ Lifetime fees of {peso(preview.periodLifetime)} shown for transparency. Allocation per BOD decision.
