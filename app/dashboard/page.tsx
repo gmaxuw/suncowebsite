@@ -21,11 +21,11 @@ const MEMBER_RIGHTS = [
 ];
 
 const ORG_RULES = [
-  "Annual dues (MAS ₱740 + AOF ₱100) must be settled by December 31 of each year.",
+  "Annual dues (MAS ₱500 + Annual Operational Expenses ₱240 + AOF ₱100) must be settled by December of each year.",
   "Members with 2 consecutive unpaid years are classified as Non-Active.",
   "Members with 3 or more consecutive unpaid years are automatically Dropped.",
   "Dropped members may apply for reinstatement subject to Board approval.",
-  "Deceased members are honored with a ₱1,500 MAS benefit upon notification.",
+  "Deceased members are honored with a ₱9,000 MAS benefit upon notification.",
   "All members must keep contact information and beneficiary details updated.",
 ];
 
@@ -950,7 +950,7 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
               <Info size={16} color="#1A5C2A" style={{ marginTop: 2, flexShrink: 0 }} />
               <div>
                 <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1A5C2A", marginBottom: 4 }}>For inquiries and concerns</p>
-                <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6 }}>Contact any officer directly or submit a written request to the Secretary. General assemblies are held quarterly.</p>
+                <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6 }}>Contact any officer directly or submit a written request to the Secretary. General assemblies are held once a year.</p>
               </div>
             </div>
           </div>
