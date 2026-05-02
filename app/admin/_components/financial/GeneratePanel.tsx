@@ -435,3 +435,4 @@ export default function GeneratePanel({ supabase, canCRUD, currentUser }: Props)
     </div>
   );
 }
+
