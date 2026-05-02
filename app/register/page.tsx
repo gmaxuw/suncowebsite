@@ -119,8 +119,7 @@ export default function RegisterPage() {
           approval_status: "pending",
           date_joined: null,
         })
-        .select("id")
-        .single();
+        ;
 
       if (memberError) {
         console.error("MEMBER INSERT ERROR:", memberError);
