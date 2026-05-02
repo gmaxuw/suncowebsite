@@ -80,6 +80,9 @@ export default function RegisterPage() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
+        options: {
+          emailRedirectTo: "https://sunco.gabrielsacro.com/auth/callback",
+        },
       });
 
       if (authError) {
