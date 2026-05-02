@@ -15,16 +15,17 @@ const STATUS_STYLE: any = {
   rejected: { bg: "rgba(192,57,43,0.1)",  color: "#C0392B", label: "Rejected" },
 };
 
-const AMOUNTS: any = { aof: 100, mas: 740, lifetime: 200 };
-
 export default function PaymentSubmissionsTab({ supabase, currentUser, currentMemberName, currentRole }: Props) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading]         = useState(true);
   const [selected, setSelected]       = useState<any>(null);
   const [filter, setFilter]           = useState("pending");
   const [rejectReason, setRejectReason] = useState("");
-  const [orNumber, setOrNumber] = useState("");
+  const [orNumber, setOrNumber]       = useState("");
   const [saving, setSaving]           = useState(false);
+
+  // ── Fee schedules cache: { [year]: { fee_aof, fee_mas, fee_lifetime, id } } ──
+  const [feeScheduleCache, setFeeScheduleCache] = useState<Record<number, any>>({});
 
   const loadSubmissions = async () => {
     setLoading(true);
@@ -38,6 +39,21 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
 
   useEffect(() => { loadSubmissions(); }, []);
 
+  // ── Fetch fee schedule for a given year (cached) ──
+  const getFeeSchedule = async (year: number) => {
+    if (feeScheduleCache[year]) return feeScheduleCache[year];
+    const { data } = await supabase
+      .from("fee_schedules")
+      .select("id, year, fee_aof, fee_mas, fee_lifetime")
+      .eq("year", year)
+      .maybeSingle();
+    if (data) {
+      setFeeScheduleCache(prev => ({ ...prev, [year]: data }));
+      return data;
+    }
+    return null;
+  };
+
   const filtered = submissions.filter(s => filter === "all" || s.status === filter);
   const pendingCount = submissions.filter(s => s.status === "pending").length;
 
@@ -46,45 +62,104 @@ export default function PaymentSubmissionsTab({ supabase, currentUser, currentMe
     return null;
   };
 
-const handleApprove = async (sub: any) => {
-    if (!orNumber.trim()) { alert("Please enter the Official Receipt (OR) number before approving."); return; }
+  // ── Check if member has already paid lifetime ──
+  const checkLifetimePaid = async (memberId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("member_id", memberId)
+      .eq("type", "lifetime")
+      .maybeSingle();
+    return !!data;
+  };
+
+  const handleApprove = async (sub: any) => {
+    if (!orNumber.trim()) {
+      alert("Please enter the Official Receipt (OR) number before approving.");
+      return;
+    }
     setSaving(true);
     try {
       const notes = parseNotes(sub);
-      let inserts: any[] = [];
+      const inserts: any[] = [];
 
-      if (notes?.year_breakdown && notes.year_breakdown.length > 0) {
-        for (const yrEntry of notes.year_breakdown) {
-          if (yrEntry.aof) inserts.push({
-            member_id:      sub.member_id,
-            year:           yrEntry.year,
-            type:           "aof",
-            amount:         AMOUNTS.aof,
-            date_paid:      new Date().toISOString().split("T")[0],
-            receipt_number: `${orNumber.trim()}-${yrEntry.year}-AOF`,
-            recorded_by:    currentMemberName || "Officer",
-          });
-          if (yrEntry.mas) inserts.push({
-            member_id:      sub.member_id,
-            year:           yrEntry.year,
-            type:           "mas",
-            amount:         AMOUNTS.mas,
-            date_paid:      new Date().toISOString().split("T")[0],
-            receipt_number: `${orNumber.trim()}-${yrEntry.year}-MAS`,
-            recorded_by:    currentMemberName || "Officer",
+      // ── 1. Handle Lifetime fee (one-time, only if not already paid) ──
+      const lifetimeIncluded = notes?.lifetime_included === true;
+      if (lifetimeIncluded) {
+        const alreadyPaidLifetime = await checkLifetimePaid(sub.member_id);
+        if (!alreadyPaidLifetime) {
+          // Get fee schedule for the submission year to get correct lifetime amount
+          const submissionYear = sub.year || new Date().getFullYear();
+          const feeSchedule = await getFeeSchedule(submissionYear);
+          const lifetimeAmount = feeSchedule ? Number(feeSchedule.fee_lifetime) : Number(notes?.lifetime_amount || 0);
+          inserts.push({
+            member_id:       sub.member_id,
+            year:            submissionYear,
+            type:            "lifetime",
+            amount:          lifetimeAmount,
+            date_paid:       new Date().toISOString().split("T")[0],
+            receipt_number:  `${orNumber.trim()}-LIFETIME`,
+            recorded_by:     currentMemberName || "Officer",
+            fee_schedule_id: feeSchedule?.id || null,
           });
         }
+        // If already paid, silently skip — no duplicate lifetime record
+      }
+
+      // ── 2. Handle AOF + MAS per year ──
+      if (notes?.year_breakdown && notes.year_breakdown.length > 0) {
+        for (const yrEntry of notes.year_breakdown) {
+          // Fetch the correct fee schedule for THAT year
+          const feeSchedule = await getFeeSchedule(yrEntry.year);
+          const aofAmount = feeSchedule ? Number(feeSchedule.fee_aof) : Number(yrEntry.aof_amount || 0);
+          const masAmount = feeSchedule ? Number(feeSchedule.fee_mas) : Number(yrEntry.mas_amount || 0);
+
+          if (yrEntry.aof) {
+            inserts.push({
+              member_id:       sub.member_id,
+              year:            yrEntry.year,
+              type:            "aof",
+              amount:          aofAmount,
+              date_paid:       new Date().toISOString().split("T")[0],
+              receipt_number:  `${orNumber.trim()}-${yrEntry.year}-AOF`,
+              recorded_by:     currentMemberName || "Officer",
+              fee_schedule_id: feeSchedule?.id || null,
+            });
+          }
+          if (yrEntry.mas) {
+            inserts.push({
+              member_id:       sub.member_id,
+              year:            yrEntry.year,
+              type:            "mas",
+              amount:          masAmount,
+              date_paid:       new Date().toISOString().split("T")[0],
+              receipt_number:  `${orNumber.trim()}-${yrEntry.year}-MAS`,
+              recorded_by:     currentMemberName || "Officer",
+              fee_schedule_id: feeSchedule?.id || null,
+            });
+          }
+        }
       } else {
-        const types: string[] = sub.types || [];
-        inserts = types.map((type: string) => ({
-          member_id:      sub.member_id,
-          year:           sub.year,
-          type,
-          amount:         AMOUNTS[type] || 0,
-          date_paid:      new Date().toISOString().split("T")[0],
-          receipt_number: `${orNumber.trim()}-${type.toUpperCase()}`,
-          recorded_by:    currentMemberName || "Officer",
-        }));
+        // Fallback: old-style submission without year_breakdown
+        const types: string[] = (sub.types || []).filter((t: string) => t !== "lifetime");
+        const feeSchedule = await getFeeSchedule(sub.year || new Date().getFullYear());
+        for (const type of types) {
+          let amount = 0;
+          if (feeSchedule) {
+            if (type === "aof") amount = Number(feeSchedule.fee_aof);
+            if (type === "mas") amount = Number(feeSchedule.fee_mas);
+          }
+          inserts.push({
+            member_id:       sub.member_id,
+            year:            sub.year,
+            type,
+            amount,
+            date_paid:       new Date().toISOString().split("T")[0],
+            receipt_number:  `${orNumber.trim()}-${type.toUpperCase()}`,
+            recorded_by:     currentMemberName || "Officer",
+            fee_schedule_id: feeSchedule?.id || null,
+          });
+        }
       }
 
       if (inserts.length === 0) {
@@ -93,18 +168,18 @@ const handleApprove = async (sub: any) => {
         return;
       }
 
-      // 1. Insert payment records
+      // ── 3. Insert all payment records ──
       const { error: payErr } = await supabase.from("payments").insert(inserts);
       if (payErr) throw payErr;
 
-      // 2. Mark submission approved
+      // ── 4. Mark submission approved ──
       const { error: updErr } = await supabase
         .from("payment_submissions")
         .update({ status: "approved", reviewed_at: new Date().toISOString() })
         .eq("id", sub.id);
       if (updErr) throw updErr;
 
-      // 3. Log activity — non-blocking, won't crash approval if it fails
+      // ── 5. Log activity ──
       try {
         await supabase.from("activity_logs").insert({
           user_id:     currentUser?.id || null,
@@ -117,18 +192,18 @@ const handleApprove = async (sub: any) => {
             years_covered:   inserts.map((r: any) => r.year).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", "),
             types:           inserts.map((r: any) => r.type).filter((v: any, i: any, a: any) => a.indexOf(v) === i).join(", ").toUpperCase(),
             total_amount:    sub.total_amount,
-            or_number: orNumber.trim(),
+            or_number:       orNumber.trim(),
             records_created: inserts.length,
             via:             "GCash submission approval",
           },
         });
       } catch (logErr: any) {
         console.error("LOG FAILED:", logErr);
-        alert("Log error: " + (logErr?.message || JSON.stringify(logErr)));
       }
 
       await loadSubmissions();
       setSelected(null);
+      setOrNumber("");
     } catch (err: any) {
       alert("Error approving: " + err.message);
     }
@@ -159,14 +234,33 @@ const handleApprove = async (sub: any) => {
 
   const buildCoversSummary = (sub: any) => {
     const notes = parseNotes(sub);
+    const parts: string[] = [];
+    if (notes?.lifetime_included) parts.push("Lifetime");
     if (notes?.year_breakdown && notes.year_breakdown.length > 0) {
-      return notes.year_breakdown.map((y: any) => {
-        const parts = [y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join("+");
-        return `${y.year} (${parts})`;
-      }).join(", ");
+      notes.year_breakdown.forEach((y: any) => {
+        const types = [y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join("+");
+        parts.push(`${y.year} (${types})`);
+      });
+    } else {
+      const types = ((sub.types || []) as string[]).filter(t => t !== "lifetime").join("+").toUpperCase();
+      if (types) parts.push(sub.year ? `${sub.year} (${types})` : types);
     }
-    const types = (sub.types || []).join("+").toUpperCase();
-    return sub.year ? `${sub.year} (${types})` : types;
+    return parts.join(", ") || "—";
+  };
+
+  // ── Count how many records will be created on approval ──
+  const countInserts = (sub: any) => {
+    const notes = parseNotes(sub);
+    let count = notes?.lifetime_included ? 1 : 0;
+    if (notes?.year_breakdown) {
+      notes.year_breakdown.forEach((y: any) => {
+        if (y.aof) count++;
+        if (y.mas) count++;
+      });
+    } else {
+      count += ((sub.types || []) as string[]).filter((t: string) => t !== "lifetime").length;
+    }
+    return count;
   };
 
   return (
@@ -255,7 +349,7 @@ const handleApprove = async (sub: any) => {
                         <span style={{ background: ss.bg, color: ss.color, fontSize: "0.7rem", fontWeight: 500, padding: "3px 10px", borderRadius: 20 }}>{ss.label}</span>
                       </td>
                       <td style={{ padding: "0.9rem 1rem" }}>
-                        <button onClick={() => { setSelected(sub); setRejectReason(""); }}
+                        <button onClick={() => { setSelected(sub); setRejectReason(""); setOrNumber(""); }}
                           style={{ background: "none", border: "1px solid rgba(26,92,42,0.2)", color: "var(--green-dk)", padding: "0.3rem 0.8rem", borderRadius: 4, fontSize: "0.75rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>
                           {sub.status === "pending" ? "Review" : "View"}
                         </button>
@@ -273,7 +367,8 @@ const handleApprove = async (sub: any) => {
       {selected && (() => {
         const notes = parseNotes(selected);
         const yearBreakdown = notes?.year_breakdown || [];
-        const hasMultiYear = yearBreakdown.length > 0;
+        const hasMultiYear  = yearBreakdown.length > 0;
+        const lifetimeIncluded = notes?.lifetime_included === true;
 
         return (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
@@ -286,7 +381,8 @@ const handleApprove = async (sub: any) => {
                     {selected.members ? `${selected.members.first_name} ${selected.members.last_name}` : "Member"}
                   </h2>
                 </div>
-                <button onClick={() => { setSelected(null); setOrNumber(""); }} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <button onClick={() => { setSelected(null); setOrNumber(""); setRejectReason(""); }}
+                  style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <X size={14} />
                 </button>
               </div>
@@ -314,27 +410,43 @@ const handleApprove = async (sub: any) => {
                   ))}
                 </div>
 
+                {/* Payment breakdown */}
                 <div style={{ background: "var(--cream)", borderRadius: 10, padding: "1.1rem", marginBottom: "1.2rem", border: "1px solid rgba(26,92,42,0.08)" }}>
                   <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>
-                    Payment Covers {hasMultiYear ? `(${yearBreakdown.length} year${yearBreakdown.length > 1 ? "s" : ""})` : ""}
+                    Payment Covers
                   </p>
+
+                  {/* Lifetime row */}
+                  {lifetimeIncluded && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid rgba(26,92,42,0.06)" }}>
+                      <div>
+                        <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "#6B3FA0" }}>Lifetime Fee</span>
+                        <span style={{ fontSize: "0.68rem", color: "var(--muted)", marginLeft: 8 }}>One-time · recorded once only</span>
+                      </div>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#6B3FA0" }}>₱{notes?.lifetime_amount?.toLocaleString() || "—"}</span>
+                    </div>
+                  )}
+
+                  {/* AOF + MAS per year */}
                   {hasMultiYear ? (
                     yearBreakdown.map((y: any) => (
                       <div key={y.year} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid rgba(26,92,42,0.06)" }}>
                         <div>
                           <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--green-dk)" }}>{y.year}</span>
                           <span style={{ fontSize: "0.72rem", color: "var(--muted)", marginLeft: 8 }}>
-                            {[y.aof && "AOF (₱100)", y.mas && "MAS (₱740)"].filter(Boolean).join(" + ")}
+                            {[y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join(" + ")}
                           </span>
                         </div>
                         <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "var(--green-dk)" }}>
-                          ₱{y.subtotal?.toLocaleString() || ((y.aof ? 100 : 0) + (y.mas ? 740 : 0)).toLocaleString()}
+                          ₱{y.subtotal?.toLocaleString() || "—"}
                         </span>
                       </div>
                     ))
                   ) : (
                     <p style={{ fontSize: "0.82rem", color: "var(--muted)" }}>{buildCoversSummary(selected)}</p>
                   )}
+
+                  {/* Fee totals */}
                   {notes && (
                     <div style={{ marginTop: "0.6rem", paddingTop: "0.6rem", borderTop: "1px solid rgba(26,92,42,0.1)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.2rem" }}>
@@ -350,6 +462,7 @@ const handleApprove = async (sub: any) => {
                   )}
                 </div>
 
+                {/* Screenshot */}
                 {selected.screenshot_url && (
                   <div style={{ marginBottom: "1.2rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
@@ -364,6 +477,7 @@ const handleApprove = async (sub: any) => {
                   </div>
                 )}
 
+                {/* Rejected banner */}
                 {selected.status === "rejected" && selected.rejection_reason && (
                   <div style={{ background: "rgba(192,57,43,0.08)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#C0392B", marginBottom: 4 }}>Rejection Reason</p>
@@ -371,39 +485,43 @@ const handleApprove = async (sub: any) => {
                   </div>
                 )}
 
+                {/* Approved banner */}
                 {selected.status === "approved" && selected.reviewed_at && (
                   <div style={{ background: "rgba(46,139,68,0.08)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 8, padding: "1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "#2E8B44", marginBottom: 4 }}>✓ Approved & Recorded</p>
                     <p style={{ fontSize: "0.78rem", color: "#2E8B44" }}>
-                      {hasMultiYear ? `${yearBreakdown.length} year(s) of payments created.` : "Payment recorded in the system."}
-                      {" "}Approved on {formatDate(selected.reviewed_at)}.
+                      Payment records created from fee schedule rates. Approved on {formatDate(selected.reviewed_at)}.
                     </p>
                   </div>
                 )}
 
+                {/* Pending — Review actions */}
                 {selected.status === "pending" && (
                   <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)", paddingTop: "1.2rem" }}>
                     <p style={{ fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem" }}>Review Action</p>
 
+                    {/* Preview of what will be recorded */}
                     <div style={{ background: "rgba(46,139,68,0.06)", border: "1px solid rgba(46,139,68,0.15)", borderRadius: 8, padding: "0.8rem 1rem", marginBottom: "1rem" }}>
                       <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "#2E8B44", marginBottom: "0.4rem" }}>
-                        ✓ Approving will create {hasMultiYear
-                          ? yearBreakdown.reduce((s: number, y: any) => s + (y.aof ? 1 : 0) + (y.mas ? 1 : 0), 0)
-                          : (selected.types || []).length} payment record(s):
+                        ✓ Approving will create {countInserts(selected)} payment record(s) using fee schedule rates:
                       </p>
+                      {lifetimeIncluded && (
+                        <p style={{ fontSize: "0.75rem", color: "#6B3FA0", margin: "0.1rem 0", fontWeight: 600 }}>
+                          • Lifetime Fee — recorded once only
+                        </p>
+                      )}
                       {hasMultiYear ? yearBreakdown.map((y: any) => (
                         <p key={y.year} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
-                          • {y.year}: {[y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join(" + ")}
+                          • {y.year}: {[y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join(" + ")} — amounts from {y.year} fee schedule
                         </p>
-                      )) : (selected.types || []).map((t: string) => (
+                      )) : ((selected.types || []) as string[]).filter((t: string) => t !== "lifetime").map((t: string) => (
                         <p key={t} style={{ fontSize: "0.75rem", color: "#555", margin: "0.1rem 0" }}>
-                          • {selected.year}: {t.toUpperCase()} (₱{AMOUNTS[t] || 0})
+                          • {selected.year}: {t.toUpperCase()} — amount from fee schedule
                         </p>
                       ))}
                     </div>
 
-
-                    {/* ── OR Number input ── */}
+                    {/* OR Number */}
                     <div style={{ marginBottom: "1rem" }}>
                       <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--green-dk)", marginBottom: "0.5rem" }}>
                         ⭐ Official Receipt (OR) Number <span style={{ color: "#C0392B" }}>*</span>
@@ -413,16 +531,14 @@ const handleApprove = async (sub: any) => {
                         value={orNumber}
                         onChange={e => setOrNumber(e.target.value)}
                         placeholder="e.g. 0012345"
-                        style={{ width: "100%", padding: "0.75rem 1rem", border: `1.5px solid ${orNumber.trim() ? "var(--green-lt)" : "rgba(192,57,43,0.4)"}`, borderRadius: 6, fontSize: "0.88rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }}
+                        style={{ width: "100%", padding: "0.75rem 1rem", border: `1.5px solid ${orNumber.trim() ? "rgba(46,139,68,0.4)" : "rgba(192,57,43,0.4)"}`, borderRadius: 6, fontSize: "0.88rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "var(--green-dk)", boxSizing: "border-box" }}
                       />
                       <p style={{ fontSize: "0.68rem", color: "var(--muted)", marginTop: 4 }}>
-                        Enter the BIR official receipt number. This will be recorded for audit purposes.
+                        Enter the BIR official receipt number. Each record gets a unique suffix (e.g. -2026-AOF, -LIFETIME).
                       </p>
                     </div>
 
-
-
-
+                    {/* Rejection reason */}
                     <div style={{ marginBottom: "1rem" }}>
                       <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.4rem" }}>
                         Rejection Reason (required if rejecting)
@@ -439,12 +555,12 @@ const handleApprove = async (sub: any) => {
                         <X size={14} /> {saving ? "..." : "Reject"}
                       </button>
                       <button onClick={() => handleApprove(selected)} disabled={saving || !orNumber.trim()}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.8rem", background: "var(--gold)", border: "none", color: "var(--green-dk)", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0.8rem", background: saving || !orNumber.trim() ? "#CCC" : "var(--gold)", border: "none", color: "var(--green-dk)", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: saving || !orNumber.trim() ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                         <CheckCircle size={14} /> {saving ? "Processing..." : "Approve & Record"}
                       </button>
                     </div>
                     <p style={{ fontSize: "0.68rem", color: "var(--muted)", textAlign: "center", marginTop: "0.6rem" }}>
-                      Each year/type will get its own payment record with a unique receipt number.
+                      Amounts are pulled from your Fee Schedules — not hardcoded.
                     </p>
                   </div>
                 )}

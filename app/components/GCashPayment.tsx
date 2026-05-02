@@ -173,6 +173,7 @@ export default function GCashPayment({
 
       // 3. Build types list (all unique types selected)
       const allTypes: string[] = [];
+      if (!hasLifetimePaid) allTypes.push("lifetime");   // ← ADD THIS LINE
       selectedYearEntries.forEach(([_, v]) => {
         if (v.aof && !allTypes.includes("aof")) allTypes.push("aof");
         if (v.mas && !allTypes.includes("mas")) allTypes.push("mas");
@@ -189,6 +190,8 @@ export default function GCashPayment({
         screenshot_url:  urlData.publicUrl,
         status:          "pending",
         notes: JSON.stringify({
+          lifetime_included: !hasLifetimePaid,
+          lifetime_amount:   lifetimeAmount,
           year_breakdown:    yearBreakdown,
           services:          selectedServices,
           dues_subtotal:     duesTotal,
