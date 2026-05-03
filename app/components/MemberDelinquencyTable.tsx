@@ -6,13 +6,16 @@
 // renders a personal payment grid exactly like the admin
 // Reports table but filtered to just this one member.
 //
+// FIX: All amounts now read from fee_schedules per year.
+//      No more hardcoded AOF/MAS values.
+//
 // Usage in dashboard/page.tsx:
 //   import MemberDelinquencyTable from "@/app/components/MemberDelinquencyTable";
 //   ...
-//   <MemberDelinquencyTable member={member} payments={payments} />
+//   <MemberDelinquencyTable member={member} payments={payments} supabase={supabase} />
 // ─────────────────────────────────────────────
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Receipt, X } from "lucide-react";
 
 interface Payment {
@@ -33,26 +36,55 @@ interface Member {
   status?: string;
 }
 
+interface FeeSchedule {
+  year: number;
+  fee_aof: number;
+  fee_mas: number;
+  fee_lifetime: number;
+}
+
 interface Props {
   member: Member;
   payments: Payment[];
+  supabase: any;
 }
 
-const AOF_AMOUNT = 100;
-const MAS_AMOUNT = 740;
-
-export default function MemberDelinquencyTable({ member, payments }: Props) {
+export default function MemberDelinquencyTable({ member, payments, supabase }: Props) {
   const [receiptModal, setReceiptModal] = useState<Payment | null>(null);
+  const [feeSchedules, setFeeSchedules] = useState<Record<number, FeeSchedule>>({});
 
   const currentYear = new Date().getFullYear();
-
-  // ── Build year range: join year → current year ──
   const joinYear = member.date_joined
     ? new Date(member.date_joined).getFullYear()
     : currentYear;
 
   const years: number[] = [];
   for (let y = joinYear; y <= currentYear; y++) years.push(y);
+
+  // ── Load all fee schedules for the relevant years ──
+  useEffect(() => {
+    supabase
+      .from("fee_schedules")
+      .select("year, fee_aof, fee_mas, fee_lifetime")
+      .in("year", years)
+      .then(({ data }: { data: FeeSchedule[] | null }) => {
+        if (data) {
+          const map: Record<number, FeeSchedule> = {};
+          data.forEach(fs => { map[fs.year] = fs; });
+          setFeeSchedules(map);
+        }
+      });
+  }, [joinYear, currentYear]);
+
+  // ── Get fee for a year (fallback to current year if not found) ──
+  const getFee = (year: number, type: "aof" | "mas" | "lifetime"): number => {
+    const fs = feeSchedules[year];
+    if (!fs) return 0;
+    if (type === "aof") return Number(fs.fee_aof);
+    if (type === "mas") return Number(fs.fee_mas);
+    if (type === "lifetime") return Number(fs.fee_lifetime);
+    return 0;
+  };
 
   // ── Per-year payment lookup ──
   const getPayment = (year: number, type: "aof" | "mas") =>
@@ -79,11 +111,24 @@ export default function MemberDelinquencyTable({ member, payments }: Props) {
     .filter(p => p.type === "aof" || p.type === "mas")
     .reduce((s, p) => s + Number(p.amount), 0);
 
-  const totalOwed = totalDelinquent * (AOF_AMOUNT + MAS_AMOUNT);
+  // ── Total owed = sum of unpaid years using that year's actual fee schedule ──
+  const totalOwed = years.reduce((sum, y) => {
+    const hasMas = !!getPayment(y, "mas");
+    const hasAof = !!getPayment(y, "aof");
+    if (!hasMas || !hasAof) {
+      return sum
+        + (!hasAof ? getFee(y, "aof") : 0)
+        + (!hasMas ? getFee(y, "mas") : 0);
+    }
+    return sum;
+  }, 0);
 
-const memberName = [member.first_name, member.middle_name?.trim() ? member.middle_name.trim()[0] + "." : null, member.last_name].filter(Boolean).join(" ");
+  const memberName = [
+    member.first_name,
+    member.middle_name?.trim() ? member.middle_name.trim()[0] + "." : null,
+    member.last_name,
+  ].filter(Boolean).join(" ");
 
-  // ── Derived status color ──
   const statusStyle: Record<string, { bg: string; color: string }> = {
     active:       { bg: "#E6F9ED", color: "#1A6B35" },
     "non-active": { bg: "#FFF8E1", color: "#A66C00" },
@@ -95,7 +140,7 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
   // ── Cell renderer ──
   const PayCell = ({ year, type }: { year: number; type: "aof" | "mas" }) => {
     const p = getPayment(year, type);
-    const amount = type === "aof" ? AOF_AMOUNT : MAS_AMOUNT;
+    const amount = getFee(year, type);
 
     if (p) {
       return (
@@ -114,7 +159,7 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
             onMouseEnter={e => (e.currentTarget.style.background = "rgba(26,107,53,0.08)")}
             onMouseLeave={e => (e.currentTarget.style.background = "none")}
           >
-            ₱{amount}
+            ₱{Number(p.amount).toLocaleString()}
           </button>
         </td>
       );
@@ -161,8 +206,6 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
             </p>
           </div>
         </div>
-
-        {/* Summary chips */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <span style={{ background: "#E6F9ED", color: "#1A6B35", fontSize: "0.75rem", fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>
             ₱{totalPaid.toLocaleString()} paid
@@ -188,7 +231,7 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
           <span style={{ fontSize: "0.72rem", color: "#888" }}>Delinquent / Not paid</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1A6B35" }}>₱740</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#1A6B35" }}>₱</span>
           <span style={{ fontSize: "0.72rem", color: "#888" }}>Paid — click to view receipt</span>
         </div>
       </div>
@@ -196,8 +239,6 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
       {/* ── Scrollable table ── */}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
-
-          {/* Column headers — years */}
           <thead>
             <tr style={{ background: "#0D3320" }}>
               <th style={{ padding: "0.8rem 1rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", width: 160, minWidth: 140 }}>Name</th>
@@ -218,8 +259,6 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
               <th style={{ padding: "0.8rem 0.8rem", textAlign: "center", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#E8A87C", borderLeft: "1px solid rgba(255,255,255,0.1)", whiteSpace: "nowrap" }}>Delinquent</th>
               <th style={{ padding: "0.8rem 1rem", textAlign: "right", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", borderLeft: "1px solid rgba(255,255,255,0.08)", whiteSpace: "nowrap" }}>Total</th>
             </tr>
-
-            {/* MAS / AOF sub-headers */}
             <tr style={{ background: "#0D3320", borderBottom: "2px solid rgba(201,168,76,0.3)" }}>
               <th colSpan={2} style={{ padding: "0 0 0.6rem" }} />
               {years.map(y => (
@@ -234,27 +273,20 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
 
           <tbody>
             <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-              {/* Name */}
               <td style={{ padding: "1rem 1rem", verticalAlign: "middle" }}>
                 <p style={{ fontSize: "0.92rem", fontWeight: 700, color: "#0D3320", whiteSpace: "nowrap" }}>{memberName}</p>
               </td>
-
-              {/* Status */}
               <td style={{ padding: "1rem 0.6rem", textAlign: "center", verticalAlign: "middle" }}>
                 <span style={{ background: ss.bg, color: ss.color, fontSize: "0.68rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20, textTransform: "capitalize", whiteSpace: "nowrap" }}>
                   {member.status || "Active"}
                 </span>
               </td>
-
-              {/* Year cells */}
               {years.map(y => (
                 <>
                   <PayCell key={`${y}-mas`} year={y} type="mas" />
                   <PayCell key={`${y}-aof`} year={y} type="aof" />
                 </>
               ))}
-
-              {/* Delinquent count */}
               <td style={{ padding: "1rem 0.8rem", textAlign: "center", verticalAlign: "middle", borderLeft: "1px solid rgba(0,0,0,0.06)" }}>
                 {totalDelinquent > 0 ? (
                   <span style={{ background: "#FDECEA", color: "#A8200D", fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 20 }}>
@@ -264,8 +296,6 @@ const memberName = [member.first_name, member.middle_name?.trim() ? member.middl
                   <span style={{ color: "#1A6B35", fontSize: "0.78rem", fontWeight: 700 }}>✓</span>
                 )}
               </td>
-
-              {/* Total */}
               <td style={{ padding: "1rem 1rem", textAlign: "right", verticalAlign: "middle", borderLeft: "1px solid rgba(0,0,0,0.06)" }}>
                 <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1rem", fontWeight: 700, color: "#0D3320", whiteSpace: "nowrap" }}>
                   ₱{totalPaid.toLocaleString()}

@@ -20,15 +20,6 @@ const MEMBER_RIGHTS = [
   { icon: Star,     title: "Benefits Access",       desc: "Access to all organizational programs and welfare benefits." },
 ];
 
-const ORG_RULES = [
-  "Annual dues (MAS ₱500 + Annual Operational Expenses ₱240 + AOF ₱100) must be settled by December of each year.",
-  "Members with 2 consecutive unpaid years are classified as Non-Active.",
-  "Members with 3 or more consecutive unpaid years are automatically Dropped.",
-  "Dropped members may apply for reinstatement subject to Board approval.",
-  "Deceased members are honored with a ₱9,000 MAS benefit upon notification.",
-  "All members must keep contact information and beneficiary details updated.",
-];
-
 export default function DashboardPage() {
   const [user,         setUser]         = useState<any>(null);
   const [member,       setMember]       = useState<any>(null);
@@ -38,14 +29,20 @@ export default function DashboardPage() {
   const [loading,      setLoading]      = useState(true);
   const [activeTab,    setActiveTab]    = useState<"overview"|"payments"|"rights"|"officers">("overview");
   const [editOpen,     setEditOpen]     = useState(false);
-const [showPayment, setShowPayment] = useState(false);
-const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
+  const [showPayment,  setShowPayment]  = useState(false);
+  const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
   const [paymentItems, setPaymentItems] = useState<any[]>([]);
   const [uploading,    setUploading]    = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState("");
   const [dismissing,   setDismissing]   = useState(false);
-  const [editForm,     setEditForm]     = useState({
+
+  // ── Fee schedule for current year ──
+  const [currentFeeSchedule, setCurrentFeeSchedule] = useState<{
+    fee_aof: number; fee_mas: number; fee_lifetime: number;
+  } | null>(null);
+
+  const [editForm, setEditForm] = useState({
     mobile: "", address: "", beneficiary_name: "", beneficiary_relation: "",
   });
   const fileRef  = useRef<HTMLInputElement>(null);
@@ -82,7 +79,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
           .order("year", { ascending: false });
         setPayments(paymentData || []);
 
-        // Load payment submissions for notifications
         const { data: subData } = await supabase
           .from("payment_submissions")
           .select("*")
@@ -95,20 +91,42 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
         .from("officers").select("*").eq("is_active", true).order("order_num");
       setOfficers(officerData || []);
 
+      // ── Fetch current year fee schedule ──
+      const currentYear = new Date().getFullYear();
+      const { data: feeData } = await supabase
+        .from("fee_schedules")
+        .select("fee_aof, fee_mas, fee_lifetime")
+        .eq("year", currentYear)
+        .single();
+      if (feeData) setCurrentFeeSchedule(feeData);
+
       setLoading(false);
     };
     load();
   }, []);
 
-  // ── Which submission to show as notification ──
-  // Show the latest one that is not dismissed AND is within 5 days
+  // ── Derived fee values (safe fallback to 0 until loaded) ──
+  const feeAof      = currentFeeSchedule ? Number(currentFeeSchedule.fee_aof)      : 0;
+  const feeMas      = currentFeeSchedule ? Number(currentFeeSchedule.fee_mas)      : 0;
+  const feeLifetime = currentFeeSchedule ? Number(currentFeeSchedule.fee_lifetime) : 0;
+  const feeAnnual   = feeAof + feeMas;
+
+  // ── Org rules built dynamically from fee schedule ──
+  const ORG_RULES = [
+    `Annual dues (MAS ₱${feeMas.toLocaleString()} + AOF ₱${feeAof.toLocaleString()}) must be settled by December 31 of each year.`,
+    "Members with 2 consecutive unpaid years are classified as Non-Active.",
+    "Members with 3 or more consecutive unpaid years are automatically Dropped.",
+    "Dropped members may apply for reinstatement subject to Board approval.",
+    "Deceased members are honored with a ₱1,500 MAS benefit upon notification.",
+    "All members must keep contact information and beneficiary details updated.",
+  ];
+
+  // ── Active notification ──
   const activeNotification = (() => {
     if (!submissions.length) return null;
     const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
     for (const sub of submissions) {
       if (sub.dismissed_by_member_at) continue;
-      // For pending: show if created within 5 days
-      // For approved/rejected: show if reviewed_at is within 5 days
       const referenceDate = sub.status === "pending"
         ? new Date(sub.created_at)
         : sub.reviewed_at ? new Date(sub.reviewed_at) : new Date(sub.created_at);
@@ -135,7 +153,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
     return null;
   };
 
-  // ── Compress & convert to WebP ──
   const compressToWebP = (file: File, maxPx = 800): Promise<Blob> =>
     new Promise((resolve, reject) => {
       const img = new Image();
@@ -299,171 +316,94 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
     const configs = {
       pending: {
         bg: "linear-gradient(135deg, #1a3a6b 0%, #1e4d8c 100%)",
-        border: "rgba(0,119,255,0.4)",
-        iconBg: "rgba(0,119,255,0.25)",
+        border: "rgba(0,119,255,0.4)", iconBg: "rgba(0,119,255,0.25)",
         icon: <CircleDot size={26} color="#5BA8FF" />,
-        badgeBg: "rgba(0,119,255,0.3)",
-        badgeColor: "#A8D4FF",
-        badgeText: "⏳ UNDER REVIEW",
-        titleColor: "#A8D4FF",
-        title: "Payment Submitted — Awaiting Review",
-        msgColor: "rgba(255,255,255,0.85)",
+        badgeBg: "rgba(0,119,255,0.3)", badgeColor: "#A8D4FF", badgeText: "⏳ UNDER REVIEW",
+        titleColor: "#A8D4FF", title: "Payment Submitted — Awaiting Review", msgColor: "rgba(255,255,255,0.85)",
       },
       approved: {
         bg: "linear-gradient(135deg, #0f3d1f 0%, #155228 100%)",
-        border: "rgba(46,139,68,0.5)",
-        iconBg: "rgba(46,139,68,0.25)",
+        border: "rgba(46,139,68,0.5)", iconBg: "rgba(46,139,68,0.25)",
         icon: <CircleCheck size={26} color="#5DD98A" />,
-        badgeBg: "rgba(46,139,68,0.35)",
-        badgeColor: "#8FEBB0",
-        badgeText: "✅ APPROVED",
-        titleColor: "#8FEBB0",
-        title: "Payment Approved & Recorded!",
-        msgColor: "rgba(255,255,255,0.85)",
+        badgeBg: "rgba(46,139,68,0.35)", badgeColor: "#8FEBB0", badgeText: "✅ APPROVED",
+        titleColor: "#8FEBB0", title: "Payment Approved & Recorded!", msgColor: "rgba(255,255,255,0.85)",
       },
       rejected: {
         bg: "linear-gradient(135deg, #3d0f0f 0%, #521515 100%)",
-        border: "rgba(192,57,43,0.5)",
-        iconBg: "rgba(192,57,43,0.25)",
+        border: "rgba(192,57,43,0.5)", iconBg: "rgba(192,57,43,0.25)",
         icon: <CircleX size={26} color="#FF7B6B" />,
-        badgeBg: "rgba(192,57,43,0.3)",
-        badgeColor: "#FFAA9F",
-        badgeText: "❌ NOT APPROVED",
-        titleColor: "#FFAA9F",
-        title: "Payment Was Not Approved",
-        msgColor: "rgba(255,255,255,0.85)",
+        badgeBg: "rgba(192,57,43,0.3)", badgeColor: "#FFAA9F", badgeText: "❌ NOT APPROVED",
+        titleColor: "#FFAA9F", title: "Payment Was Not Approved", msgColor: "rgba(255,255,255,0.85)",
       },
     };
 
     const cfg = configs[sub.status as keyof typeof configs] || configs.pending;
+
+    // ── Build covers summary including lifetime ──
     const coversSummary = (() => {
+      const parts: string[] = [];
+      if (notes?.lifetime_included) parts.push("Lifetime Fee");
       if (notes?.year_breakdown?.length > 0) {
-        return notes.year_breakdown.map((y: any) => {
-          const parts = [y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join("+");
-          return `${y.year} (${parts})`;
-        }).join(", ");
+        notes.year_breakdown.forEach((y: any) => {
+          const types = [y.aof && "AOF", y.mas && "MAS"].filter(Boolean).join("+");
+          parts.push(`${y.year} (${types})`);
+        });
+      } else if (sub.year) {
+        parts.push(`${sub.year}`);
       }
-      return sub.year ? `${sub.year}` : "—";
+      return parts.join(", ") || "—";
     })();
 
     return (
-      <div style={{
-        background: cfg.bg,
-        border: `1.5px solid ${cfg.border}`,
-        borderRadius: 14,
-        padding: "1.3rem 1.5rem",
-        marginBottom: "1.5rem",
-        position: "relative",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
-      }}>
-        {/* Dismiss button */}
-        <button
-          onClick={() => handleDismissNotification(sub.id)}
-          disabled={dismissing}
-          title="Dismiss this notification"
-          style={{
-            position: "absolute", top: 12, right: 12,
-            background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)",
-            color: "rgba(255,255,255,0.6)", width: 30, height: 30,
-            borderRadius: "50%", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: "'DM Sans', sans-serif",
-          }}
-        >
+      <div style={{ background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 14, padding: "1.3rem 1.5rem", marginBottom: "1.5rem", position: "relative", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }}>
+        <button onClick={() => handleDismissNotification(sub.id)} disabled={dismissing}
+          style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.6)", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>
           <X size={14} />
         </button>
-
         <div style={{ display: "flex", alignItems: "flex-start", gap: "1rem", paddingRight: "2rem" }}>
-          {/* Icon */}
-          <div style={{
-            width: 50, height: 50, borderRadius: 12,
-            background: cfg.iconBg,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0,
-          }}>
+          <div style={{ width: 50, height: 50, borderRadius: 12, background: cfg.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {cfg.icon}
           </div>
-
           <div style={{ flex: 1 }}>
-            {/* Badge + Title */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.4rem", flexWrap: "wrap" }}>
-              <span style={{
-                background: cfg.badgeBg, color: cfg.badgeColor,
-                fontSize: "0.65rem", fontWeight: 700,
-                letterSpacing: "0.1em", padding: "3px 10px",
-                borderRadius: 20,
-              }}>
-                {cfg.badgeText}
-              </span>
+              <span style={{ background: cfg.badgeBg, color: cfg.badgeColor, fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", padding: "3px 10px", borderRadius: 20 }}>{cfg.badgeText}</span>
               <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.35)" }}>
-                {sub.status === "pending"
-                  ? `Submitted ${formatDate(sub.created_at)}`
-                  : sub.reviewed_at ? `Reviewed ${formatDate(sub.reviewed_at)}` : ""}
+                {sub.status === "pending" ? `Submitted ${formatDate(sub.created_at)}` : sub.reviewed_at ? `Reviewed ${formatDate(sub.reviewed_at)}` : ""}
               </span>
             </div>
-
-            <p style={{
-              fontFamily: "'DM Serif Display', serif",
-              fontSize: "1.05rem", fontWeight: 700,
-              color: cfg.titleColor, marginBottom: "0.5rem",
-            }}>
-              {cfg.title}
-            </p>
-
-            {/* Details */}
+            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.05rem", fontWeight: 700, color: cfg.titleColor, marginBottom: "0.5rem" }}>{cfg.title}</p>
             {sub.status === "pending" && (
               <p style={{ fontSize: "0.88rem", color: cfg.msgColor, lineHeight: 1.6 }}>
-                Your GCash payment of{" "}
-                <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong>
-                {" "}covering <strong style={{ color: "white" }}>{coversSummary}</strong> has been submitted and is being verified by our officers. This usually takes 1–3 business days.
+                Your GCash payment of <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong> covering <strong style={{ color: "white" }}>{coversSummary}</strong> has been submitted and is being verified. This usually takes 1–3 business days.
               </p>
             )}
-
             {sub.status === "approved" && (
               <div>
                 <p style={{ fontSize: "0.88rem", color: cfg.msgColor, lineHeight: 1.6, marginBottom: "0.6rem" }}>
-                  Your payment of{" "}
-                  <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong>
-                  {" "}for <strong style={{ color: "white" }}>{coversSummary}</strong> has been approved and recorded in your payment history.
+                  Your payment of <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong> for <strong style={{ color: "white" }}>{coversSummary}</strong> has been approved and recorded in your payment history.
                 </p>
-                <div style={{
-                  background: "rgba(0,0,0,0.2)", borderRadius: 8,
-                  padding: "0.6rem 1rem",
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
+                <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "0.6rem 1rem", display: "flex", alignItems: "center", gap: 8 }}>
                   <FileText size={14} color="#8FEBB0" />
-                  <p style={{ fontSize: "0.82rem", color: "#8FEBB0", fontWeight: 600 }}>
-                    Payment is now reflected in your Payments tab.
-                  </p>
+                  <p style={{ fontSize: "0.82rem", color: "#8FEBB0", fontWeight: 600 }}>Payment is now reflected in your Payments tab.</p>
                 </div>
               </div>
             )}
-
             {sub.status === "rejected" && (
               <div>
                 <p style={{ fontSize: "0.88rem", color: cfg.msgColor, lineHeight: 1.6, marginBottom: "0.6rem" }}>
-                  Your GCash payment submission of{" "}
-                  <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong>
-                  {" "}was not approved by our officers.
+                  Your GCash payment submission of <strong style={{ color: "white" }}>₱{Number(sub.total_amount).toLocaleString()}</strong> was not approved by our officers.
                 </p>
                 {sub.rejection_reason && (
-                  <div style={{
-                    background: "rgba(192,57,43,0.2)", border: "1px solid rgba(192,57,43,0.3)",
-                    borderRadius: 8, padding: "0.7rem 1rem", marginBottom: "0.6rem",
-                  }}>
+                  <div style={{ background: "rgba(192,57,43,0.2)", border: "1px solid rgba(192,57,43,0.3)", borderRadius: 8, padding: "0.7rem 1rem", marginBottom: "0.6rem" }}>
                     <p style={{ fontSize: "0.8rem", color: "#FFAA9F", fontWeight: 700, marginBottom: 2 }}>Reason:</p>
                     <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>{sub.rejection_reason}</p>
                   </div>
                 )}
-                <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)" }}>
-                  Please contact our officers or resubmit with the correct details.
-                </p>
+                <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)" }}>Please contact our officers or resubmit with the correct details.</p>
               </div>
             )}
           </div>
         </div>
-
-        {/* Progress dots for pending */}
         {sub.status === "pending" && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: "1rem", paddingLeft: "4rem" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#5BA8FF" }} />
@@ -485,15 +425,7 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
     <main style={{ minHeight: "100vh", background: "#F0EDE6", fontFamily: "'DM Sans', sans-serif" }}>
 
       {/* NAV */}
-      <nav style={{
-        background: "#0D3320",
-        borderBottom: "2px solid #C9A84C",
-        padding: "0 2rem",
-        height: 66,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        position: "sticky", top: 0, zIndex: 100,
-        boxShadow: "0 2px 20px rgba(0,0,0,0.3)",
-      }}>
+      <nav style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "0 2rem", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 20px rgba(0,0,0,0.3)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/images/sunco-logo.png" alt="SUNCO" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain" }} />
           <div>
@@ -502,7 +434,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Notification bell indicator */}
           {activeNotification && (
             <div style={{ position: "relative" }}>
               <Bell size={20} color={activeNotification.status === "pending" ? "#5BA8FF" : activeNotification.status === "approved" ? "#5DD98A" : "#FF7B6B"} />
@@ -518,7 +449,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
 
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "2rem 1.5rem" }}>
 
-        {/* ── PAYMENT NOTIFICATION BANNER ── */}
         <PaymentNotificationBanner />
 
         {/* BIRTHDAY BANNER */}
@@ -533,18 +463,10 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
         )}
 
         {/* HERO CARD */}
-        <div style={{
-          background: "linear-gradient(135deg, #0D3320 0%, #1A5C2A 65%, #0D3320 100%)",
-          borderRadius: 16, padding: "2rem", marginBottom: "1.5rem",
-          border: "1px solid rgba(255,255,255,0.06)",
-          position: "relative", overflow: "hidden",
-          boxShadow: "0 8px 32px rgba(13,51,32,0.25)",
-        }}>
+        <div style={{ background: "linear-gradient(135deg, #0D3320 0%, #1A5C2A 65%, #0D3320 100%)", borderRadius: 16, padding: "2rem", marginBottom: "1.5rem", border: "1px solid rgba(255,255,255,0.06)", position: "relative", overflow: "hidden", boxShadow: "0 8px 32px rgba(13,51,32,0.25)" }}>
           <div style={{ position: "absolute", top: -40, right: -40, width: 220, height: 220, borderRadius: "50%", background: "rgba(201,168,76,0.06)", pointerEvents: "none" }} />
           <div style={{ position: "absolute", bottom: -60, left: -20, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.03)", pointerEvents: "none" }} />
-
           <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap", position: "relative" }}>
-            {/* Avatar */}
             <div style={{ position: "relative", flexShrink: 0 }}>
               <div style={{ width: 96, height: 96, borderRadius: "50%", border: "3px solid #C9A84C", overflow: "hidden", background: "rgba(201,168,76,0.15)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 0 6px rgba(201,168,76,0.12)" }}>
                 {member?.avatar_url ? (
@@ -555,14 +477,12 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                   <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: "2rem", color: "#C9A84C" }}>{getInitials()}</span>
                 )}
               </div>
-              <button onClick={() => fileRef.current?.click()} disabled={uploading} title="Change photo"
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}
                 style={{ position: "absolute", bottom: 2, right: 2, width: 30, height: 30, borderRadius: "50%", background: "#C9A84C", border: "2.5px solid #0D3320", display: "flex", alignItems: "center", justifyContent: "center", cursor: uploading ? "wait" : "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
                 {uploading ? <Clock size={13} color="#0D3320" /> : <Camera size={13} color="#0D3320" />}
               </button>
               <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
             </div>
-
-            {/* Info */}
             <div style={{ flex: 1, minWidth: 200 }}>
               <p style={{ fontSize: "0.65rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>Welcome back</p>
               <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.8rem", color: "white", fontWeight: 400, lineHeight: 1.15, marginBottom: 12 }}>{getFullName()}</h1>
@@ -589,8 +509,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                 )}
               </div>
             </div>
-
-            {/* Status + Edit */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
               <div style={{ background: sc.bg, color: sc.text, border: `1.5px solid ${sc.border}`, padding: "0.45rem 1.2rem", borderRadius: 20, fontSize: "0.85rem", fontWeight: 700, textTransform: "capitalize", letterSpacing: "0.04em" }}>
                 {member?.status || "Active"}
@@ -623,8 +541,6 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
             </div>
           ))}
         </div>
-
-
 
         {/* TABS */}
         <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.4rem", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -662,144 +578,144 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
           </div>
         )}
 
+        {/* TAB: PAYMENTS */}
+        {activeTab === "payments" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
 
+            {/* ── Pay Dues CTA ── */}
+            {(() => {
+              const currentYear = new Date().getFullYear();
+              const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
+              const unpaidYears = [];
+              for (let y = joinYear; y <= currentYear; y++) {
+                const hasAof = payments.some(p => p.year === y && p.type === "aof");
+                const hasMas = payments.some(p => p.year === y && p.type === "mas");
+                if (!hasAof || !hasMas) unpaidYears.push(y);
+              }
+              const lifetimePaid = payments.some(p => p.type === "lifetime");
+              if (unpaidYears.length === 0 && lifetimePaid) return null;
 
-{/* TAB: PAYMENTS */}
-{activeTab === "payments" && (
-  <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+              const isDropped    = member?.status === "dropped";
+              const isNonActive  = member?.status === "non-active";
+              const accentColor  = isDropped ? "#A8200D" : isNonActive ? "#A66C00" : "#0077FF";
+              const accentBg     = isDropped ? "#FDECEA"  : isNonActive ? "#FFF8E1"  : "#EEF4FF";
+              const accentBorder = isDropped ? "#F5A49A"  : isNonActive ? "#FFD97A"  : "#BBCFFF";
 
-    {/* ── Pay Dues CTA (shown only when there are delinquent years) ── */}
-    {(() => {
-      const currentYear = 2026;
-      const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
-      const unpaidYears = [];
-      for (let y = joinYear; y <= currentYear; y++) {
-        const hasAof = payments.some(p => p.year === y && p.type === "aof");
-        const hasMas = payments.some(p => p.year === y && p.type === "mas");
-        if (!hasAof || !hasMas) unpaidYears.push(y);
-      }
-      if (unpaidYears.length === 0) return null;
+              // ── Calculate correct outstanding amount from fee schedule ──
+              const annualOwed = unpaidYears.length * feeAnnual;
+              const lifetimeOwed = !lifetimePaid ? feeLifetime : 0;
+              const totalOwed = annualOwed + lifetimeOwed;
 
-      const isDropped = member?.status === "dropped";
-      const isNonActive = member?.status === "non-active";
-      const accentColor = isDropped ? "#A8200D" : isNonActive ? "#A66C00" : "#0077FF";
-      const accentBg    = isDropped ? "#FDECEA"  : isNonActive ? "#FFF8E1"  : "#EEF4FF";
-      const accentBorder= isDropped ? "#F5A49A"  : isNonActive ? "#FFD97A"  : "#BBCFFF";
+              return (
+                <div style={{ background: accentBg, border: `1.5px solid ${accentBorder}`, borderRadius: 12, padding: "1.2rem 1.4rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.8rem", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accentColor}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <AlertTriangle size={20} color={accentColor} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "0.92rem", fontWeight: 700, color: accentColor, marginBottom: 2 }}>
+                        {unpaidYears.length > 0
+                          ? `${unpaidYears.length} delinquent year${unpaidYears.length > 1 ? "s" : ""} — ₱${totalOwed.toLocaleString()} outstanding`
+                          : `Lifetime fee unpaid — ₱${feeLifetime.toLocaleString()} outstanding`
+                        }
+                      </p>
+                      <p style={{ fontSize: "0.8rem", color: "#666" }}>
+                        {unpaidYears.length > 0
+                          ? `Unpaid: ${unpaidYears.join(", ")} · ₱${feeAnnual.toLocaleString()}/yr (MAS ₱${feeMas.toLocaleString()} + AOF ₱${feeAof.toLocaleString()})`
+                          : "One-time lifetime membership fee not yet recorded"
+                        }
+                        {!lifetimePaid && unpaidYears.length > 0 && ` + ₱${feeLifetime.toLocaleString()} lifetime fee`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const allYears = [];
+                      for (let y = joinYear; y <= currentYear; y++) {
+                        allYears.push({
+                          year: y,
+                          hasAof: payments.some(p => p.year === y && p.type === "aof"),
+                          hasMas: payments.some(p => p.year === y && p.type === "mas"),
+                        });
+                      }
+                      setPaymentItems(allYears);
+                      setHasLifetimePaid(lifetimePaid);
+                      setShowPayment(true);
+                    }}
+                    style={{ background: "#0077FF", color: "white", border: "none", padding: "0.6rem 1.4rem", borderRadius: 8, fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 12px rgba(0,119,255,0.3)", whiteSpace: "nowrap" }}>
+                    <BanknoteIcon size={16} /> Pay Now via GCash
+                  </button>
+                </div>
+              );
+            })()}
 
-      return (
-        <div style={{
-          background: accentBg,
-          border: `1.5px solid ${accentBorder}`,
-          borderRadius: 12, padding: "1.2rem 1.4rem",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexWrap: "wrap", gap: "0.8rem",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accentColor}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <AlertTriangle size={20} color={accentColor} />
-            </div>
-            <div>
-              <p style={{ fontSize: "0.92rem", fontWeight: 700, color: accentColor, marginBottom: 2 }}>
-                {unpaidYears.length} delinquent year{unpaidYears.length > 1 ? "s" : ""} — ₱{(unpaidYears.length * 840).toLocaleString()} outstanding
-              </p>
-              <p style={{ fontSize: "0.8rem", color: "#666" }}>
-                Unpaid: {unpaidYears.join(", ")} · ₱840/yr (MAS ₱740 + AOF ₱100)
-              </p>
+            {/* ── Delinquency Table ── */}
+            {payments.length > 0 && (
+              <div style={{ width: "100%", minWidth: 0 }}>
+                <MemberDelinquencyTable member={member} payments={payments} supabase={supabase} />
+              </div>
+            )}
+
+            {/* ── Payment History Table ── */}
+            <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+              <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <CreditCard size={18} color="#1A5C2A" />
+                  <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
+                </div>
+                {/* ── Dynamic fee display from fee schedule ── */}
+                <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>
+                  {currentFeeSchedule
+                    ? `AOF ₱${feeAof.toLocaleString()} · MAS ₱${feeMas.toLocaleString()} per year`
+                    : "Loading rates..."}
+                </span>
+              </div>
+              {payments.length === 0 ? (
+                <div style={{ padding: "3rem", textAlign: "center" }}>
+                  <CreditCard size={40} color="rgba(0,0,0,0.1)" style={{ marginBottom: 12 }} />
+                  <p style={{ color: "#999", fontSize: "1rem", fontWeight: 600 }}>No payments recorded yet.</p>
+                  <p style={{ color: "#CCC", fontSize: "0.88rem", marginTop: 6 }}>Your history will appear here once recorded by SUNCO officers.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto", width: "100%" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+                    <thead>
+                      <tr style={{ background: "#F9F8F5" }}>
+                        {["Year", "Type", "Amount", "Date Paid", "Receipt No."].map(h => (
+                          <th key={h} style={{ padding: "0.85rem 1.2rem", textAlign: "left", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999", fontWeight: 600 }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p, i) => {
+                        const tc = TYPE_COLOR[p.type] || { bg: "#F5F5F5", text: "#666" };
+                        return (
+                          <tr key={p.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", background: i % 2 === 0 ? "white" : "#FAFAF8" }}>
+                            <td style={{ padding: "1rem 1.2rem", fontSize: "1rem", fontWeight: 700, color: "#0D3320" }}>{p.year}</td>
+                            <td style={{ padding: "1rem 1.2rem" }}>
+                              <span style={{ background: tc.bg, color: tc.text, fontSize: "0.75rem", fontWeight: 700, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{p.type}</span>
+                            </td>
+                            <td style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#1A5C2A", fontWeight: 700 }}>₱{Number(p.amount).toLocaleString()}</td>
+                            <td style={{ padding: "1rem 1.2rem", fontSize: "0.88rem", color: "#777", fontWeight: 500 }}>
+                              {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}
+                            </td>
+                            <td style={{ padding: "1rem 1.2rem", fontSize: "0.82rem", color: "#999", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ background: "#F9F8F5", borderTop: "2px solid #C9A84C" }}>
+                        <td colSpan={2} style={{ padding: "1rem 1.2rem", fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", fontWeight: 600 }}>Total Paid</td>
+                        <td colSpan={3} style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320", fontWeight: 700 }}>₱{totalPaid.toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
-          <button
-            onClick={() => {
-              const allYears = [];
-              for (let y = joinYear; y <= currentYear; y++) {
-                allYears.push({
-                  year: y,
-                  hasAof: payments.some(p => p.year === y && p.type === "aof"),
-                  hasMas: payments.some(p => p.year === y && p.type === "mas"),
-                });
-              }
-              setPaymentItems(allYears);
-              setHasLifetimePaid(payments.some(p => p.type === "lifetime"));
-              setShowPayment(true);
-            }}
-            style={{
-              background: "#0077FF", color: "white", border: "none",
-              padding: "0.6rem 1.4rem", borderRadius: 8, fontSize: "0.88rem",
-              fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-              display: "flex", alignItems: "center", gap: 8,
-              boxShadow: "0 4px 12px rgba(0,119,255,0.3)", whiteSpace: "nowrap",
-            }}
-          >
-            <BanknoteIcon size={16} /> Pay Now via GCash
-          </button>
-        </div>
-      );
-    })()}
-
-    {/* ── Delinquency Table ── */}
-    {payments.length > 0 && (
-      <div style={{ width: "100%", minWidth: 0 }}>
-        <MemberDelinquencyTable member={member} payments={payments} />
-      </div>
-    )}
-
-    {/* ── Payment History Table ── */}
-    <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-      <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <CreditCard size={18} color="#1A5C2A" />
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
-        </div>
-        <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>AOF ₱100 · MAS ₱740 per year</span>
-      </div>
-
-      {payments.length === 0 ? (
-        <div style={{ padding: "3rem", textAlign: "center" }}>
-          <CreditCard size={40} color="rgba(0,0,0,0.1)" style={{ marginBottom: 12 }} />
-          <p style={{ color: "#999", fontSize: "1rem", fontWeight: 600 }}>No payments recorded yet.</p>
-          <p style={{ color: "#CCC", fontSize: "0.88rem", marginTop: 6 }}>Your history will appear here once recorded by SUNCO officers.</p>
-        </div>
-      ) : (
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
-            <thead>
-              <tr style={{ background: "#F9F8F5" }}>
-                {["Year", "Type", "Amount", "Date Paid", "Receipt No."].map(h => (
-                  <th key={h} style={{ padding: "0.85rem 1.2rem", textAlign: "left", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#999", fontWeight: 600 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((p, i) => {
-                const tc = TYPE_COLOR[p.type] || { bg: "#F5F5F5", text: "#666" };
-                return (
-                  <tr key={p.id} style={{ borderTop: "1px solid rgba(0,0,0,0.05)", background: i % 2 === 0 ? "white" : "#FAFAF8" }}>
-                    <td style={{ padding: "1rem 1.2rem", fontSize: "1rem", fontWeight: 700, color: "#0D3320" }}>{p.year}</td>
-                    <td style={{ padding: "1rem 1.2rem" }}>
-                      <span style={{ background: tc.bg, color: tc.text, fontSize: "0.75rem", fontWeight: 700, padding: "4px 12px", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.05em" }}>{p.type}</span>
-                    </td>
-                    <td style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#1A5C2A", fontWeight: 700 }}>₱{Number(p.amount).toLocaleString()}</td>
-                    <td style={{ padding: "1rem 1.2rem", fontSize: "0.88rem", color: "#777", fontWeight: 500 }}>
-                      {p.date_paid ? new Date(p.date_paid).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}
-                    </td>
-                    <td style={{ padding: "1rem 1.2rem", fontSize: "0.82rem", color: "#999", fontFamily: "monospace" }}>{p.receipt_number || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: "#F9F8F5", borderTop: "2px solid #C9A84C" }}>
-                <td colSpan={2} style={{ padding: "1rem 1.2rem", fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", fontWeight: 600 }}>Total Paid</td>
-                <td colSpan={3} style={{ padding: "1rem 1.2rem", fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320", fontWeight: 700 }}>₱{totalPaid.toLocaleString()}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-    </div>
-
-  </div>
-)}
+        )}
 
         {/* TAB: RIGHTS & RULES */}
         {activeTab === "rights" && (
@@ -871,10 +787,9 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
               <Users size={18} color="#1A5C2A" />
               <div>
                 <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Current Officers</h2>
-                <p style={{ fontSize: "0.78rem", color: "#BBB", marginTop: 2 }}>Board of Officers — 2026</p>
+                <p style={{ fontSize: "0.78rem", color: "#BBB", marginTop: 2 }}>Board of Officers — {new Date().getFullYear()}</p>
               </div>
             </div>
-
             {officers.filter(o => o.role_type === "executive").length > 0 && (
               <div style={{ padding: "1.5rem" }}>
                 <p style={{ fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem", fontWeight: 600 }}>Executive Officers</p>
@@ -895,16 +810,13 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                 </div>
               </div>
             )}
-
             {officers.filter(o => o.role_type === "pio").length > 0 && (
               <div style={{ padding: "0 1.5rem 1.5rem" }}>
                 <p style={{ fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem", fontWeight: 600 }}>Public Information Officers</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
                   {officers.filter(o => o.role_type === "pio").map(officer => (
                     <div key={officer.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0.9rem 1rem", background: "#F9F8F5", borderRadius: 10, border: "1px solid rgba(0,0,0,0.05)" }}>
-                      {officer.photo_url ? (
-                        <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                      ) : (
+                      {officer.photo_url ? <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : (
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.9rem", fontWeight: 700, color: "#0D3320" }}>
                           {(officer.name || "").trim() ? officer.name.trim().split(" ").filter((p: string) => p.length > 0).slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() : "?"}
                         </div>
@@ -918,16 +830,13 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                 </div>
               </div>
             )}
-
             {officers.filter(o => o.role_type === "bod").length > 0 && (
               <div style={{ padding: "0 1.5rem 1.5rem" }}>
                 <p style={{ fontSize: "0.7rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "#BBB", marginBottom: "1rem", fontWeight: 600 }}>Board of Directors</p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.8rem" }}>
                   {officers.filter(o => o.role_type === "bod").map(officer => (
                     <div key={officer.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0.9rem 1rem", background: "#F9F8F5", borderRadius: 10, border: "1px solid rgba(0,0,0,0.05)" }}>
-                      {officer.photo_url ? (
-                        <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                      ) : (
+                      {officer.photo_url ? <img src={officer.photo_url} alt={officer.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : (
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#E4EFE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "0.9rem", fontWeight: 700, color: "#0D3320" }}>
                           {(officer.name || "").trim() ? officer.name.trim().split(" ").filter((p: string) => p.length > 0).slice(0, 2).map((p: string) => p[0]).join("").toUpperCase() : "?"}
                         </div>
@@ -941,16 +850,14 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
                 </div>
               </div>
             )}
-
             {officers.length === 0 && (
               <div style={{ padding: "3rem", textAlign: "center", color: "#BBB", fontSize: "0.95rem" }}>No officers listed yet.</div>
             )}
-
             <div style={{ margin: "0 1.5rem 1.5rem", padding: "1rem 1.2rem", background: "#EEF6F1", borderRadius: 10, border: "1px solid #C0D9C6", display: "flex", gap: 10, alignItems: "flex-start" }}>
               <Info size={16} color="#1A5C2A" style={{ marginTop: 2, flexShrink: 0 }} />
               <div>
                 <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1A5C2A", marginBottom: 4 }}>For inquiries and concerns</p>
-                <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6 }}>Contact any officer directly or submit a written request to the Secretary. General assemblies are held once a year.</p>
+                <p style={{ fontSize: "0.85rem", color: "#555", lineHeight: 1.6 }}>Contact any officer directly or submit a written request to the Secretary. General assemblies are held quarterly.</p>
               </div>
             </div>
           </div>
@@ -973,11 +880,7 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
             <div style={{ padding: "1.5rem 1.6rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.3rem", padding: "1rem", background: "#F9F8F5", borderRadius: 10 }}>
                 <div style={{ width: 62, height: 62, borderRadius: "50%", border: "2.5px solid #C9A84C", overflow: "hidden", background: "#EAF0EB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {member?.avatar_url ? (
-                    <img src={member.avatar_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320" }}>{getInitials()}</span>
-                  )}
+                  {member?.avatar_url ? <img src={member.avatar_url} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.3rem", color: "#0D3320" }}>{getInitials()}</span>}
                 </div>
                 <div>
                   <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0D3320", marginBottom: 3 }}>Profile Photo</p>
@@ -995,12 +898,8 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
               ].map(({ key, label, placeholder }) => (
                 <div key={key} style={{ marginBottom: "1rem" }}>
                   <label style={{ display: "block", fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#999", marginBottom: 5, fontWeight: 600 }}>{label}</label>
-                  <input
-                    value={(editForm as any)[key]}
-                    onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    style={{ width: "100%", padding: "0.72rem 1rem", border: "1.5px solid rgba(0,0,0,0.12)", borderRadius: 8, fontSize: "0.95rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#0D3320", boxSizing: "border-box" }}
-                  />
+                  <input value={(editForm as any)[key]} onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))} placeholder={placeholder}
+                    style={{ width: "100%", padding: "0.72rem 1rem", border: "1.5px solid rgba(0,0,0,0.12)", borderRadius: 8, fontSize: "0.95rem", fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#0D3320", boxSizing: "border-box" }} />
                 </div>
               ))}
               {saveMsg && (
@@ -1052,6 +951,3 @@ const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
     </main>
   );
 }
-
-
-// cache-bust
