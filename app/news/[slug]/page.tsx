@@ -28,7 +28,7 @@ async function getPost(slugOrId: string) {
 
   if (postById) return { post: postById, source: "posts" };
 
-  return null;
+return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
