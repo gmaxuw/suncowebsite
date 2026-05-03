@@ -1,9 +1,8 @@
 "use client";
-// ─────────────────────────────────────────────
-// cms/SettingsPanel.tsx — Premium 2026 Edition
-// One-stop shop for all site settings
-// Groups: Identity · Hero · About · Contact · Fees · SEO
-// ─────────────────────────────────────────────
+// -------------------------------------------------
+// cms/SettingsPanel.tsx -- Premium 2026 Edition
+// Groups: Identity / Hero / About / Contact / SEO
+// -------------------------------------------------
 import { useEffect, useState, useRef } from "react";
 import {
   Save, RefreshCw, Upload, Globe, Info, Image as ImageIcon,
@@ -20,81 +19,23 @@ type Setting = {
 };
 
 const GROUPS = [
-  { id: "identity", label: "Identity",     icon: Building2,   desc: "Logo, org name, short name, registration numbers.",  color: "#C9A84C" },
-  { id: "hero",     label: "Hero Section", icon: Sparkles,    desc: "Homepage banner — headline, stats, buttons.",         color: "#2E8B44" },
-  { id: "about",    label: "About",        icon: Info,        desc: "About section headline and paragraphs.",              color: "#2B5FA8" },
-  { id: "contact",  label: "Contact",      icon: Phone,       desc: "Address, email, phone, Link2, GCash.",             color: "#9A2020" },
-  { id: "fees",     label: "Fees",         icon: DollarSign,  desc: "Membership and annual fee amounts.",                  color: "#6B3FA0" },
-  { id: "seo",      label: "SEO & Meta",   icon: Search,      desc: "Google title, description, social sharing image.",    color: "#1A7A8A" },
+  { id: "identity", label: "Identity",     icon: Building2, desc: "Logo, org name, short name, registration numbers.", color: "#C9A84C" },
+  { id: "hero",     label: "Hero Section", icon: Sparkles,  desc: "Homepage banner -- headline, stats, buttons.",      color: "#2E8B44" },
+  { id: "about",    label: "About",        icon: Info,      desc: "About section headline and paragraphs.",            color: "#2B5FA8" },
+  { id: "contact",  label: "Contact",      icon: Phone,     desc: "Address, email, phone, Facebook, GCash.",           color: "#9A2020" },
+  { id: "seo",      label: "SEO & Meta",   icon: Search,    desc: "Google title, description, social sharing image.",  color: "#1A7A8A" },
 ];
 
-// Which DB group_name maps to our UI group
 const GROUP_MAP: Record<string, string[]> = {
   identity: ["general"],
   hero:     ["hero"],
   about:    ["about"],
   contact:  ["general"],
-  fees:     ["fees"],
   seo:      ["seo"],
 };
 
-// Which keys belong to identity vs contact (both are group_name: "general")
 const IDENTITY_KEYS = ["org_name","org_short_name","org_established","org_sec_number","org_region","registration_open"];
 const CONTACT_KEYS  = ["org_address","org_email","org_phone","org_facebook","gcash_number","gcash_name","footer_tagline"];
-
-const FIELD_META: Record<string, {
-  label: string; hint: string; multiline?: boolean;
-  type?: string; placeholder?: string; toggle?: boolean;
-}> = {
-  // Identity
-  org_name:           { label: "Full Organization Name",      hint: "Legal name as registered with SEC.",          placeholder: "Surigao del Norte Consumers Organization, Inc." },
-  org_short_name:     { label: "Short Name / Abbreviation",   hint: "Used in nav and footer.",                     placeholder: "SUNCO" },
-  org_established:    { label: "Year Established",            hint: "Founding year.",                              placeholder: "2011", type: "number" },
-  org_sec_number:     { label: "SEC Registration Number",     hint: "Certificate of incorporation number.",        placeholder: "CN 2011-31-445" },
-  org_region:         { label: "Region",                      hint: "Administrative region.",                      placeholder: "Caraga Region (Region XIII)" },
-  registration_open:  { label: "Membership Registration",     hint: "Toggle to open or close new registrations.",  toggle: true },
-  // Hero
-  hero_logo_url:      { label: "Logo / Seal URL",             hint: "Auto-filled when you upload above." },
-  hero_eyebrow:       { label: "Eyebrow Text",                hint: "Small uppercase text above headline.",        placeholder: "Surigao del Norte · Est. 2011" },
-  hero_title_line1:   { label: "Headline — Line 1",           hint: "First line of the big headline.",             placeholder: "Protecting" },
-  hero_title_highlight:{ label: "Headline — Highlighted Word",hint: "The golden italic word.",                    placeholder: "Consumers," },
-  hero_title_line2:   { label: "Headline — Line 2",           hint: "",                                            placeholder: "Empowering" },
-  hero_title_line3:   { label: "Headline — Line 3",           hint: "",                                            placeholder: "Communities." },
-  hero_subtitle:      { label: "Subtitle / Tagline",          hint: "Italic text below headline.",                 placeholder: "SEC Registered · DTI Partner Organization" },
-  hero_description:   { label: "Hero Description",            hint: "Paragraph text in the hero.",                 multiline: true, placeholder: "SUNCO is the voice of consumers..." },
-  hero_btn1_text:     { label: "Button 1 Text",               hint: "Primary CTA button.",                         placeholder: "Become a Member" },
-  hero_btn2_text:     { label: "Button 2 Text",               hint: "Secondary button.",                           placeholder: "Our Mission" },
-  hero_stat1_num:     { label: "Stat 1 — Number",             hint: "",                                            placeholder: "2011" },
-  hero_stat1_label:   { label: "Stat 1 — Label",              hint: "",                                            placeholder: "Year Founded" },
-  hero_stat2_num:     { label: "Stat 2 — Number",             hint: "",                                            placeholder: "CN 2011-31-445" },
-  hero_stat2_label:   { label: "Stat 2 — Label",              hint: "",                                            placeholder: "SEC Registered Org." },
-  hero_stat3_num:     { label: "Stat 3 — Number",             hint: "",                                            placeholder: "DTI" },
-  hero_stat3_label:   { label: "Stat 3 — Label",              hint: "",                                            placeholder: "Accredited Partner" },
-  // About
-  about_title:        { label: "Section Headline",            hint: "Main heading for the About section.",         multiline: true, placeholder: "A trusted organization built for every consumer." },
-  about_p1:           { label: "Paragraph 1",                 hint: "First paragraph.",                            multiline: true },
-  about_p2:           { label: "Paragraph 2",                 hint: "Second paragraph.",                           multiline: true },
-  about_p3:           { label: "Paragraph 3",                 hint: "Third paragraph.",                            multiline: true },
-  // Contact
-  org_address:        { label: "Office Address",              hint: "Shown in footer.",                            multiline: true, placeholder: "Surigao del Norte, Caraga Region, Philippines" },
-  org_email:          { label: "Email Address",               hint: "Public contact email.",                       type: "email", placeholder: "info@sunco.org.ph" },
-  org_phone:          { label: "Phone Number",                hint: "Contact number.",                             placeholder: "0946-365-7331" },
-  org_facebook:       { label: "Facebook Page URL",           hint: "Full Facebook URL.",                          placeholder: "https://facebook.com/suncosurigao" },
-  gcash_number:       { label: "GCash Number",                hint: "For membership fee payments.",                placeholder: "09XX-XXX-XXXX" },
-  gcash_name:         { label: "GCash Account Name",          hint: "Name shown on GCash.",                        placeholder: "SUNCO Inc." },
-  footer_tagline:     { label: "Footer Tagline",              hint: "Short text in the footer about section.",     multiline: true },
-  // Fees
-  fee_lifetime:       { label: "Lifetime Membership Fee (₱)", hint: "One-time fee upon joining.",                  type: "number", placeholder: "100" },
-  fee_aof:            { label: "Annual Operating Fee (₱)",    hint: "Paid every year.",                            type: "number", placeholder: "240" },
-  fee_mas:            { label: "Mortuary Assistance (₱)",     hint: "Annual mutual aid contribution.",             type: "number", placeholder: "500" },
-  // SEO
-  seo_title:          { label: "Page Title",                  hint: "Shown in Google results. Leave blank to auto-generate.", placeholder: "SUNCO — Protecting Consumers in Surigao del Norte" },
-  seo_description:    { label: "Meta Description",            hint: "Shown under title in Google. Leave blank to auto-generate.", multiline: true, placeholder: "150-160 characters..." },
-  seo_og_image_url:   { label: "Social Sharing Image URL",    hint: "Shown when sharing on Facebook/Messenger. Leave blank to use logo.", placeholder: "https://..." },
-  site_url:           { label: "Website URL",                 hint: "Your live domain. Important for SEO.",        placeholder: "https://sunco.org.ph" },
-  facebook_page:      { label: "Facebook Page URL",           hint: "For Open Graph meta tags.",                   placeholder: "https://facebook.com/suncosurigao" },
-  google_site_verification: { label: "Google Verification Code", hint: "From Google Search Console.",             placeholder: "xxxxxxxxxxxxxxxxxxxxxx" },
-};
 
 const compressToWebP = (file: File): Promise<Blob> =>
   new Promise((resolve, reject) => {
@@ -184,9 +125,8 @@ export default function SettingsPanel({ supabase }: Props) {
     setLogoUploading(false);
   };
 
-  const groupSettings = getGroupSettings(activeGroup);
-  const activeMeta    = GROUPS.find(g => g.id === activeGroup)!;
-  const isOpen        = get("registration_open", "true") === "true";
+  const activeMeta = GROUPS.find(g => g.id === activeGroup)!;
+  const isOpen     = get("registration_open", "true") === "true";
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"4rem", gap:12, color:"var(--muted)" }}>
@@ -213,13 +153,12 @@ export default function SettingsPanel({ supabase }: Props) {
         .sp-nav-btn { width:100%; display:flex; align-items:center; gap:10px; padding:0.8rem 1rem; border:none; background:transparent; cursor:pointer; text-align:left; font-family:'DM Sans',sans-serif; border-radius:10px; transition:all 0.15s; margin-bottom:2px; }
         .sp-nav-btn:hover { background:rgba(26,92,42,0.05); }
         .sp-nav-btn.active { background:rgba(26,92,42,0.08); }
-        .sp-preview { background:linear-gradient(135deg,#0A2818 0%,#1A5C2A 100%); border-radius:14px; overflow:hidden; position:sticky; top:80px; }
+        .sp-preview { background:linear-gradient(135deg,#0A2818 0%,#1A5C2A 100%); border-radius:14px; overflow:hidden; }
         @keyframes sp-fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         .sp-section { animation: sp-fade 0.2s ease; }
         @media(max-width:900px){ .sp-grid-2,.sp-grid-3{grid-template-columns:1fr;} }
       `}</style>
 
-      {/* ── Status banners ── */}
       {saveStatus === "saved" && (
         <div style={{ display:"flex", alignItems:"center", gap:10, background:"rgba(46,139,68,0.08)", border:"1px solid rgba(46,139,68,0.25)", borderRadius:10, padding:"0.85rem 1.2rem", marginBottom:"1.2rem" }}>
           <CheckCircle size={15} color="#2E8B44" />
@@ -235,7 +174,7 @@ export default function SettingsPanel({ supabase }: Props) {
 
       <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:"1.2rem", alignItems:"start" }}>
 
-        {/* ── Left sidebar nav ── */}
+        {/* Left sidebar */}
         <div style={{ background:"white", borderRadius:14, border:"1px solid rgba(26,92,42,0.07)", padding:"0.6rem", position:"sticky", top:80, boxShadow:"0 1px 8px rgba(0,0,0,0.04)" }}>
           {GROUPS.map(g => {
             const Icon = g.icon;
@@ -245,15 +184,11 @@ export default function SettingsPanel({ supabase }: Props) {
                 <div style={{ width:32, height:32, borderRadius:8, background: isActive ? g.color : "rgba(26,92,42,0.06)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s" }}>
                   <Icon size={14} color={isActive ? "white" : "var(--muted)"} />
                 </div>
-                <div>
-                  <div style={{ fontSize:"0.82rem", fontWeight: isActive ? 700 : 500, color: isActive ? "#0D3320" : "var(--muted)", lineHeight:1.2 }}>{g.label}</div>
-                </div>
+                <div style={{ fontSize:"0.82rem", fontWeight: isActive ? 700 : 500, color: isActive ? "#0D3320" : "var(--muted)" }}>{g.label}</div>
                 {isActive && <ChevronRight size={12} color="var(--muted)" style={{ marginLeft:"auto" }} />}
               </button>
             );
           })}
-
-          {/* Preview toggle */}
           <div style={{ borderTop:"1px solid rgba(26,92,42,0.07)", marginTop:"0.5rem", paddingTop:"0.6rem" }}>
             <button onClick={() => setShowPreview(v => !v)}
               style={{ width:"100%", display:"flex", alignItems:"center", gap:8, padding:"0.6rem 0.8rem", border:"none", background:"transparent", cursor:"pointer", fontFamily:"'DM Sans',sans-serif", color:"var(--muted)", fontSize:"0.75rem", borderRadius:8 }}>
@@ -263,9 +198,8 @@ export default function SettingsPanel({ supabase }: Props) {
           </div>
         </div>
 
-        {/* ── Right: form + preview ── */}
+        {/* Right: form */}
         <div>
-
           {/* Section header */}
           <div style={{ background:"linear-gradient(135deg,#0A2818,#1A5C2A)", borderRadius:14, padding:"1.2rem 1.5rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -289,7 +223,7 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           </div>
 
-          {/* ══ IDENTITY ══ */}
+          {/* IDENTITY */}
           {activeGroup === "identity" && (
             <div className="sp-section">
               <div className="sp-card">
@@ -330,7 +264,6 @@ export default function SettingsPanel({ supabase }: Props) {
                 </div>
               </div>
 
-              {/* Logo upload card */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   <ImageIcon size={14} color="#C9A84C" />
@@ -347,13 +280,12 @@ export default function SettingsPanel({ supabase }: Props) {
                         style={{ display:"inline-flex", alignItems:"center", gap:7, background: logoUploading ? "rgba(26,92,42,0.1)" : "#0D3318", color: logoUploading ? "var(--muted)" : "white", padding:"0.6rem 1.2rem", borderRadius:9, fontSize:"0.82rem", fontWeight:600, cursor: logoUploading ? "not-allowed" : "pointer", border:"none", fontFamily:"'DM Sans',sans-serif", marginBottom:"0.5rem" }}>
                         <Upload size={13}/> {logoUploading ? "Uploading..." : "Upload New Logo"}
                       </button>
-                      <p style={{ fontSize:"0.7rem", color:"var(--muted)", lineHeight:1.6 }}>PNG, JPG or WebP. Auto-compressed.<br/>Recommended: square, minimum 400×400px.</p>
+                      <p style={{ fontSize:"0.7rem", color:"var(--muted)", lineHeight:1.6 }}>PNG, JPG or WebP. Auto-compressed.<br/>Recommended: square, minimum 400x400px.</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Registration toggle card */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   {isOpen ? <ToggleRight size={14} color="#2E8B44" /> : <ToggleLeft size={14} color="#C0392B" />}
@@ -383,28 +315,27 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* ══ HERO ══ */}
+          {/* HERO */}
           {activeGroup === "hero" && (
             <div className="sp-section">
-              {/* Live preview */}
               {showPreview && (
                 <div className="sp-preview" style={{ marginBottom:"1rem", padding:"1.5rem" }}>
                   <p style={{ fontSize:"0.6rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"0.8rem" }}>Live Preview</p>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"0.8rem" }}>
                     <div style={{ width:20, height:1.5, background:"#C9A84C" }} />
-                    <span style={{ fontSize:"0.65rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#C9A84C" }}>{get("hero_eyebrow","Surigao del Norte · Est. 2011")}</span>
+                    <span style={{ fontSize:"0.65rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#C9A84C" }}>{get("hero_eyebrow","Surigao del Norte - Est. 2011")}</span>
                   </div>
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.6rem", fontWeight:900, color:"white", lineHeight:1.1, marginBottom:"0.4rem" }}>
                     {get("hero_title_line1","Protecting")} <em style={{ fontStyle:"italic", color:"#F0C842" }}>{get("hero_title_highlight","Consumers,")}</em><br/>
                     {get("hero_title_line2","Empowering")}<br/>
                     {get("hero_title_line3","Communities.")}
                   </div>
-                  <p style={{ fontSize:"0.78rem", fontStyle:"italic", color:"rgba(255,255,255,0.45)", marginBottom:"0.5rem" }}>{get("hero_subtitle","SEC Registered · DTI Partner Organization")}</p>
+                  <p style={{ fontSize:"0.78rem", fontStyle:"italic", color:"rgba(255,255,255,0.45)", marginBottom:"0.5rem" }}>{get("hero_subtitle","SEC Registered - DTI Partner Organization")}</p>
                   <div style={{ display:"flex", gap:"1.5rem", paddingTop:"0.8rem", borderTop:"1px solid rgba(212,160,23,0.2)", flexWrap:"wrap" }}>
                     {[
-                      [get("hero_stat1_num","2011"), get("hero_stat1_label","Year Founded")],
+                      [get("hero_stat1_num","2011"),           get("hero_stat1_label","Year Founded")],
                       [get("hero_stat2_num","CN 2011-31-445"), get("hero_stat2_label","SEC Registered")],
-                      [get("hero_stat3_num","DTI"), get("hero_stat3_label","Accredited Partner")],
+                      [get("hero_stat3_num","DTI"),            get("hero_stat3_label","Accredited Partner")],
                     ].map(([num, label]) => (
                       <div key={label}>
                         <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842" }}>{num}</div>
@@ -424,30 +355,30 @@ export default function SettingsPanel({ supabase }: Props) {
                   <div className="sp-field">
                     <label className="sp-label">Eyebrow Text</label>
                     <p className="sp-hint">Small uppercase text above the headline</p>
-                    <input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Surigao del Norte · Est. 2011" />
+                    <input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Surigao del Norte - Est. 2011" />
                   </div>
                   <div className="sp-grid-2">
                     <div className="sp-field">
-                      <label className="sp-label">Headline — Line 1</label>
+                      <label className="sp-label">Headline Line 1</label>
                       <input className="sp-input" value={get("hero_title_line1")} onChange={e => update("hero_title_line1", e.target.value)} placeholder="Protecting" />
                     </div>
                     <div className="sp-field">
-                      <label className="sp-label">Highlighted Word <span style={{ color:"#C9A84C" }}>(golden italic)</span></label>
+                      <label className="sp-label">Highlighted Word (golden italic)</label>
                       <input className="sp-input" value={get("hero_title_highlight")} onChange={e => update("hero_title_highlight", e.target.value)} placeholder="Consumers," />
                     </div>
                     <div className="sp-field">
-                      <label className="sp-label">Headline — Line 2</label>
+                      <label className="sp-label">Headline Line 2</label>
                       <input className="sp-input" value={get("hero_title_line2")} onChange={e => update("hero_title_line2", e.target.value)} placeholder="Empowering" />
                     </div>
                     <div className="sp-field">
-                      <label className="sp-label">Headline — Line 3</label>
+                      <label className="sp-label">Headline Line 3</label>
                       <input className="sp-input" value={get("hero_title_line3")} onChange={e => update("hero_title_line3", e.target.value)} placeholder="Communities." />
                     </div>
                   </div>
                   <div className="sp-field">
                     <label className="sp-label">Subtitle / Tagline</label>
                     <p className="sp-hint">Italic text below the headline</p>
-                    <input className="sp-input" value={get("hero_subtitle")} onChange={e => update("hero_subtitle", e.target.value)} placeholder="SEC Registered · DTI Partner Organization" />
+                    <input className="sp-input" value={get("hero_subtitle")} onChange={e => update("hero_subtitle", e.target.value)} placeholder="SEC Registered - DTI Partner Organization" />
                   </div>
                   <div className="sp-field">
                     <label className="sp-label">Hero Description</label>
@@ -475,7 +406,7 @@ export default function SettingsPanel({ supabase }: Props) {
                       <input className="sp-input" value={get("hero_btn2_text")} onChange={e => update("hero_btn2_text", e.target.value)} placeholder="Our Mission" />
                     </div>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"0.9rem" }}>
+                  <div className="sp-grid-3">
                     {[
                       ["hero_stat1_num","hero_stat1_label","Stat 1"],
                       ["hero_stat2_num","hero_stat2_label","Stat 2"],
@@ -499,7 +430,7 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* ══ ABOUT ══ */}
+          {/* ABOUT */}
           {activeGroup === "about" && (
             <div className="sp-section">
               <div className="sp-card">
@@ -524,7 +455,7 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* ══ CONTACT ══ */}
+          {/* CONTACT */}
           {activeGroup === "contact" && (
             <div className="sp-section">
               <div className="sp-card">
@@ -540,16 +471,16 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                   <div className="sp-grid-2">
                     <div className="sp-field">
-                      <label className="sp-label"><Mail size={11} style={{ display:"inline", marginRight:4 }} />Email Address</label>
+                      <label className="sp-label">Email Address</label>
                       <input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" />
                     </div>
                     <div className="sp-field">
-                      <label className="sp-label"><Phone size={11} style={{ display:"inline", marginRight:4 }} />Phone Number</label>
+                      <label className="sp-label">Phone Number</label>
                       <input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" />
                     </div>
                   </div>
                   <div className="sp-field">
-                    <label className="sp-label"><Link2 size={11} style={{ display:"inline", marginRight:4 }} />Facebook Page URL</label>
+                    <label className="sp-label">Facebook Page URL</label>
                     <p className="sp-hint">Full URL e.g. https://facebook.com/suncosurigao</p>
                     <input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" />
                   </div>
@@ -583,53 +514,9 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* ══ FEES ══ */}
-          {activeGroup === "fees" && (
-            <div className="sp-section">
-              <div style={{ background:"rgba(26,92,42,0.05)", border:"1px solid rgba(26,92,42,0.12)", borderRadius:10, padding:"0.9rem 1.1rem", marginBottom:"1rem", display:"flex", gap:10, alignItems:"flex-start" }}>
-                <AlertTriangle size={15} color="#C9A84C" style={{ marginTop:1, flexShrink:0 }} />
-                <p style={{ fontSize:"0.8rem", color:"var(--muted)", lineHeight:1.6 }}>
-                  Changing these fees updates both the <strong style={{ color:"#0D3320" }}>public website display</strong> and the <strong style={{ color:"#0D3320" }}>registration form total calculation</strong>. Make sure they match your official rates.
-                </p>
-              </div>
-              <div className="sp-card">
-                <div className="sp-card-header">
-                  <DollarSign size={14} color="#6B3FA0" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Membership Fee Amounts</span>
-                </div>
-                <div className="sp-card-body">
-                  {[
-                    { key:"fee_lifetime", label:"Lifetime Membership Fee (₱)", hint:"One-time payment upon joining. Never expires.", color:"#C9A84C" },
-                    { key:"fee_aof",      label:"Annual Operating Fee — AOF (₱)", hint:"Paid every year. Covers organizational operations.", color:"#2B5FA8" },
-                    { key:"fee_mas",      label:"Mortuary Assistance Service — MAS (₱)", hint:"Annual mutual aid contribution for member families.", color:"#2E8B44" },
-                  ].map(({ key, label, hint, color }) => (
-                    <div key={key} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.9rem 1rem", background:"white", borderRadius:10, border:"1px solid rgba(26,92,42,0.08)", borderLeft:`4px solid ${color}` }}>
-                      <div style={{ flex:1 }}>
-                        <label className="sp-label" style={{ marginBottom:"0.2rem" }}>{label}</label>
-                        <p style={{ fontSize:"0.7rem", color:"var(--muted)" }}>{hint}</p>
-                      </div>
-                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", color:color, fontWeight:700 }}>₱</span>
-                        <input className="sp-input" type="number" value={get(key)} onChange={e => update(key, e.target.value)}
-                          style={{ width:110, textAlign:"right", fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:700, color:color }} />
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ background:"rgba(26,92,42,0.04)", borderRadius:10, padding:"0.9rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontSize:"0.82rem", fontWeight:600, color:"var(--muted)" }}>First Year Total</span>
-                    <span style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.3rem", fontWeight:700, color:"#0D3320" }}>
-                      ₱{(Number(get("fee_lifetime","0")) + Number(get("fee_aof","0")) + Number(get("fee_mas","0"))).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══ SEO ══ */}
+          {/* SEO */}
           {activeGroup === "seo" && (
             <div className="sp-section">
-              {/* Google preview */}
               <div className="sp-card" style={{ marginBottom:"1rem" }}>
                 <div className="sp-card-header">
                   <Search size={14} color="#2B5FA8" />
@@ -644,7 +531,7 @@ export default function SettingsPanel({ supabase }: Props) {
                       <span style={{ fontSize:"0.72rem", color:"#202124" }}>{get("site_url","https://sunco.org.ph")}</span>
                     </div>
                     <p style={{ fontSize:"1rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.2rem", lineHeight:1.3 }}>
-                      {get("seo_title") || `SUNCO — ${get("org_name","Surigao del Norte Consumers Organization")}`}
+                      {get("seo_title") || `SUNCO -- ${get("org_name","Surigao del Norte Consumers Organization")}`}
                     </p>
                     <p style={{ fontSize:"0.82rem", color:"#4D5156", lineHeight:1.55, fontFamily:"Arial,sans-serif" }}>
                       {get("seo_description") || get("hero_description","SUNCO is the voice of consumers in Surigao del Norte...")}
@@ -661,8 +548,8 @@ export default function SettingsPanel({ supabase }: Props) {
                 <div className="sp-card-body">
                   <div className="sp-field">
                     <label className="sp-label">Page Title</label>
-                    <p className="sp-hint">Shown in Google results. Leave blank to auto-generate from org name.</p>
-                    <input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="SUNCO — Protecting Consumers in Surigao del Norte" />
+                    <p className="sp-hint">Shown in Google results. Leave blank to auto-generate.</p>
+                    <input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="SUNCO -- Protecting Consumers in Surigao del Norte" />
                     <p style={{ fontSize:"0.65rem", color: get("seo_title").length > 60 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_title").length}/60</p>
                   </div>
                   <div className="sp-field">
@@ -702,7 +589,7 @@ export default function SettingsPanel({ supabase }: Props) {
           <div style={{ display:"flex", justifyContent:"flex-end", paddingTop:"0.5rem" }}>
             <button onClick={handleSave} disabled={saving}
               style={{ display:"flex", alignItems:"center", gap:7, background: saving ? "rgba(201,168,76,0.5)" : "linear-gradient(135deg,#0A2818,#1A5C2A)", color: saving ? "#888" : "white", border:"none", padding:"0.8rem 1.8rem", borderRadius:10, fontSize:"0.85rem", fontWeight:700, cursor: saving ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif", boxShadow: saving ? "none" : "0 4px 16px rgba(10,40,24,0.3)" }}>
-              {saving ? <><RefreshCw size={14}/> Saving...</> : <><Save size={14}/> Save {activeMeta.label} →</>}
+              {saving ? <><RefreshCw size={14}/> Saving...</> : <><Save size={14}/> Save {activeMeta.label}</>}
             </button>
           </div>
 
