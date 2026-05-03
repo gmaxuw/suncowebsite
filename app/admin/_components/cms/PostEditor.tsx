@@ -15,6 +15,7 @@ interface Props {
   supabase:           any;
   post:               Post;
   currentMemberName?: string;
+  currentRole?:       string;
   onSaved:            () => void;
   onClose:            () => void;
 }
@@ -29,7 +30,7 @@ function slugify(text: string) {
 
 type EditorTab = "content" | "seo" | "settings";
 
-export default function PostEditor({ supabase, post, currentMemberName, onSaved, onClose }: Props) {
+export default function PostEditor({ supabase, post, currentMemberName, currentRole, onSaved, onClose }: Props) {
   const isEditing = !!post.id;
   const [form, setForm] = useState<Post>({
     ...post,
@@ -318,7 +319,8 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
               <div>
 
                 {/* AI Generator */}
-                <div className="pe-ai-panel">
+                {currentRole === "admin" && (
+                  <div className="pe-ai-panel">
                   <button className="pe-ai-header" onClick={() => setShowAI(v => !v)}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                       <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -347,6 +349,8 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
                           rows={3}
                         />
                       </div>
+
+                      
                       {aiError && (
                         <div style={{ display:"flex", gap:8, padding:"0.75rem 1rem", background:"#FDECEA", borderRadius:10, marginBottom:"0.9rem", border:"1px solid rgba(192,57,43,0.2)" }}>
                           <AlertCircle size={14} color="#A8200D" style={{ marginTop:1, flexShrink:0 }} />
@@ -365,6 +369,7 @@ export default function PostEditor({ supabase, post, currentMemberName, onSaved,
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Title */}
                 <div className="pe-field">

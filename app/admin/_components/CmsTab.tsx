@@ -199,13 +199,14 @@ export default function CmsTab({
 
       {/* ── Post editor overlay ── */}
       {showEditor && editingPost && (
-        <PostEditor
-          supabase={supabase}
-          post={editingPost}
-          currentMemberName={currentMemberName}
-          onSaved={onSaved}
-          onClose={() => setShowEditor(false)}
-        />
+<PostEditor
+  supabase={supabase}
+  post={editingPost}
+  currentMemberName={currentMemberName}
+  currentRole={currentRole}
+  onSaved={onSaved}
+  onClose={() => setShowEditor(false)}
+/>
       )}
     </div>
   );

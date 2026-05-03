@@ -6,7 +6,28 @@
 // ─────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
 
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
+
 export async function POST(req: NextRequest) {
+  const cookieStore = await cookies();
+const supabase = createClient(cookieStore);
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (roleRow?.role !== "admin") {
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
