@@ -133,8 +133,8 @@ const navLinks = [
               {s("hero_description")}
             </p>
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-              <a href="#membership" style={{ background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>Become a Member</a>
-              <a href="#about" style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>Our Mission</a>
+              <a href="#membership" style={{ background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>{s("hero_btn1_text","Become a Member")}</a>
+              <a href="#about" style={{ background: "transparent", color: "rgba(255,255,255,0.85)", border: "1.5px solid rgba(255,255,255,0.3)", padding: "0.85rem 2rem", fontSize: "0.85rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: 4, textDecoration: "none" }}>{s("hero_btn2_text","Our Mission")}</a>
             </div>
             <div style={{ display: "flex", gap: "2.5rem", paddingTop: "2rem", borderTop: "1px solid rgba(212,160,23,0.2)", flexWrap: "wrap" }}>
               {[
@@ -479,7 +479,7 @@ const navLinks = [
               <h2 className="playfair" style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--gold-lt)", marginBottom: "0.4rem" }}>{s("org_short_name","SUNCO")} Inc.</h2>
               <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "0.6rem" }}>{s("org_name","Surigao del Norte Consumers Organization")}</p>
               <p style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.7 }}>
-                Protecting the rights and welfare of consumers across Surigao del Norte since {s("org_established","2011")}. A SEC-registered, DTI-accredited consumer organization.
+                {s("footer_tagline","Protecting the rights and welfare of consumers across Surigao del Norte since 2011.")}
               </p>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: "1rem", background: "rgba(212,160,23,0.1)", border: "1px solid rgba(212,160,23,0.25)", padding: "4px 12px", borderRadius: 4, fontSize: "0.7rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--gold)" }}>DTI Accredited Partner</div>
             </div>
@@ -518,3 +518,4 @@ const navLinks = [
   </div>
   );
 }
+

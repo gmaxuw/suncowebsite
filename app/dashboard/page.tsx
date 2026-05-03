@@ -31,6 +31,8 @@ export default function DashboardPage() {
   const [editOpen,     setEditOpen]     = useState(false);
   const [showPayment,  setShowPayment]  = useState(false);
   const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
+  const [gcashNumber, setGcashNumber] = useState("09XX-XXX-XXXX");
+  const [gcashName,   setGcashName]   = useState("SUNCO Inc.");
   const [paymentItems, setPaymentItems] = useState<any[]>([]);
   const [uploading,    setUploading]    = useState(false);
   const [saving,       setSaving]       = useState(false);
@@ -93,6 +95,17 @@ export default function DashboardPage() {
 
       // ── Fetch current year fee schedule ──
       const currentYear = new Date().getFullYear();
+      const { data: settingsData } = await supabase
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["gcash_number","gcash_name"]);
+      if (settingsData) {
+        const sm: Record<string,string> = {};
+        settingsData.forEach((s: any) => { sm[s.key] = s.value; });
+        if (sm.gcash_number) setGcashNumber(sm.gcash_number);
+        if (sm.gcash_name)   setGcashName(sm.gcash_name);
+      }
+
       const { data: feeData } = await supabase
         .from("fee_schedules")
         .select("fee_aof, fee_mas, fee_lifetime")
@@ -939,8 +952,8 @@ export default function DashboardPage() {
                 userId={user?.id}
                 unpaidYears={paymentItems}
                 hasLifetimePaid={hasLifetimePaid}
-                gcashNumber="0946-365-7331"
-                gcashName="Gabriel Sacro"
+                gcashNumber={gcashNumber}
+                gcashName={gcashName}
                 onSuccess={() => { setShowPayment(false); }}
                 onCancel={() => setShowPayment(false)}
               />
@@ -951,3 +964,6 @@ export default function DashboardPage() {
     </main>
   );
 }
+
+
+
