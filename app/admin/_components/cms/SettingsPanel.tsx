@@ -1,14 +1,14 @@
 "use client";
 // -------------------------------------------------
 // cms/SettingsPanel.tsx -- Premium 2026 Edition
-// Groups: Identity / Hero / About / Contact / SEO
+// Groups: Identity / Hero / About / Contact / SEO / Navigation
 // -------------------------------------------------
 import { useEffect, useState, useRef } from "react";
 import {
   Save, RefreshCw, Upload, Globe, Info, Image as ImageIcon,
   CheckCircle, AlertTriangle, Building2, Sparkles, DollarSign,
   Search, Eye, EyeOff, Phone, Mail, MapPin, Link2,
-  ChevronRight, ToggleLeft, ToggleRight, ExternalLink,
+  ChevronRight, ToggleLeft, ToggleRight, ExternalLink, Navigation,
 } from "lucide-react";
 
 interface Props { supabase: any; }
@@ -19,19 +19,21 @@ type Setting = {
 };
 
 const GROUPS = [
-  { id: "identity", label: "Identity",     icon: Building2, desc: "Logo, org name, short name, registration numbers.", color: "#C9A84C" },
-  { id: "hero",     label: "Hero Section", icon: Sparkles,  desc: "Homepage banner -- headline, stats, buttons.",      color: "#2E8B44" },
-  { id: "about",    label: "About",        icon: Info,      desc: "About section headline and paragraphs.",            color: "#2B5FA8" },
-  { id: "contact",  label: "Contact",      icon: Phone,     desc: "Address, email, phone, Facebook, GCash.",           color: "#9A2020" },
-  { id: "seo",      label: "SEO & Meta",   icon: Search,    desc: "Google title, description, social sharing image.",  color: "#1A7A8A" },
+  { id: "identity",   label: "Identity",     icon: Building2,  desc: "Logo, org name, short name, registration numbers.", color: "#C9A84C" },
+  { id: "hero",       label: "Hero Section", icon: Sparkles,   desc: "Homepage banner -- headline, stats, buttons.",      color: "#2E8B44" },
+  { id: "about",      label: "About",        icon: Info,       desc: "About section headline and paragraphs.",            color: "#2B5FA8" },
+  { id: "contact",    label: "Contact",      icon: Phone,      desc: "Address, email, phone, Facebook, GCash.",           color: "#9A2020" },
+  { id: "seo",        label: "SEO & Meta",   icon: Search,     desc: "Google title, description, social sharing image.",  color: "#1A7A8A" },
+  { id: "navigation", label: "Nav & Footer", icon: Navigation, desc: "Navigation links, footer links, badge text.",       color: "#C46B1A" },
 ];
 
 const GROUP_MAP: Record<string, string[]> = {
-  identity: ["general"],
-  hero:     ["hero"],
-  about:    ["about"],
-  contact:  ["general"],
-  seo:      ["seo"],
+  identity:   ["general"],
+  hero:       ["hero"],
+  about:      ["about"],
+  contact:    ["general"],
+  seo:        ["seo"],
+  navigation: ["navigation"],
 };
 
 const IDENTITY_KEYS = ["org_name","org_short_name","org_established","org_sec_number","org_region","registration_open"];
@@ -345,7 +347,6 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
               )}
-
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Sparkles size={14} color="#C9A84C" />
@@ -387,7 +388,6 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
               </div>
-
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Globe size={14} color="#2B5FA8" />
@@ -491,7 +491,6 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
               </div>
-
               <div className="sp-card">
                 <div className="sp-card-header">
                   <DollarSign size={14} color="#2E8B44" />
@@ -539,7 +538,6 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
               </div>
-
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Search size={14} color="#1A7A8A" />
@@ -579,6 +577,74 @@ export default function SettingsPanel({ supabase }: Props) {
                     <label className="sp-label">Google Search Console Verification</label>
                     <p className="sp-hint">Verification code from Google Search Console.</p>
                     <input className="sp-input" value={get("google_site_verification")} onChange={e => update("google_site_verification", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxx" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NAVIGATION & FOOTER */}
+          {activeGroup === "navigation" && (
+            <div className="sp-section">
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <Navigation size={14} color="#C46B1A" />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Navigation Bar Links</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Shown in top nav and mobile menu</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-grid-2">
+                    {[
+                      ["nav_link1_label","Link 1 (About section)"],
+                      ["nav_link2_label","Link 2 (Programs section)"],
+                      ["nav_link3_label","Link 3 (Membership section)"],
+                      ["nav_link4_label","Link 4 (Officers section)"],
+                      ["nav_link5_label","Link 5 (News section)"],
+                      ["nav_join_label", "Join / Register button"],
+                    ].map(([key, label]) => (
+                      <div key={key} className="sp-field">
+                        <label className="sp-label">{label}</label>
+                        <input className="sp-input" value={get(key)} onChange={e => update(key, e.target.value)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <Link2 size={14} color="#C46B1A" />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Footer Quick Links</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Labels shown in footer Quick Links column</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-grid-2">
+                    {[
+                      ["footer_link1_label","Footer Link 1 (About)"],
+                      ["footer_link2_label","Footer Link 2 (Programs)"],
+                      ["footer_link3_label","Footer Link 3 (Membership)"],
+                      ["footer_link4_label","Footer Link 4 (Officers)"],
+                      ["footer_link5_label","Footer Link 5 (News)"],
+                    ].map(([key, label]) => (
+                      <div key={key} className="sp-field">
+                        <label className="sp-label">{label}</label>
+                        <input className="sp-input" value={get(key)} onChange={e => update(key, e.target.value)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <Globe size={14} color="#C46B1A" />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Footer Badge</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-field">
+                    <label className="sp-label">Badge Text</label>
+                    <p className="sp-hint">The gold badge shown below the footer tagline e.g. "DTI Accredited Partner"</p>
+                    <input className="sp-input" value={get("footer_badge_text")} onChange={e => update("footer_badge_text", e.target.value)} placeholder="DTI Accredited Partner" />
                   </div>
                 </div>
               </div>
