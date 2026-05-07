@@ -11,6 +11,8 @@ import {
   Bell, AlertTriangle, BanknoteIcon, ChevronRight,
   MapPin, Users, Gavel, Award, FileText, RefreshCw,
   CircleCheck, CircleX, CircleDot,
+  // ── NEW imports for Documents tab ──
+  Download, File, FileImage, FileSpreadsheet, FolderOpen, Lock,
 } from "lucide-react";
 
 const MEMBER_RIGHTS = [
@@ -20,6 +22,47 @@ const MEMBER_RIGHTS = [
   { icon: Star,     title: "Benefits Access",       desc: "Access to all organizational programs and welfare benefits." },
 ];
 
+// ── Document helpers ──────────────────────────────────────────
+type DocFile = {
+  id: string; title: string; description: string;
+  file_url: string; file_path: string; file_type: string;
+  file_size_kb: number; thumbnail_url: string;
+  category: string; tags: string[];
+  download_count: number; created_at: string;
+};
+
+type FinancialReport = {
+  id: string; report_no: string;
+  period_from: string; period_to: string;
+  generated_by_name: string; generated_at: string;
+  status: string; snapshot_json: any;
+};
+
+function detectIcon(type: string) {
+  if (type === "pdf")   return <FileText   size={22} color="#C0392B" strokeWidth={1.5} />;
+  if (type === "image") return <FileImage  size={22} color="#2980B9" strokeWidth={1.5} />;
+  if (type === "excel") return <FileSpreadsheet size={22} color="#1E8449" strokeWidth={1.5} />;
+  if (type === "word")  return <FileText   size={22} color="#1A5276" strokeWidth={1.5} />;
+  return <File size={22} color="#7F8C8D" strokeWidth={1.5} />;
+}
+
+function fmtBytes(kb: number) {
+  if (!kb) return "";
+  return kb < 1024 ? `${kb} KB` : `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function fmtShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function fmtDateRange(from: string, to: string) {
+  const f = new Date(from).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" });
+  const t = new Date(to).toLocaleDateString("en-PH",   { month: "long", day: "numeric", year: "numeric" });
+  return `${f} — ${t}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const [user,         setUser]         = useState<any>(null);
   const [member,       setMember]       = useState<any>(null);
@@ -27,7 +70,7 @@ export default function DashboardPage() {
   const [officers,     setOfficers]     = useState<any[]>([]);
   const [submissions,  setSubmissions]  = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [activeTab,    setActiveTab]    = useState<"overview"|"payments"|"rights"|"officers">("overview");
+  const [activeTab,    setActiveTab]    = useState<"overview"|"payments"|"rights"|"officers"|"documents">("overview");
   const [editOpen,     setEditOpen]     = useState(false);
   const [showPayment,  setShowPayment]  = useState(false);
   const [hasLifetimePaid, setHasLifetimePaid] = useState(false);
@@ -47,6 +90,14 @@ export default function DashboardPage() {
   const [editForm, setEditForm] = useState({
     mobile: "", address: "", beneficiary_name: "", beneficiary_relation: "",
   });
+
+  // ── Documents tab state ──
+  const [publicDocs,       setPublicDocs]       = useState<DocFile[]>([]);
+  const [financialReports, setFinancialReports] = useState<FinancialReport[]>([]);
+  const [docsLoading,      setDocsLoading]      = useState(false);
+  const [downloadingDoc,   setDownloadingDoc]   = useState<string | null>(null);
+  const [downloadingRpt,   setDownloadingRpt]   = useState<string | null>(null);
+
   const fileRef  = useRef<HTMLInputElement>(null);
   const router   = useRouter();
   const supabase = createClient();
@@ -93,7 +144,6 @@ export default function DashboardPage() {
         .from("officers").select("*").eq("is_active", true).order("order_num");
       setOfficers(officerData || []);
 
-      // ── Fetch current year fee schedule ──
       const currentYear = new Date().getFullYear();
       const { data: settingsData } = await supabase
         .from("site_settings")
@@ -118,13 +168,94 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  // ── Derived fee values (safe fallback to 0 until loaded) ──
+  // ── Load documents when tab is opened (lazy) ──────────────
+  useEffect(() => {
+    if (activeTab !== "documents" || docsLoading || publicDocs.length > 0 || financialReports.length > 0) return;
+    const loadDocs = async () => {
+      setDocsLoading(true);
+      const [{ data: docs }, { data: reports }] = await Promise.all([
+        supabase
+          .from("documents")
+          .select("id,title,description,file_url,file_path,file_type,file_size_kb,thumbnail_url,category,tags,download_count,created_at")
+          .eq("visibility", "public")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("financial_reports")
+          .select("id,report_no,period_from,period_to,generated_by_name,generated_at,status,snapshot_json")
+          .order("generated_at", { ascending: false }),
+      ]);
+      setPublicDocs(docs || []);
+      setFinancialReports(reports || []);
+      setDocsLoading(false);
+    };
+    loadDocs();
+  }, [activeTab]);
+
+  // ── Download a public document ────────────────────────────
+  const handleDocDownload = async (doc: DocFile) => {
+    setDownloadingDoc(doc.id);
+    try {
+      // Get signed URL (works for both public and stored files)
+      let downloadUrl = doc.file_url;
+      if (!downloadUrl.startsWith("http")) {
+        const { data } = await supabase.storage
+          .from("documents")
+          .createSignedUrl(doc.file_path, 120);
+        downloadUrl = data?.signedUrl || "";
+      }
+      if (!downloadUrl) { alert("Could not generate download link."); return; }
+
+      // Increment download count
+      await supabase
+        .from("documents")
+        .update({ download_count: (doc.download_count || 0) + 1 })
+        .eq("id", doc.id);
+
+      // Log email lead using the authenticated user's email (no duplicate gate)
+      if (user?.email) {
+        await supabase.from("document_leads").upsert(
+          { document_id: doc.id, email: user.email },
+          { onConflict: "document_id,email", ignoreDuplicates: true }
+        );
+      }
+
+      // Update local count
+      setPublicDocs(prev =>
+        prev.map(d => d.id === doc.id ? { ...d, download_count: (d.download_count || 0) + 1 } : d)
+      );
+
+      // Trigger download
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = doc.title;
+      a.target = "_blank";
+      a.click();
+    } catch (err: any) {
+      alert("Download failed: " + err.message);
+    }
+    setDownloadingDoc(null);
+  };
+
+  // ── Download / reprint a financial report PDF ─────────────
+  const handleReportDownload = async (report: FinancialReport) => {
+    setDownloadingRpt(report.id);
+    try {
+      const { generateFinancialReportPDF } = await import(
+        "@/app/admin/_components/financial/financialReportPDF"
+      );
+      await generateFinancialReportPDF(report.snapshot_json);
+    } catch (err: any) {
+      alert("Could not generate PDF: " + err.message);
+    }
+    setDownloadingRpt(null);
+  };
+
+  // ── Derived fee values ────────────────────────────────────
   const feeAof      = currentFeeSchedule ? Number(currentFeeSchedule.fee_aof)      : 0;
   const feeMas      = currentFeeSchedule ? Number(currentFeeSchedule.fee_mas)      : 0;
   const feeLifetime = currentFeeSchedule ? Number(currentFeeSchedule.fee_lifetime) : 0;
   const feeAnnual   = feeAof + feeMas;
 
-  // ── Org rules built dynamically from fee schedule ──
   const ORG_RULES = [
     `Annual dues (MAS ₱${feeMas.toLocaleString()} + AOF ₱${feeAof.toLocaleString()}) must be settled by December 31 of each year.`,
     "Members with 2 consecutive unpaid years are classified as Non-Active.",
@@ -134,7 +265,6 @@ export default function DashboardPage() {
     "All members must keep contact information and beneficiary details updated.",
   ];
 
-  // ── Active notification ──
   const activeNotification = (() => {
     if (!submissions.length) return null;
     const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
@@ -250,11 +380,13 @@ export default function DashboardPage() {
 
   const sc = STATUS_STYLE[member?.status] || STATUS_STYLE["active"];
 
+  // ── Updated TABS — includes Documents ────────────────────
   const TABS = [
-    { id: "overview",  label: "Overview",       icon: User       },
-    { id: "payments",  label: "Payments",       icon: CreditCard },
-    { id: "rights",    label: "Rights & Rules", icon: BookOpen   },
-    { id: "officers",  label: "Officers",       icon: Star       },
+    { id: "overview",   label: "Overview",       icon: User       },
+    { id: "payments",   label: "Payments",       icon: CreditCard },
+    { id: "rights",     label: "Rights & Rules", icon: BookOpen   },
+    { id: "officers",   label: "Officers",       icon: Star       },
+    { id: "documents",  label: "Documents",      icon: FolderOpen },
   ] as const;
 
   const formatDate = (ts: string) => new Date(ts).toLocaleDateString("en-US", {
@@ -352,7 +484,6 @@ export default function DashboardPage() {
 
     const cfg = configs[sub.status as keyof typeof configs] || configs.pending;
 
-    // ── Build covers summary including lifetime ──
     const coversSummary = (() => {
       const parts: string[] = [];
       if (notes?.lifetime_included) parts.push("Lifetime Fee");
@@ -433,7 +564,9 @@ export default function DashboardPage() {
     );
   };
 
-  // ── MAIN DASHBOARD ──
+  // ══════════════════════════════════════════════════════════
+  // MAIN DASHBOARD
+  // ══════════════════════════════════════════════════════════
   return (
     <main style={{ minHeight: "100vh", background: "#F0EDE6", fontFamily: "'DM Sans', sans-serif" }}>
 
@@ -556,9 +689,9 @@ export default function DashboardPage() {
         </div>
 
         {/* TABS */}
-        <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.4rem", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+        <div style={{ display: "flex", gap: "0.3rem", marginBottom: "1.2rem", background: "white", padding: "0.4rem", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", overflowX: "auto" }}>
           {TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "0.65rem 0.5rem", borderRadius: 8, border: "none", background: activeTab === id ? "#0D3320" : "transparent", color: activeTab === id ? "white" : "#888", fontSize: "0.82rem", fontWeight: activeTab === id ? 600 : 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" }}>
+            <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "0.65rem 0.5rem", borderRadius: 8, border: "none", background: activeTab === id ? "#0D3320" : "transparent", color: activeTab === id ? "white" : "#888", fontSize: "0.82rem", fontWeight: activeTab === id ? 600 : 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>
               <Icon size={14} /> {label}
             </button>
           ))}
@@ -594,8 +727,6 @@ export default function DashboardPage() {
         {/* TAB: PAYMENTS */}
         {activeTab === "payments" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-
-            {/* ── Pay Dues CTA ── */}
             {(() => {
               const currentYear = new Date().getFullYear();
               const joinYear = member?.date_joined ? new Date(member.date_joined).getFullYear() : currentYear;
@@ -607,18 +738,14 @@ export default function DashboardPage() {
               }
               const lifetimePaid = payments.some(p => p.type === "lifetime");
               if (unpaidYears.length === 0 && lifetimePaid) return null;
-
-              const isDropped    = member?.status === "dropped";
-              const isNonActive  = member?.status === "non-active";
+              const isDropped   = member?.status === "dropped";
+              const isNonActive = member?.status === "non-active";
               const accentColor  = isDropped ? "#A8200D" : isNonActive ? "#A66C00" : "#0077FF";
               const accentBg     = isDropped ? "#FDECEA"  : isNonActive ? "#FFF8E1"  : "#EEF4FF";
               const accentBorder = isDropped ? "#F5A49A"  : isNonActive ? "#FFD97A"  : "#BBCFFF";
-
-              // ── Calculate correct outstanding amount from fee schedule ──
-              const annualOwed = unpaidYears.length * feeAnnual;
+              const annualOwed  = unpaidYears.length * feeAnnual;
               const lifetimeOwed = !lifetimePaid ? feeLifetime : 0;
-              const totalOwed = annualOwed + lifetimeOwed;
-
+              const totalOwed   = annualOwed + lifetimeOwed;
               return (
                 <div style={{ background: accentBg, border: `1.5px solid ${accentBorder}`, borderRadius: 12, padding: "1.2rem 1.4rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.8rem", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -661,22 +788,17 @@ export default function DashboardPage() {
                 </div>
               );
             })()}
-
-            {/* ── Delinquency Table ── */}
             {payments.length > 0 && (
               <div style={{ width: "100%", minWidth: 0 }}>
                 <MemberDelinquencyTable member={member} payments={payments} supabase={supabase} />
               </div>
             )}
-
-            {/* ── Payment History Table ── */}
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <CreditCard size={18} color="#1A5C2A" />
                   <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.15rem", color: "#0D3320", fontWeight: 400 }}>Payment History</h2>
                 </div>
-                {/* ── Dynamic fee display from fee schedule ── */}
                 <span style={{ fontSize: "0.8rem", color: "#AAA", fontWeight: 500 }}>
                   {currentFeeSchedule
                     ? `AOF ₱${feeAof.toLocaleString()} · MAS ₱${feeMas.toLocaleString()} per year`
@@ -752,7 +874,6 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", alignItems: "center", gap: 10 }}>
                 <Gavel size={18} color="#1A5C2A" />
@@ -769,7 +890,6 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-
             <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", alignItems: "center", gap: 10 }}>
                 <Info size={18} color="#1A5C2A" />
@@ -875,6 +995,200 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ══════════════════════════════════════════════════════
+            TAB: DOCUMENTS
+        ══════════════════════════════════════════════════════ */}
+        {activeTab === "documents" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+
+            {docsLoading ? (
+              <div style={{ padding: "4rem", textAlign: "center", color: "#BBB", background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)" }}>
+                <RefreshCw size={24} style={{ opacity: 0.3, marginBottom: 10 }} />
+                <p style={{ fontSize: "0.9rem" }}>Loading documents...</p>
+              </div>
+            ) : (
+              <>
+                {/* ── SECTION 1: Financial Reports ───────────────── */}
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  {/* Header */}
+                  <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#0D3320", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <FileText size={18} color="#C9A84C" />
+                      <div>
+                        <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#C9A84C", fontWeight: 400 }}>Financial Reports</h2>
+                        <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", marginTop: 2, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                          {financialReports.length} report{financialReports.length !== 1 ? "s" : ""} · All locked & final
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.25)", borderRadius: 6, padding: "0.3rem 0.7rem" }}>
+                      <Lock size={11} color="#C9A84C" />
+                      <span style={{ fontSize: "0.65rem", color: "#C9A84C", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Read Only</span>
+                    </div>
+                  </div>
+
+                  {financialReports.length === 0 ? (
+                    <div style={{ padding: "3rem", textAlign: "center", color: "#BBB" }}>
+                      <FileText size={36} style={{ opacity: 0.15, marginBottom: 10 }} />
+                      <p style={{ fontSize: "0.92rem", fontWeight: 600 }}>No financial reports yet.</p>
+                      <p style={{ fontSize: "0.8rem", marginTop: 4 }}>Reports will appear here once generated by the treasurer.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {financialReports.map((report, i) => {
+                        const snap         = report.snapshot_json;
+                        const grandTotal   = snap?.grandTotalAssets || 0;
+                        const isDownloading = downloadingRpt === report.id;
+                        return (
+                          <div key={report.id} style={{ borderBottom: i < financialReports.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none" }}>
+                            {/* Main row */}
+                            <div style={{ padding: "1.1rem 1.5rem", display: "flex", alignItems: "center", gap: "1rem", background: i % 2 === 0 ? "white" : "#FAFAF8", flexWrap: "wrap" }}>
+                              {/* Report badge */}
+                              <div style={{ background: "#0D3320", color: "#C9A84C", padding: "0.4rem 0.85rem", borderRadius: 7, fontFamily: "'DM Sans', sans-serif", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: "nowrap", flexShrink: 0 }}>
+                                {report.report_no}
+                              </div>
+
+                              {/* Period */}
+                              <div style={{ flex: 1, minWidth: 160 }}>
+                                <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#BBB", marginBottom: 2 }}>Period</p>
+                                <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0D3320" }}>
+                                  {fmtShortDate(report.period_from)} — {fmtShortDate(report.period_to)}
+                                </p>
+                              </div>
+
+                              {/* Grand total */}
+                              <div style={{ minWidth: 130 }}>
+                                <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#BBB", marginBottom: 2 }}>Grand Total Assets</p>
+                                <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.05rem", fontWeight: 700, color: "#1A5C2A" }}>
+                                  ₱{Number(grandTotal).toLocaleString()}
+                                </p>
+                              </div>
+
+                              {/* Generated */}
+                              <div style={{ minWidth: 120 }}>
+                                <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#BBB", marginBottom: 2 }}>Generated</p>
+                                <p style={{ fontSize: "0.75rem", color: "#777" }}>
+                                  {fmtShortDate(report.generated_at)}
+                                </p>
+                                <p style={{ fontSize: "0.7rem", color: "#BBB" }}>by {report.generated_by_name || "Admin"}</p>
+                              </div>
+
+                              {/* Download button */}
+                              <button
+                                onClick={() => handleReportDownload(report)}
+                                disabled={isDownloading}
+                                style={{ display: "flex", alignItems: "center", gap: 6, background: isDownloading ? "rgba(201,168,76,0.3)" : "#C9A84C", color: "#0D3320", border: "none", padding: "0.6rem 1.1rem", borderRadius: 8, fontSize: "0.78rem", fontWeight: 700, cursor: isDownloading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap", flexShrink: 0 }}>
+                                {isDownloading ? <RefreshCw size={13} /> : <Download size={13} />}
+                                {isDownloading ? "Generating..." : "Download PDF"}
+                              </button>
+                            </div>
+
+                            {/* Account breakdown strip */}
+                            {snap?.accounts && snap.accounts.length > 0 && (
+                              <div style={{ padding: "0.55rem 1.5rem", background: "rgba(13,51,32,0.03)", borderTop: "1px solid rgba(0,0,0,0.04)", display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+                                {snap.accounts.map((a: any) => (
+                                  <div key={a.account.id} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: a.account.account_type === "mas" ? "#2E8B44" : a.account.account_type === "aof" ? "#2B5FA8" : "#C9A84C", flexShrink: 0 }} />
+                                    <span style={{ fontSize: "0.68rem", color: "#999" }}>{a.account.name}:</span>
+                                    <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0D3320" }}>₱{Number(a.closingBalance).toLocaleString()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── SECTION 2: Public Documents ─────────────────── */}
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(0,0,0,0.07)", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  {/* Header */}
+                  <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(0,0,0,0.06)", background: "#F9F8F5", display: "flex", alignItems: "center", gap: 10 }}>
+                    <FolderOpen size={18} color="#1A5C2A" />
+                    <div>
+                      <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.1rem", color: "#0D3320", fontWeight: 400 }}>Documents & Resources</h2>
+                      <p style={{ fontSize: "0.7rem", color: "#BBB", marginTop: 2 }}>
+                        {publicDocs.length} document{publicDocs.length !== 1 ? "s" : ""} available for download
+                      </p>
+                    </div>
+                  </div>
+
+                  {publicDocs.length === 0 ? (
+                    <div style={{ padding: "3rem", textAlign: "center", color: "#BBB" }}>
+                      <FolderOpen size={36} style={{ opacity: 0.15, marginBottom: 10 }} />
+                      <p style={{ fontSize: "0.92rem", fontWeight: 600 }}>No public documents yet.</p>
+                      <p style={{ fontSize: "0.8rem", marginTop: 4 }}>Documents shared by the organization will appear here.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {publicDocs.map((doc, i) => {
+                        const isDownloading = downloadingDoc === doc.id;
+                        return (
+                          <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.5rem", borderBottom: i < publicDocs.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none", background: i % 2 === 0 ? "white" : "#FAFAF8" }}>
+                            {/* File icon / thumbnail */}
+                            <div style={{ width: 46, height: 46, borderRadius: 10, background: "#F2F5F2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+                              {doc.thumbnail_url
+                                ? <img src={doc.thumbnail_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                : detectIcon(doc.file_type)
+                              }
+                            </div>
+
+                            {/* Info */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: "0.92rem", fontWeight: 700, color: "#0D3320", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.title}</p>
+                              {doc.description && (
+                                <p style={{ fontSize: "0.78rem", color: "#888", marginBottom: 4, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.description}</p>
+                              )}
+                              <div style={{ display: "flex", gap: "0.7rem", alignItems: "center", flexWrap: "wrap" }}>
+                                {doc.category && (
+                                  <span style={{ fontSize: "0.65rem", fontWeight: 700, background: "rgba(26,92,42,0.08)", color: "#1A5C2A", padding: "0.15rem 0.5rem", borderRadius: 20, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                    {doc.category.replace(/-/g, " ")}
+                                  </span>
+                                )}
+                                {(doc.tags || []).slice(0, 3).map(t => (
+                                  <span key={t} style={{ fontSize: "0.65rem", background: "rgba(0,0,0,0.05)", color: "#999", padding: "0.15rem 0.5rem", borderRadius: 20 }}>{t}</span>
+                                ))}
+                                {doc.file_size_kb > 0 && (
+                                  <span style={{ fontSize: "0.68rem", color: "#BBB" }}>{fmtBytes(doc.file_size_kb)}</span>
+                                )}
+                                <span style={{ fontSize: "0.68rem", color: "#BBB" }}>{fmtShortDate(doc.created_at)}</span>
+                                {doc.download_count > 0 && (
+                                  <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "0.68rem", color: "#BBB" }}>
+                                    <Download size={10} /> {doc.download_count}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Download button */}
+                            <button
+                              onClick={() => handleDocDownload(doc)}
+                              disabled={isDownloading}
+                              style={{ display: "flex", alignItems: "center", gap: 6, background: isDownloading ? "rgba(26,92,42,0.1)" : "#0D3320", color: isDownloading ? "#1A5C2A" : "white", border: "none", padding: "0.6rem 1.1rem", borderRadius: 8, fontSize: "0.78rem", fontWeight: 600, cursor: isDownloading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap", flexShrink: 0 }}>
+                              {isDownloading ? <RefreshCw size={13} /> : <Download size={13} />}
+                              {isDownloading ? "Opening..." : "Download"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Info note */}
+                <div style={{ padding: "0.9rem 1.2rem", background: "#EEF6F1", borderRadius: 10, border: "1px solid #C0D9C6", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <Info size={15} color="#1A5C2A" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <p style={{ fontSize: "0.82rem", color: "#555", lineHeight: 1.6 }}>
+                    These documents are shared by SUNCO for member transparency and information. Financial reports are final and cannot be altered. For questions about any document, contact an officer directly.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* EDIT PROFILE MODAL */}
@@ -964,6 +1278,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-
-
-
