@@ -22,6 +22,7 @@ export default function RegisterPage() {
     birthdate: "",
     mobile: "",
     address: "",
+    tin: "",
     beneficiary_name: "",
     beneficiary_relation: "",
     alternate_contact_name: "",
@@ -58,7 +59,6 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // ── VALIDATION ──
       if (form.password !== form.confirm_password) {
         setError("Passwords do not match.");
         setLoading(false);
@@ -75,7 +75,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // ── CHECK IF ALREADY REGISTERED ──
       const { data: existing } = await supabase
         .from("members")
         .select("id")
@@ -88,7 +87,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // ── CREATE AUTH USER ──
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -110,31 +108,30 @@ export default function RegisterPage() {
         return;
       }
 
-      // ── INSERT MEMBER (capture the returned id) ──
       const { error: memberError } = await supabase
         .from("members")
         .insert({
-          user_id: userId,
-          first_name: form.first_name,
-          middle_name: form.middle_name,
-          last_name: form.last_name,
-          birthdate: form.birthdate || null,
-          mobile: form.mobile,
-          contact_number: form.mobile,
-          email: form.email,
-          address: form.address,
-          beneficiary_name: form.beneficiary_name,
-          beneficiary_relation: form.beneficiary_relation,
-          alternate_contact_name: form.alternate_contact_name || null,
-          alternate_contact_number: form.alternate_contact_number || null,
+          user_id:                    userId,
+          first_name:                 form.first_name,
+          middle_name:                form.middle_name,
+          last_name:                  form.last_name,
+          birthdate:                  form.birthdate || null,
+          mobile:                     form.mobile,
+          contact_number:             form.mobile,
+          email:                      form.email,
+          address:                    form.address,
+          tin:                        form.tin || null,
+          beneficiary_name:           form.beneficiary_name,
+          beneficiary_relation:       form.beneficiary_relation,
+          alternate_contact_name:     form.alternate_contact_name || null,
+          alternate_contact_number:   form.alternate_contact_number || null,
           alternate_contact_relation: form.alternate_contact_relation || null,
-          gender: form.gender || "male",
-          citizenship: form.citizenship || "Filipino",
-          status: "non-active",
-          approval_status: "pending",
-          date_joined: null,
-        })
-        ;
+          gender:                     form.gender || "male",
+          citizenship:                form.citizenship || "Filipino",
+          status:                     "non-active",
+          approval_status:            "pending",
+          date_joined:                null,
+        });
 
       if (memberError) {
         console.error("MEMBER INSERT ERROR:", memberError);
@@ -143,13 +140,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // Role is auto-assigned by database trigger
-
-      // ── INSERT PAYMENT RECORDS ──
-      const currentYear = new Date().getFullYear();
-
-
-      // ── SUCCESS ──
       setSubmittedName(form.first_name);
       setStep(4);
       setLoading(false);
@@ -161,7 +151,6 @@ export default function RegisterPage() {
     }
   };
 
-  // ── Shared Styles ──
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "0.8rem 1rem",
@@ -236,7 +225,6 @@ export default function RegisterPage() {
   return (
     <main style={{ minHeight: "100vh", background: "var(--green-dk)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
 
-      {/* Background decorative circles */}
       <div style={{ position: "fixed", width: 600, height: 600, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.07)", top: -150, right: -150, pointerEvents: "none" }} />
       <div style={{ position: "fixed", width: 400, height: 400, borderRadius: "50%", border: "1px solid rgba(212,160,23,0.05)", bottom: -100, left: -100, pointerEvents: "none" }} />
 
@@ -249,19 +237,13 @@ export default function RegisterPage() {
           <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Membership Registration</p>
         </div>
 
-        {/* Step indicator — hidden on success */}
+        {/* Step indicator */}
         {step < 4 && (
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", marginBottom: "1.5rem" }}>
               {[1, 2, 3].map(s => (
                 <div key={s} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: "50%",
-                    background: step >= s ? "var(--gold)" : "rgba(255,255,255,0.1)",
-                    color: step >= s ? "var(--green-dk)" : "rgba(255,255,255,0.3)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "0.8rem", fontWeight: 700, transition: "all 0.3s",
-                  }}>{s}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: step >= s ? "var(--gold)" : "rgba(255,255,255,0.1)", color: step >= s ? "var(--green-dk)" : "rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, transition: "all 0.3s" }}>{s}</div>
                   {s < 3 && <div style={{ width: 40, height: 1.5, background: step > s ? "var(--gold)" : "rgba(255,255,255,0.1)" }} />}
                 </div>
               ))}
@@ -293,6 +275,7 @@ export default function RegisterPage() {
             <div>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: "white", marginBottom: "0.3rem" }}>Personal Information</h2>
               <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>Please fill in your details accurately.</p>
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
                 {fieldGroup("First Name *", "first_name", "text", "Juan")}
                 {fieldGroup("Last Name *", "last_name", "text", "dela Cruz")}
@@ -301,6 +284,23 @@ export default function RegisterPage() {
               {fieldGroup("Date of Birth", "birthdate", "date")}
               {fieldGroup("Mobile Number", "mobile", "tel", "09XX XXX XXXX")}
               {fieldGroup("Complete Address", "address", "text", "Barangay, Municipality, Surigao del Norte")}
+
+              {/* ── TIN Field ── */}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Tax Identification Number (TIN)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 123-456-789-000"
+                  value={form.tin}
+                  onChange={e => update("tin", e.target.value)}
+                  style={inputStyle}
+                />
+                <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.3)", marginTop: "0.3rem", lineHeight: 1.5 }}>
+                  Required for SEC General Information Sheet (GIS). Leave blank if not yet issued.
+                </p>
+              </div>
+
+              {/* Beneficiary */}
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
                 <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: "0.8rem" }}>Beneficiary (for MAS)</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
@@ -308,32 +308,34 @@ export default function RegisterPage() {
                   {fieldGroup("Relationship", "beneficiary_relation", "text", "Spouse")}
                 </div>
               </div>
-                                            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
-                                              <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: "0.8rem" }}>Alternate Contact</p>
-                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
-                                                {fieldGroup("Full Name", "alternate_contact_name", "text", "e.g. Maria dela Cruz")}
-                                                {fieldGroup("Relationship", "alternate_contact_relation", "text", "e.g. Spouse, Child")}
-                                              </div>
-                                              {fieldGroup("Contact Number", "alternate_contact_number", "tel", "09XX XXX XXXX")}
-                                            </div>
-                                            <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
-                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
-                                                <div style={{ marginBottom: "1rem" }}>
-                                                  <label style={labelStyle}>Gender</label>
-                                                  <select value={form.gender} onChange={e => update("gender", e.target.value)}
-                                                    style={{ ...inputStyle, cursor: "pointer" }}>
-                                                    <option value="male" style={{ color: "#000", background: "#fff" }}>Male</option>
-                                                    <option value="female" style={{ color: "#000", background: "#fff" }}>Female</option>
-                                                    <option value="other" style={{ color: "#000", background: "#fff" }}>Other</option>
-                                                  </select>
-                                                </div>
-                                                <div style={{ marginBottom: "1rem" }}>
-                                                  <label style={labelStyle}>Citizenship</label>
-                                                  <input type="text" value={form.citizenship} onChange={e => update("citizenship", e.target.value)}
-                                                    placeholder="Filipino" style={inputStyle} />
-                                                </div>
-                                              </div>
-                                            </div>
+
+              {/* Alternate Contact */}
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.6)", marginBottom: "0.8rem" }}>Alternate Contact</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
+                  {fieldGroup("Full Name", "alternate_contact_name", "text", "e.g. Maria dela Cruz")}
+                  {fieldGroup("Relationship", "alternate_contact_relation", "text", "e.g. Spouse, Child")}
+                </div>
+                {fieldGroup("Contact Number", "alternate_contact_number", "tel", "09XX XXX XXXX")}
+              </div>
+
+              {/* Gender & Citizenship */}
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem", marginTop: "0.5rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 0.8rem" }}>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={labelStyle}>Gender</label>
+                    <select value={form.gender} onChange={e => update("gender", e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <option value="male" style={{ color: "#000", background: "#fff" }}>Male</option>
+                      <option value="female" style={{ color: "#000", background: "#fff" }}>Female</option>
+                      <option value="other" style={{ color: "#000", background: "#fff" }}>Other</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label style={labelStyle}>Citizenship</label>
+                    <input type="text" value={form.citizenship} onChange={e => update("citizenship", e.target.value)} placeholder="Filipino" style={inputStyle} />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -343,24 +345,27 @@ export default function RegisterPage() {
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", fontWeight: 700, color: "white", marginBottom: "0.3rem" }}>Review & Confirm</h2>
               <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>Please review your information before submitting.</p>
               {[
-                ["Full Name", `${form.first_name} ${form.middle_name} ${form.last_name}`.trim()],
-                ["Email", form.email],
-                ["Mobile", form.mobile],
-                ["Address", form.address],
-                ["Birthdate", form.birthdate],
+                ["Full Name",   `${form.first_name} ${form.middle_name} ${form.last_name}`.trim()],
+                ["Email",       form.email],
+                ["Mobile",      form.mobile],
+                ["Address",     form.address],
+                ["TIN",         form.tin || "Not provided"],
+                ["Birthdate",   form.birthdate],
+                ["Citizenship", form.citizenship],
                 ["Beneficiary", form.beneficiary_name ? `${form.beneficiary_name} (${form.beneficiary_relation})` : ""],
               ].map(([label, value]) => value && value.trim() !== "" && (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: "0.83rem" }}>
                   <span style={{ color: "rgba(255,255,255,0.4)" }}>{label}</span>
-                  <span style={{ color: "white", fontWeight: 500, maxWidth: "60%", textAlign: "right" }}>{value}</span>
+                  <span style={{ color: label === "TIN" ? "rgba(255,255,255,0.6)" : "white", fontWeight: 500, maxWidth: "60%", textAlign: "right", fontFamily: label === "TIN" ? "monospace" : "inherit" }}>{value}</span>
                 </div>
               ))}
+
               <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "1.2rem", marginTop: "1.2rem" }}>
                 <p style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", marginBottom: "0.8rem" }}>Membership Fees</p>
                 {[
-                  ["Lifetime Membership", `₱${fees.fee_lifetime}`, true],
-                  ["Annual Operating Fee (AOF)", `₱${fees.fee_aof}`, true],
-                  ["Mortuary Assistance (MAS)", `₱${fees.fee_mas}`, form.include_mas],
+                  ["Lifetime Membership",      `₱${fees.fee_lifetime}`, true],
+                  ["Annual Operating Fee (AOF)", `₱${fees.fee_aof}`,    true],
+                  ["Mortuary Assistance (MAS)", `₱${fees.fee_mas}`,     form.include_mas],
                 ].map(([label, amount, included]) => (
                   <div key={label as string} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", marginBottom: "0.4rem", opacity: included ? 1 : 0.4 }}>
                     <span style={{ color: "rgba(255,255,255,0.6)" }}>{label as string}</span>
@@ -384,43 +389,32 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* ── STEP 4 — SUCCESS SCREEN ── */}
+          {/* ── STEP 4 — Success ── */}
           {step === 4 && (
             <div style={{ textAlign: "center", padding: "1rem 0" }}>
               <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(46,139,68,0.15)", border: "2px solid #2E8B44", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.5rem" }}>
                 <CheckCircle2 size={40} color="#2E8B44" />
               </div>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: "white", marginBottom: "0.5rem" }}>
-                Application Submitted!
-              </h2>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 700, color: "white", marginBottom: "0.5rem" }}>Application Submitted!</h2>
               <p style={{ fontSize: "0.88rem", color: "rgba(255,255,255,0.6)", lineHeight: 1.8, marginBottom: "0.3rem" }}>
                 Thank you, <strong style={{ color: "var(--gold-lt)" }}>{submittedName}</strong>!
               </p>
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.45)", lineHeight: 1.8, marginBottom: "1.5rem" }}>
-                Your membership application is now <strong style={{ color: "var(--gold)" }}>pending review</strong> by SUNCO officers. You will be notified once approved.
+                Your membership application is now <strong style={{ color: "var(--gold)" }}>pending review</strong> by SUNCO officers.
               </p>
               <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "1rem 1.2rem", marginBottom: "1.5rem", textAlign: "left" }}>
-                {[
-                  ["Full Name", `${form.first_name} ${form.last_name}`],
-                  ["Email", form.email],
-                  ["Status", "Pending Approval"],
-                ].map(([label, value]) => (
+                {[["Full Name", `${form.first_name} ${form.last_name}`], ["Email", form.email], ["Status", "Pending Approval"]].map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
                     <span style={{ color: "rgba(255,255,255,0.4)" }}>{label}</span>
                     <span style={{ color: label === "Status" ? "var(--gold)" : "white", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
-                      {label === "Status" && <Clock size={12} />}
-                      {value}
+                      {label === "Status" && <Clock size={12} />}{value}
                     </span>
                   </div>
                 ))}
               </div>
               <div style={{ background: "rgba(46,139,68,0.08)", border: "1px solid rgba(46,139,68,0.2)", borderRadius: 8, padding: "1rem 1.2rem", marginBottom: "1.5rem", textAlign: "left" }}>
                 <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#2E8B44", marginBottom: "0.6rem" }}>What happens next?</p>
-                {[
-                  "SUNCO officers will review your application.",
-                  "You'll receive a confirmation once approved.",
-                  "Payment will be collected by an officer.",
-                ].map((text, i) => (
+                {["SUNCO officers will review your application.", "You'll receive a confirmation once approved.", "Payment will be collected by an officer."].map((text, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: "0.4rem" }}>
                     <span style={{ color: "var(--gold)", fontWeight: 700, fontSize: "0.8rem", flexShrink: 0 }}>{i + 1}.</span>
                     <span style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>{text}</span>
@@ -433,14 +427,12 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Error message */}
           {error && step !== 4 && (
             <div style={{ background: "rgba(192,57,43,0.2)", border: "1px solid rgba(192,57,43,0.4)", borderRadius: 6, padding: "0.7rem 1rem", marginTop: "1rem", fontSize: "0.82rem", color: "#ff6b6b" }}>
               {error}
             </div>
           )}
 
-          {/* Navigation buttons — hidden on success */}
           {step !== 4 && (
             <div style={{ display: "flex", gap: "0.8rem", marginTop: "1.5rem" }}>
               {step > 1 && (
@@ -461,7 +453,6 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {/* Footer links — hidden on success */}
         {step !== 4 && (
           <>
             <div style={{ textAlign: "center", marginTop: "1.2rem" }}>

@@ -4,6 +4,7 @@
 // Handles: CRUD officers, BOD, PIO
 //          Photo upload with WebP compression
 //          Drag to reorder
+//          GIS fields: TIN, nationality, address
 // Accessible by: admin, president, secretary
 // ─────────────────────────────────────────────
 import { useEffect, useState } from "react";
@@ -15,32 +16,36 @@ interface Props {
 }
 
 type Officer = {
-  id: string;
-  name: string;
-  role: string;
-  role_type: string;
-  photo_url: string | null;
-  order_num: number;
-  is_active: boolean;
+  id:          string;
+  name:        string;
+  role:        string;
+  role_type:   string;
+  photo_url:   string | null;
+  order_num:   number;
+  is_active:   boolean;
+  tin:         string | null;
+  nationality: string | null;
+  address:     string | null;
 };
 
 const roleTypes = [
   { id: "executive", label: "Executive Officers" },
-  { id: "pio", label: "Public Information Officers" },
-  { id: "bod", label: "Board of Directors" },
+  { id: "pio",       label: "Public Information Officers" },
+  { id: "bod",       label: "Board of Directors" },
 ];
 
 export default function OfficersTab({ canCRUD, supabase }: Props) {
-  const [officers, setOfficers] = useState<Officer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState("executive");
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Officer | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [officers,      setOfficers]      = useState<Officer[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [activeType,    setActiveType]    = useState("executive");
+  const [showForm,      setShowForm]      = useState(false);
+  const [editing,       setEditing]       = useState<Officer | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [uploading,     setUploading]     = useState(false);
   const [form, setForm] = useState({
     name: "", role: "", role_type: "executive",
     photo_url: "", order_num: 0, is_active: true,
+    tin: "", nationality: "Filipino", address: "",
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -59,7 +64,11 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
   const openNew = () => {
     setEditing(null);
     const typeOfficers = officers.filter(o => o.role_type === activeType);
-    setForm({ name: "", role: "", role_type: activeType, photo_url: "", order_num: typeOfficers.length + 1, is_active: true });
+    setForm({
+      name: "", role: "", role_type: activeType,
+      photo_url: "", order_num: typeOfficers.length + 1, is_active: true,
+      tin: "", nationality: "Filipino", address: "",
+    });
     setPhotoPreview(null);
     setShowForm(true);
   };
@@ -67,12 +76,15 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
   const openEdit = (officer: Officer) => {
     setEditing(officer);
     setForm({
-      name: officer.name,
-      role: officer.role,
-      role_type: officer.role_type,
-      photo_url: officer.photo_url || "",
-      order_num: officer.order_num,
-      is_active: officer.is_active,
+      name:        officer.name,
+      role:        officer.role,
+      role_type:   officer.role_type,
+      photo_url:   officer.photo_url || "",
+      order_num:   officer.order_num,
+      is_active:   officer.is_active,
+      tin:         officer.tin         || "",
+      nationality: officer.nationality || "Filipino",
+      address:     officer.address     || "",
     });
     setPhotoPreview(officer.photo_url);
     setShowForm(true);
@@ -82,41 +94,29 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-
     try {
-      // Preview immediately
       const reader = new FileReader();
       reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
 
-      // Compress and convert to WebP
       const imageCompression = (await import("browser-image-compression")).default;
       const compressed = await imageCompression(file, {
-        maxSizeMB: 0.2,
-        maxWidthOrHeight: 300,
-        fileType: "image/webp",
-        useWebWorker: true,
+        maxSizeMB: 0.2, maxWidthOrHeight: 300,
+        fileType: "image/webp", useWebWorker: true,
       });
 
       const filename = `officer-${Date.now()}.webp`;
       const { data, error } = await supabase.storage
         .from("officers")
-        .upload(`photos/${filename}`, compressed, {
-          contentType: "image/webp",
-          upsert: true,
-        });
+        .upload(`photos/${filename}`, compressed, { contentType: "image/webp", upsert: true });
 
       if (!error) {
-        const { data: urlData } = supabase.storage
-          .from("officers")
-          .getPublicUrl(`photos/${filename}`);
+        const { data: urlData } = supabase.storage.from("officers").getPublicUrl(`photos/${filename}`);
         setForm(prev => ({ ...prev, photo_url: urlData.publicUrl }));
       } else {
         alert("Upload failed: " + error.message);
       }
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    }
+    } catch (err: any) { alert("Error: " + err.message); }
     setUploading(false);
   };
 
@@ -124,24 +124,22 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
     if (!form.name || !form.role) { alert("Name and role are required."); return; }
     setSaving(true);
 
+    const payload = {
+      name:        form.name,
+      role:        form.role,
+      role_type:   form.role_type,
+      photo_url:   form.photo_url   || null,
+      order_num:   form.order_num,
+      is_active:   form.is_active,
+      tin:         form.tin         || null,
+      nationality: form.nationality || "Filipino",
+      address:     form.address     || null,
+    };
+
     if (editing) {
-      await supabase.from("officers").update({
-        name: form.name,
-        role: form.role,
-        role_type: form.role_type,
-        photo_url: form.photo_url || null,
-        order_num: form.order_num,
-        is_active: form.is_active,
-      }).eq("id", editing.id);
+      await supabase.from("officers").update(payload).eq("id", editing.id);
     } else {
-      await supabase.from("officers").insert({
-        name: form.name,
-        role: form.role,
-        role_type: form.role_type,
-        photo_url: form.photo_url || null,
-        order_num: form.order_num,
-        is_active: form.is_active,
-      });
+      await supabase.from("officers").insert(payload);
     }
 
     await loadOfficers();
@@ -181,6 +179,7 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
     borderRadius: 6, fontSize: "0.88rem",
     fontFamily: "'DM Sans', sans-serif",
     color: "var(--text)", background: "white", outline: "none",
+    boxSizing: "border-box" as const,
   };
 
   const labelStyle = {
@@ -189,6 +188,12 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
     letterSpacing: "0.08em", textTransform: "uppercase" as const,
     color: "var(--muted)", marginBottom: "0.4rem",
   };
+
+  const sectionLabel = (text: string) => (
+    <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.8rem", paddingBottom: "0.4rem", borderBottom: "1px solid rgba(26,92,42,0.08)" }}>
+      {text}
+    </p>
+  );
 
   return (
     <div>
@@ -223,16 +228,9 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1.2rem" }}>
           {filteredOfficers.map((officer, idx) => (
             <div key={officer.id} style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", borderBottom: `3px solid ${officer.is_active ? "var(--gold)" : "var(--muted)"}`, overflow: "hidden", opacity: officer.is_active ? 1 : 0.6 }}>
-
-              {/* Photo */}
               <div style={{ height: 120, background: "var(--green-dk)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                 {officer.photo_url ? (
-                  <img
-                    src={officer.photo_url}
-                    alt={officer.name}
-                    loading="lazy"
-                    style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--gold)" }}
-                  />
+                  <img src={officer.photo_url} alt={officer.name} loading="lazy" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "3px solid var(--gold)" }} />
                 ) : (
                   <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(212,160,23,0.2)", border: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", fontWeight: 700, color: "var(--gold-lt)" }}>
                     {getInitials(officer.name)}
@@ -242,13 +240,18 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
                   <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(192,57,43,0.8)", color: "white", fontSize: "0.62rem", padding: "2px 6px", borderRadius: 3, fontWeight: 500 }}>INACTIVE</div>
                 )}
               </div>
-
-              {/* Info */}
               <div style={{ padding: "1rem" }}>
                 <div style={{ fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold-dk)", marginBottom: "0.2rem" }}>{officer.role}</div>
-                <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--green-dk)", lineHeight: 1.3, marginBottom: "0.8rem" }}>{officer.name}</div>
-
-                {/* Actions */}
+                <div style={{ fontSize: "0.88rem", fontWeight: 500, color: "var(--green-dk)", lineHeight: 1.3, marginBottom: "0.4rem" }}>{officer.name}</div>
+                {/* GIS badge indicators */}
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: "0.7rem" }}>
+                  <span style={{ fontSize: "0.58rem", fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: officer.tin ? "rgba(46,139,68,0.1)" : "rgba(192,57,43,0.08)", color: officer.tin ? "#2E8B44" : "#C0392B" }}>
+                    TIN {officer.tin ? "✓" : "missing"}
+                  </span>
+                  <span style={{ fontSize: "0.58rem", fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: officer.address ? "rgba(46,139,68,0.1)" : "rgba(192,57,43,0.08)", color: officer.address ? "#2E8B44" : "#C0392B" }}>
+                    Address {officer.address ? "✓" : "missing"}
+                  </span>
+                </div>
                 {canCRUD && (
                   <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
                     <button onClick={() => openEdit(officer)}
@@ -278,7 +281,7 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
       {/* ── Officer Form Modal ── */}
       {showForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
-          <div style={{ background: "white", borderRadius: 12, padding: "2rem", maxWidth: 480, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+          <div style={{ background: "white", borderRadius: 12, padding: "2rem", maxWidth: 520, width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", fontWeight: 700, color: "var(--green-dk)" }}>
@@ -287,7 +290,7 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
               <button onClick={() => setShowForm(false)} style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "var(--muted)" }}>✕</button>
             </div>
 
-            {/* Photo upload */}
+            {/* Photo */}
             <div style={{ marginBottom: "1.5rem", textAlign: "center" }}>
               <div style={{ width: 100, height: 100, borderRadius: "50%", background: "var(--green-dk)", border: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", overflow: "hidden" }}>
                 {photoPreview ? (
@@ -300,49 +303,82 @@ export default function OfficersTab({ canCRUD, supabase }: Props) {
               </div>
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoUpload} style={{ display: "none" }} id="officer-photo" />
               <label htmlFor="officer-photo"
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: uploading ? "var(--warm)" : "var(--warm)", border: "1.5px solid rgba(26,92,42,0.2)", color: "var(--green-dk)", padding: "0.5rem 1rem", borderRadius: 6, fontSize: "0.78rem", fontWeight: 500, cursor: uploading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--warm)", border: "1.5px solid rgba(26,92,42,0.2)", color: "var(--green-dk)", padding: "0.5rem 1rem", borderRadius: 6, fontSize: "0.78rem", fontWeight: 500, cursor: uploading ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                 <Upload size={13} /> {uploading ? "Uploading..." : "Upload Photo"}
               </label>
               <p style={{ fontSize: "0.68rem", color: "var(--muted)", marginTop: "0.4rem" }}>PNG or JPG. Auto-compressed to WebP.</p>
             </div>
 
-            {/* Name */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={labelStyle}>Full Name *</label>
-              <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="Engr. Juan dela Cruz" style={inputStyle} />
+            {/* ── Basic Info ── */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              {sectionLabel("Basic Information")}
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Full Name *</label>
+                <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Engr. Juan dela Cruz" style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Role / Position *</label>
+                <input type="text" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} placeholder="President, Treasurer, Board Member..." style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Category *</label>
+                <select value={form.role_type} onChange={e => setForm(p => ({ ...p, role_type: e.target.value }))} style={inputStyle}>
+                  <option value="executive">Executive Officer</option>
+                  <option value="pio">Public Information Officer</option>
+                  <option value="bod">Board of Directors</option>
+                </select>
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Display Order</label>
+                <input type="number" value={form.order_num} onChange={e => setForm(p => ({ ...p, order_num: Number(e.target.value) }))} style={inputStyle} />
+              </div>
             </div>
 
-            {/* Role */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={labelStyle}>Role / Position *</label>
-              <input type="text" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
-                placeholder="President, Treasurer, Board Member..." style={inputStyle} />
-            </div>
-
-            {/* Role Type */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={labelStyle}>Category *</label>
-              <select value={form.role_type} onChange={e => setForm(p => ({ ...p, role_type: e.target.value }))} style={inputStyle}>
-                <option value="executive">Executive Officer</option>
-                <option value="pio">Public Information Officer</option>
-                <option value="bod">Board of Directors</option>
-              </select>
-            </div>
-
-            {/* Order */}
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={labelStyle}>Display Order</label>
-              <input type="number" value={form.order_num} onChange={e => setForm(p => ({ ...p, order_num: Number(e.target.value) }))} style={inputStyle} />
+            {/* ── GIS Required Fields ── */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              {sectionLabel("GIS Required Fields (SEC)")}
+              <div style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 8, padding: "0.7rem 1rem", marginBottom: "1rem" }}>
+                <p style={{ fontSize: "0.75rem", color: "#8B6914", lineHeight: 1.6, margin: 0 }}>
+                  These fields are required for the SEC General Information Sheet (GIS). Please fill them in accurately.
+                </p>
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Tax Identification Number (TIN)</label>
+                <input
+                  type="text"
+                  value={form.tin}
+                  onChange={e => setForm(p => ({ ...p, tin: e.target.value }))}
+                  placeholder="e.g. 123-456-789-000"
+                  style={{ ...inputStyle, fontFamily: "monospace" }}
+                />
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Nationality</label>
+                <input
+                  type="text"
+                  value={form.nationality}
+                  onChange={e => setForm(p => ({ ...p, nationality: e.target.value }))}
+                  placeholder="Filipino"
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={labelStyle}>Residential / Business Address</label>
+                <input
+                  type="text"
+                  value={form.address}
+                  onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+                  placeholder="Barangay, City/Municipality, Province"
+                  style={inputStyle}
+                />
+              </div>
             </div>
 
             {/* Active toggle */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.8rem 1rem", background: "var(--warm)", borderRadius: 8, marginBottom: "1.5rem" }}>
-              <div>
-                <p style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--green-dk)" }}>
-                  {form.is_active ? "Active — shown on public website" : "Inactive — hidden from public website"}
-                </p>
-              </div>
+              <p style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--green-dk)" }}>
+                {form.is_active ? "Active — shown on public website" : "Inactive — hidden from public website"}
+              </p>
               <button onClick={() => setForm(p => ({ ...p, is_active: !p.is_active }))}
                 style={{ background: form.is_active ? "var(--green-lt)" : "rgba(26,92,42,0.1)", border: "none", color: form.is_active ? "white" : "var(--green-dk)", padding: "0.5rem 1rem", borderRadius: 6, fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
                 {form.is_active ? "✓ Active" : "Set Active"}
