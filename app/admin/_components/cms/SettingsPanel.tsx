@@ -158,11 +158,11 @@ export default function SettingsPanel({ supabase }: Props) {
         .sp-nav-btn.active { background:rgba(26,92,42,0.08); }
         .sp-preview { background:linear-gradient(135deg,#0A2818 0%,#1A5C2A 100%); border-radius:14px; overflow:hidden; }
         .sp-footer-preview { background:#080f0a; border-radius:14px; overflow:hidden; border:1px solid rgba(212,160,23,0.2); margin-bottom:1rem; }
-        .sp-footer-col { display:flex; flex-direction:column; gap:0.5rem; }
         .sp-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.7rem; background:rgba(26,92,42,0.02); border-radius:8px; border:1px solid rgba(26,92,42,0.06); }
+        .sp-nav-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.8rem; background:rgba(196,107,26,0.03); border-radius:8px; border:1px solid rgba(196,107,26,0.1); }
         @keyframes sp-fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         .sp-section { animation: sp-fade 0.2s ease; }
-        @media(max-width:900px){ .sp-grid-2,.sp-grid-3,.sp-link-row{grid-template-columns:1fr;} }
+        @media(max-width:900px){ .sp-grid-2,.sp-grid-3,.sp-link-row,.sp-nav-link-row{grid-template-columns:1fr;} }
       `}</style>
 
       {saveStatus === "saved" && (
@@ -591,28 +591,67 @@ export default function SettingsPanel({ supabase }: Props) {
           {activeGroup === "navigation" && (
             <div className="sp-section">
 
-              {/* Nav bar links */}
+              {/* Navigation Bar */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Navigation size={14} color="#C46B1A" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Navigation Bar</span>
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Navigation Bar Links</span>
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Top nav + mobile menu</span>
                 </div>
                 <div className="sp-card-body">
-                  <div className="sp-grid-3">
-                    {[
-                      ["nav_link1_label","Link 1","About"],
-                      ["nav_link2_label","Link 2","Programs"],
-                      ["nav_link3_label","Link 3","Membership"],
-                      ["nav_link4_label","Link 4","Officers"],
-                      ["nav_link5_label","Link 5","News"],
-                      ["nav_join_label", "Join Button","Join Now"],
-                    ].map(([key, label, placeholder]) => (
-                      <div key={key} className="sp-field">
-                        <label className="sp-label">{label}</label>
-                        <input className="sp-input" value={get(key)} onChange={e => update(key, e.target.value)} placeholder={placeholder} />
+                  {/* Header row */}
+                  <div style={{ display:"grid", gridTemplateColumns:"auto 1fr 1fr", gap:"0.6rem", padding:"0 0.2rem", marginBottom:"0.2rem" }}>
+                    <div style={{ width:60 }} />
+                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"var(--muted)", opacity:0.7 }}>Label (shown in nav)</p>
+                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"var(--muted)", opacity:0.7 }}>Link / URL</p>
+                  </div>
+                  {[
+                    ["nav_link1_label","nav_link1_href","Link 1","About","#about"],
+                    ["nav_link2_label","nav_link2_href","Link 2","Programs","#programs"],
+                    ["nav_link3_label","nav_link3_href","Link 3","Membership","#membership"],
+                    ["nav_link4_label","nav_link4_href","Link 4","Officers","#officers"],
+                    ["nav_link5_label","nav_link5_href","Link 5","News","#news"],
+                  ].map(([labelKey, hrefKey, title, labelPh, hrefPh]) => (
+                    <div key={labelKey} className="sp-nav-link-row">
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <div style={{ width:20, height:20, borderRadius:5, background:"rgba(196,107,26,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                          <span style={{ fontSize:"0.6rem", fontWeight:700, color:"#C46B1A" }}>{title.split(" ")[1]}</span>
+                        </div>
+                        <span style={{ fontSize:"0.72rem", fontWeight:600, color:"var(--muted)", whiteSpace:"nowrap" }}>{title}</span>
                       </div>
-                    ))}
+                      <div className="sp-field">
+                        <label className="sp-label">Label</label>
+                        <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={labelPh} style={{ fontSize:"0.84rem" }} />
+                      </div>
+                      <div className="sp-field">
+                        <label className="sp-label">Link / URL</label>
+                        <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hrefPh} style={{ fontSize:"0.84rem", fontFamily:"monospace" }} />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Join + Login buttons */}
+                  <div style={{ borderTop:"1px solid rgba(26,92,42,0.08)", paddingTop:"0.8rem", marginTop:"0.2rem" }}>
+                    <p style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--muted)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"0.6rem" }}>Action Buttons</p>
+                    <div className="sp-grid-2">
+                      <div className="sp-nav-link-row" style={{ gridTemplateColumns:"1fr 1fr" }}>
+                        <div className="sp-field">
+                          <label className="sp-label">Join Button Label</label>
+                          <input className="sp-input" value={get("nav_join_label")} onChange={e => update("nav_join_label", e.target.value)} placeholder="Join Now" style={{ fontSize:"0.84rem" }} />
+                        </div>
+                        <div className="sp-field">
+                          <label className="sp-label">Join Button Link</label>
+                          <input className="sp-input" value={get("nav_join_href")} onChange={e => update("nav_join_href", e.target.value)} placeholder="/register" style={{ fontSize:"0.84rem", fontFamily:"monospace" }} />
+                        </div>
+                      </div>
+                      <div className="sp-nav-link-row" style={{ gridTemplateColumns:"1fr" }}>
+                        <div className="sp-field">
+                          <label className="sp-label">Login Link Label</label>
+                          <p className="sp-hint">Shown when user is not logged in</p>
+                          <input className="sp-input" value={get("nav_login_label")} onChange={e => update("nav_login_label", e.target.value)} placeholder="Login" style={{ fontSize:"0.84rem" }} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -620,20 +659,18 @@ export default function SettingsPanel({ supabase }: Props) {
               {/* Live footer preview */}
               {showPreview && (
                 <div className="sp-footer-preview">
-                  <div style={{ padding:"1.2rem 1.5rem", borderBottom:"1px solid rgba(212,160,23,0.15)" }}>
-                    <p style={{ fontSize:"0.6rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:0 }}>Footer Preview</p>
+                  <div style={{ padding:"1rem 1.5rem", borderBottom:"1px solid rgba(212,160,23,0.15)" }}>
+                    <p style={{ fontSize:"0.6rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.12em", textTransform:"uppercase", margin:0 }}>Footer Preview</p>
                   </div>
                   <div style={{ padding:"1.5rem", display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr", gap:"2rem" }}>
-                    {/* Col 1 */}
                     <div>
                       <p style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842", marginBottom:"0.3rem" }}>{get("org_short_name","SUNCO")} Inc.</p>
                       <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:"0.5rem" }}>{get("org_name","Surigao del Norte Consumers Organization")}</p>
-                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare of consumers...")}</p>
+                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare...")}</p>
                       <div style={{ display:"inline-flex", alignItems:"center", background:"rgba(212,160,23,0.1)", border:"1px solid rgba(212,160,23,0.25)", padding:"3px 10px", borderRadius:4, fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"#F0C842" }}>
                         {get("footer_badge_text","DTI Accredited Partner")}
                       </div>
                     </div>
-                    {/* Col 2 */}
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_links_title","Quick Links")}</p>
                       {[
@@ -646,20 +683,18 @@ export default function SettingsPanel({ supabase }: Props) {
                         <p key={href} style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{label}</p>
                       ))}
                     </div>
-                    {/* Col 3 */}
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_contact_title","Contact")}</p>
                       <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_address","Surigao del Norte, Philippines")}</p>
                       <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_email","")}</p>
-                      {get("org_phone") && <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_phone")}</p>}
+                      {get("org_phone") && <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)" }}>{get("org_phone")}</p>}
                     </div>
                   </div>
-                  {/* Copyright bar */}
                   <div style={{ padding:"0.8rem 1.5rem", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)" }}>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>
                       {currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}
                     </p>
-                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3 }}>
+                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>
                       {get("footer_sec_badge","SEC Registered - Est. 2011")}
                     </p>
                   </div>
@@ -669,9 +704,9 @@ export default function SettingsPanel({ supabase }: Props) {
               {/* 3-column footer editor */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
 
-                {/* Col 1 editor */}
+                {/* Col 1 */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
-                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.05))" }}>
+                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.03))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#C9A84C" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 1 — About</span>
                   </div>
@@ -696,9 +731,9 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
 
-                {/* Col 2 editor */}
+                {/* Col 2 */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
-                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(43,95,168,0.08),rgba(43,95,168,0.03))" }}>
+                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(43,95,168,0.08),rgba(43,95,168,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#2B5FA8" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 2 — Links</span>
                   </div>
@@ -713,22 +748,22 @@ export default function SettingsPanel({ supabase }: Props) {
                       ["footer_link3_label","footer_link3_href","Link 3","Membership","#membership"],
                       ["footer_link4_label","footer_link4_href","Link 4","Officers & BOD","#officers"],
                       ["footer_link5_label","footer_link5_href","Link 5","News & Updates","#news"],
-                    ].map(([labelKey, hrefKey, title, labelPlaceholder, hrefPlaceholder]) => (
+                    ].map(([labelKey, hrefKey, title, lPh, hPh]) => (
                       <div key={labelKey} className="sp-link-row">
                         <div className="sp-field">
                           <label className="sp-label">{title} Label</label>
-                          <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={labelPlaceholder} style={{ fontSize:"0.82rem" }} />
+                          <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={lPh} style={{ fontSize:"0.82rem" }} />
                         </div>
                         <div className="sp-field">
                           <label className="sp-label">{title} Link</label>
-                          <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hrefPlaceholder} style={{ fontSize:"0.82rem", fontFamily:"monospace" }} />
+                          <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hPh} style={{ fontSize:"0.82rem", fontFamily:"monospace" }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Col 3 editor */}
+                {/* Col 3 */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(154,32,32,0.07),rgba(154,32,32,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#9A2020" }} />
@@ -759,7 +794,7 @@ export default function SettingsPanel({ supabase }: Props) {
                 </div>
               </div>
 
-              {/* Copyright bar editor */}
+              {/* Copyright bar */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Globe size={14} color="#C46B1A" />
@@ -767,7 +802,6 @@ export default function SettingsPanel({ supabase }: Props) {
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Bottom strip of footer</span>
                 </div>
                 <div className="sp-card-body">
-                  {/* Live copyright preview */}
                   <div style={{ background:"#080f0a", borderRadius:8, padding:"0.7rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem", marginBottom:"0.5rem" }}>
                     <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>
                       {currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}
@@ -779,7 +813,7 @@ export default function SettingsPanel({ supabase }: Props) {
                   <div className="sp-grid-2">
                     <div className="sp-field">
                       <label className="sp-label">Copyright Text</label>
-                      <p className="sp-hint">Shown after the year and org name. Year is auto-set to current year.</p>
+                      <p className="sp-hint">Text after the year and org name. Year is auto-set to current year.</p>
                       <input className="sp-input" value={get("footer_copyright_text")} onChange={e => update("footer_copyright_text", e.target.value)} placeholder="All rights reserved." />
                     </div>
                     <div className="sp-field">
