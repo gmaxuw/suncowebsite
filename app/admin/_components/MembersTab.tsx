@@ -298,21 +298,64 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   };
 
   // ── Delete member ──
-  const handleDeleteMember = async () => {
-    if (!selected) return;
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selected.first_name} ${selected.last_name}?\n\nThis will permanently remove the member and cannot be undone.`
-    );
-    if (!confirmed) return;
-    const { error } = await supabase.from("members").delete().eq("id", selected.id);
-    if (error) { alert("Error deleting member: " + error.message); return; }
-    await logActivity("MEMBER_DELETED", {
-      for_member: `${selected.first_name} ${selected.last_name}`,
-      member_id:  selected.id,
-    });
-    setSelected(null);
-    await loadMembers();
-  };
+  // ── Delete member ──
+const handleDeleteMember = async () => {
+  if (!selected) return;
+
+  // 1. Count their related records first
+  const [{ count: payCount }, { count: subCount }] = await Promise.all([
+    supabase.from("payments").select("*", { count: "exact", head: true }).eq("member_id", selected.id),
+    supabase.from("payment_submissions").select("*", { count: "exact", head: true }).eq("member_id", selected.id),
+  ]);
+
+  // 2. Build a detailed warning message
+  const lines = [
+    `Delete ${selected.first_name} ${selected.last_name}?`,
+    ``,
+    `This will permanently remove:`,
+    `  • 1 member profile`,
+    payCount  ? `  • ${payCount} payment record(s)`            : `  • 0 payment records`,
+    subCount  ? `  • ${subCount} GCash submission(s)`          : `  • 0 GCash submissions`,
+    ``,
+    `This cannot be undone. Are you sure?`,
+  ];
+
+  const confirmed = window.confirm(lines.join("\n"));
+  if (!confirmed) return;
+
+  // 3. Delete in correct order (children first, then parent)
+  const { error: subError } = await supabase
+    .from("payment_submissions")
+    .delete()
+    .eq("member_id", selected.id);
+
+  if (subError) { alert("Error deleting submissions: " + subError.message); return; }
+
+  const { error: payError } = await supabase
+    .from("payments")
+    .delete()
+    .eq("member_id", selected.id);
+
+  if (payError) { alert("Error deleting payments: " + payError.message); return; }
+
+  const { error: memberError } = await supabase
+    .from("members")
+    .delete()
+    .eq("id", selected.id);
+
+  if (memberError) { alert("Error deleting member: " + memberError.message); return; }
+
+  // 4. Log and refresh
+  await logActivity("MEMBER_DELETED", {
+    for_member:        `${selected.first_name} ${selected.last_name}`,
+    member_id:         selected.id,
+    payments_deleted:  payCount  || 0,
+    submissions_deleted: subCount || 0,
+  });
+
+  setSelected(null);
+  await loadMembers();
+};
 
   // ── Approve / Reject ──
   const handleApprove = async () => {
