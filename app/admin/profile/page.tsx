@@ -9,6 +9,7 @@ export default function AdminProfilePage() {
   const [form, setForm] = useState({
     first_name: "", middle_name: "", last_name: "",
     birthdate: "", mobile: "", address: "",
+    tin: "",
     beneficiary_name: "", beneficiary_relation: "",
   });
   const [loading, setLoading] = useState(true);
@@ -30,13 +31,14 @@ export default function AdminProfilePage() {
       if (member) {
         setMemberId(member.id);
         setForm({
-          first_name: member.first_name || "",
-          middle_name: member.middle_name || "",
-          last_name: member.last_name || "",
-          birthdate: member.birthdate || "",
-          mobile: member.mobile || "",
-          address: member.address || "",
-          beneficiary_name: member.beneficiary_name || "",
+          first_name:           member.first_name           || "",
+          middle_name:          member.middle_name          || "",
+          last_name:            member.last_name            || "",
+          birthdate:            member.birthdate            || "",
+          mobile:               member.mobile               || "",
+          address:              member.address              || "",
+          tin:                  member.tin                  || "",
+          beneficiary_name:     member.beneficiary_name     || "",
           beneficiary_relation: member.beneficiary_relation || "",
         });
       }
@@ -53,21 +55,21 @@ export default function AdminProfilePage() {
     setSaved(false);
 
     if (memberId) {
-      // Update existing
       await supabase.from("members").update({
         ...form,
+        tin:            form.tin || null,
         contact_number: form.mobile,
       }).eq("id", memberId);
     } else {
-      // Create new member record for this admin user
       await supabase.from("members").insert({
-        user_id: user.id,
+        user_id:        user.id,
         ...form,
-        email: user.email,
+        tin:            form.tin || null,
+        email:          user.email,
         contact_number: form.mobile,
-        status: "active",
+        status:         "active",
         approval_status: "approved",
-        date_joined: new Date().toISOString().split("T")[0],
+        date_joined:    new Date().toISOString().split("T")[0],
       });
     }
 
@@ -82,15 +84,22 @@ export default function AdminProfilePage() {
     borderRadius: 6, fontSize: "0.88rem",
     fontFamily: "'DM Sans', sans-serif",
     color: "var(--text)", background: "white",
-    outline: "none",
+    outline: "none", boxSizing: "border-box" as const,
   };
 
   const labelStyle = {
     display: "block" as const,
-    fontSize: "0.72rem", fontWeight: 500,
+    fontSize: "0.72rem", fontWeight: 500 as const,
     letterSpacing: "0.08em", textTransform: "uppercase" as const,
     color: "var(--muted)", marginBottom: "0.4rem",
   };
+
+  const sectionHeader = (title: string, desc?: string) => (
+    <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", background: "var(--warm)" }}>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>{title}</h2>
+      {desc && <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.2rem" }}>{desc}</p>}
+    </div>
+  );
 
   if (loading) return (
     <div style={{ minHeight: "100vh", background: "var(--green-dk)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -108,10 +117,8 @@ export default function AdminProfilePage() {
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.95rem", fontWeight: 700, color: "var(--gold-lt)" }}>SUNCO</span>
           <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", marginLeft: 6 }}>Admin Panel</span>
         </div>
-        <button
-          onClick={() => router.push("/admin")}
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", padding: "0.4rem 1rem", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontFamily: "'DM Sans', sans-serif" }}
-        >
+        <button onClick={() => router.push("/admin")}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", padding: "0.4rem 1rem", borderRadius: 6, cursor: "pointer", fontSize: "0.78rem", fontFamily: "'DM Sans', sans-serif" }}>
           <ArrowLeft size={14} /> Back to Admin
         </button>
       </nav>
@@ -124,135 +131,113 @@ export default function AdminProfilePage() {
           <p style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: "0.3rem" }}>Logged in as <strong>{user?.email}</strong></p>
         </div>
 
-        {/* FORM CARD */}
-        <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
-
-          {/* Personal Info */}
-          <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", background: "var(--warm)" }}>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>Personal Information</h2>
-            <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.2rem" }}>Your name cannot be changed once set. Contact the system admin if needed.</p>
-          </div>
-
+        {/* ── PERSONAL INFO ── */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden", marginBottom: "1.5rem" }}>
+          {sectionHeader("Personal Information", "Your name cannot be changed once set. Contact the system admin if needed.")}
           <div style={{ padding: "2rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-              <div>
-                <label style={labelStyle}>First Name *</label>
-                <input
-                  type="text"
-                  value={form.first_name}
-                  onChange={e => update("first_name", e.target.value)}
-                  placeholder="Juan"
-                  style={inputStyle}
-                  disabled={!!memberId && !!form.first_name}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Middle Name</label>
-                <input
-                  type="text"
-                  value={form.middle_name}
-                  onChange={e => update("middle_name", e.target.value)}
-                  placeholder="Santos"
-                  style={inputStyle}
-                  disabled={!!memberId && !!form.middle_name}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Last Name *</label>
-                <input
-                  type="text"
-                  value={form.last_name}
-                  onChange={e => update("last_name", e.target.value)}
-                  placeholder="dela Cruz"
-                  style={inputStyle}
-                  disabled={!!memberId && !!form.last_name}
-                />
-              </div>
-            </div>
 
+            {/* Name fields */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginBottom: "0.5rem" }}>
+              {[["First Name *", "first_name", "Juan"], ["Middle Name", "middle_name", "Santos"], ["Last Name *", "last_name", "dela Cruz"]].map(([label, key, placeholder]) => (
+                <div key={key}>
+                  <label style={labelStyle}>{label}</label>
+                  <input
+                    type="text"
+                    value={(form as any)[key]}
+                    onChange={e => update(key, e.target.value)}
+                    placeholder={placeholder}
+                    style={inputStyle}
+                    disabled={!!memberId && !!(form as any)[key]}
+                  />
+                </div>
+              ))}
+            </div>
             <p style={{ fontSize: "0.72rem", color: "var(--muted)", marginBottom: "1.5rem", fontStyle: "italic" }}>
               * Name fields are locked after being set. Contact system admin to make changes.
             </p>
 
+            {/* Birthdate + Mobile */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
               <div>
                 <label style={labelStyle}>Date of Birth</label>
-                <input
-                  type="date"
-                  value={form.birthdate}
-                  onChange={e => update("birthdate", e.target.value)}
-                  style={inputStyle}
-                />
+                <input type="date" value={form.birthdate} onChange={e => update("birthdate", e.target.value)} style={inputStyle} />
               </div>
               <div>
                 <label style={labelStyle}>Mobile Number</label>
-                <input
-                  type="tel"
-                  value={form.mobile}
-                  onChange={e => update("mobile", e.target.value)}
-                  placeholder="09XX XXX XXXX"
-                  style={inputStyle}
-                />
+                <input type="tel" value={form.mobile} onChange={e => update("mobile", e.target.value)} placeholder="09XX XXX XXXX" style={inputStyle} />
               </div>
             </div>
 
-            <div style={{ marginBottom: "1.5rem" }}>
+            {/* Address */}
+            <div style={{ marginBottom: "0" }}>
               <label style={labelStyle}>Complete Address</label>
-              <input
-                type="text"
-                value={form.address}
-                onChange={e => update("address", e.target.value)}
-                placeholder="Barangay, Municipality, Surigao del Norte"
-                style={inputStyle}
-              />
-            </div>
-
-            {/* Divider */}
-            <div style={{ borderTop: "1px solid rgba(26,92,42,0.08)", paddingTop: "1.5rem", marginBottom: "1.5rem" }}>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.95rem", fontWeight: 700, color: "var(--green-dk)", marginBottom: "1rem" }}>Beneficiary Information (for MAS)</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <div>
-                  <label style={labelStyle}>Beneficiary Name</label>
-                  <input
-                    type="text"
-                    value={form.beneficiary_name}
-                    onChange={e => update("beneficiary_name", e.target.value)}
-                    placeholder="Maria dela Cruz"
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Relationship</label>
-                  <input
-                    type="text"
-                    value={form.beneficiary_relation}
-                    onChange={e => update("beneficiary_relation", e.target.value)}
-                    placeholder="Spouse"
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Save button */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              {saved && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#2E8B44", fontSize: "0.85rem", fontWeight: 500 }}>
-                  ✓ Profile saved successfully!
-                </div>
-              )}
-              {!saved && <div />}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={{ display: "flex", alignItems: "center", gap: 8, background: saving ? "var(--gold-dk)" : "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem 2rem", borderRadius: 6, fontSize: "0.85rem", fontWeight: 500, cursor: saving ? "not-allowed" : "pointer", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}
-              >
-                <Save size={15} />
-                {saving ? "Saving..." : "Save Profile"}
-              </button>
+              <input type="text" value={form.address} onChange={e => update("address", e.target.value)} placeholder="Barangay, Municipality, Surigao del Norte" style={inputStyle} />
             </div>
           </div>
         </div>
+
+        {/* ── GOVERNMENT ID / TIN ── */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden", marginBottom: "1.5rem" }}>
+          {sectionHeader("Government ID", "Required for SEC General Information Sheet (GIS) filing.")}
+          <div style={{ padding: "2rem" }}>
+            <div style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: 8, padding: "0.8rem 1rem", marginBottom: "1.2rem" }}>
+              <p style={{ fontSize: "0.8rem", color: "#8B6914", lineHeight: 1.6, margin: 0 }}>
+                Your TIN is required by the Securities and Exchange Commission (SEC) for the annual General Information Sheet (GIS). As an officer of SUNCO, please make sure this is filled in accurately.
+              </p>
+            </div>
+            <div>
+              <label style={labelStyle}>Tax Identification Number (TIN)</label>
+              <input
+                type="text"
+                value={form.tin}
+                onChange={e => update("tin", e.target.value)}
+                placeholder="e.g. 123-456-789-000"
+                style={{ ...inputStyle, fontFamily: "monospace", letterSpacing: "0.05em" }}
+              />
+              <p style={{ fontSize: "0.7rem", color: "var(--muted)", marginTop: "0.4rem" }}>
+                Format: XXX-XXX-XXX-000. Leave blank if not yet issued.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── BENEFICIARY ── */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden", marginBottom: "1.5rem" }}>
+          {sectionHeader("Beneficiary Information", "For Mortuary Assistance (MAS) benefit claims.")}
+          <div style={{ padding: "2rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div>
+                <label style={labelStyle}>Beneficiary Name</label>
+                <input type="text" value={form.beneficiary_name} onChange={e => update("beneficiary_name", e.target.value)} placeholder="Maria dela Cruz" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Relationship</label>
+                <input type="text" value={form.beneficiary_relation} onChange={e => update("beneficiary_relation", e.target.value)} placeholder="Spouse" style={inputStyle} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SAVE BUTTON ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "white", borderRadius: 12, border: "1px solid rgba(26,92,42,0.08)", padding: "1.2rem 1.5rem" }}>
+          {saved ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#2E8B44", fontSize: "0.85rem", fontWeight: 600 }}>
+              ✓ Profile saved successfully!
+            </div>
+          ) : (
+            <p style={{ fontSize: "0.78rem", color: "var(--muted)" }}>
+              Make sure all information is accurate before saving.
+            </p>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ display: "flex", alignItems: "center", gap: 8, background: saving ? "var(--gold-dk)" : "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.85rem 2rem", borderRadius: 6, fontSize: "0.85rem", fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
+            <Save size={15} />
+            {saving ? "Saving..." : "Save Profile"}
+          </button>
+        </div>
+
       </div>
     </main>
   );

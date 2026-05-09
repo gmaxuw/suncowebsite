@@ -12,6 +12,7 @@
 // FIX: STATUS_STYLES crash when m.status is undefined/null
 // FIX: Full mobile + tablet responsiveness
 // NEW: Delete member, styled edit/delete payment modal
+// NEW: TIN field in Add Member + Edit Profile + Profile view
 // ─────────────────────────────────────────────
 import { useEffect, useState, useRef } from "react";
 import {
@@ -38,7 +39,6 @@ const PAYMENT_TYPE_META = [
 ];
 type FeeSchedule = { id: string; year: number; fee_lifetime: number; fee_aof: number; fee_mas: number; resolution_no: string | null; };
 
-// ── CRASH FIX: Added "active" and "non-active" lowercase fallbacks ──
 const STATUS_STYLES: Record<string, { text: string; bg: string; border: string }> = {
   Active:       { text: "#1A6B35", bg: "#E6F9ED", border: "#A8E6BC" },
   "active":     { text: "#1A6B35", bg: "#E6F9ED", border: "#A8E6BC" },
@@ -70,7 +70,7 @@ function getApprovalStyle(status: string | undefined | null) {
   return APPROVAL_STYLES[status] || APPROVAL_STYLES.pending;
 }
 
-function InfoCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function InfoCard({ icon: Icon, label, value, mono = false }: { icon: any; label: string; value: string; mono?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "0.8rem 1rem", background: "#F9F8F5", borderRadius: 10, border: "1px solid rgba(0,0,0,0.05)" }}>
       <div style={{ width: 28, height: 28, borderRadius: 7, background: "rgba(26,92,42,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -78,7 +78,7 @@ function InfoCard({ icon: Icon, label, value }: { icon: any; label: string; valu
       </div>
       <div style={{ minWidth: 0 }}>
         <p style={{ fontSize: "0.6rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#AAA", marginBottom: 3, fontWeight: 600 }}>{label}</p>
-        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0D3320", wordBreak: "break-word" }}>{value || "—"}</p>
+        <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0D3320", wordBreak: "break-word", fontFamily: mono ? "monospace" : "inherit" }}>{value || "—"}</p>
       </div>
     </div>
   );
@@ -98,23 +98,23 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const [editSaving,     setEditSaving]     = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
 
-  // Actions (approve/reject)
+  // Actions
   const [rejectReason,   setRejectReason]   = useState("");
   const [actionSaving,   setActionSaving]   = useState(false);
 
   // Payments
-  const [memberPayments,    setMemberPayments]    = useState<any[]>([]);
-  const [memberSubmissions, setMemberSubmissions] = useState<any[]>([]);
-  const [paymentsLoading,   setPaymentsLoading]   = useState(false);
-  const [showPayForm,       setShowPayForm]       = useState(false);
-  const [payYear,           setPayYear]           = useState(new Date().getFullYear());
-  const [payTypes,          setPayTypes]          = useState<string[]>([]);
-  const [payOR,             setPayOR]             = useState("");
-  const [payDate,           setPayDate]           = useState(new Date().toISOString().split("T")[0]);
-  const [paySaving,         setPaySaving]         = useState(false);
-  const [feeSchedule,       setFeeSchedule]       = useState<FeeSchedule | null>(null);
-  const [feeScheduleLoading,setFeeScheduleLoading]= useState(false);
-  const [feeScheduleError,  setFeeScheduleError]  = useState(false);
+  const [memberPayments,     setMemberPayments]     = useState<any[]>([]);
+  const [memberSubmissions,  setMemberSubmissions]  = useState<any[]>([]);
+  const [paymentsLoading,    setPaymentsLoading]    = useState(false);
+  const [showPayForm,        setShowPayForm]        = useState(false);
+  const [payYear,            setPayYear]            = useState(new Date().getFullYear());
+  const [payTypes,           setPayTypes]           = useState<string[]>([]);
+  const [payOR,              setPayOR]              = useState("");
+  const [payDate,            setPayDate]            = useState(new Date().toISOString().split("T")[0]);
+  const [paySaving,          setPaySaving]          = useState(false);
+  const [feeSchedule,        setFeeSchedule]        = useState<FeeSchedule | null>(null);
+  const [feeScheduleLoading, setFeeScheduleLoading] = useState(false);
+  const [feeScheduleError,   setFeeScheduleError]   = useState(false);
 
   // Edit payment modal
   const [editingPayment, setEditingPayment] = useState<any>(null);
@@ -124,11 +124,12 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   const [editPayYear,    setEditPayYear]    = useState(0);
   const [editPaySaving,  setEditPaySaving]  = useState(false);
 
-  // Add member form
+  // ── Add member form — now includes TIN ──
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm,     setAddForm]     = useState({
     first_name: "", middle_name: "", last_name: "",
     birthdate: "", mobile: "", address: "", email: "",
+    tin: "",
     beneficiary_name: "", beneficiary_relation: "",
     gender: "male", citizenship: "Filipino",
     date_joined: new Date().toISOString().split("T")[0],
@@ -167,7 +168,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     });
   };
 
- // ── Fetch fee schedule by year ──
+  // ── Fetch fee schedule by year ──
   const fetchFeeSchedule = async (yr: number) => {
     setFeeScheduleLoading(true);
     setFeeScheduleError(false);
@@ -215,6 +216,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       mobile:               m.mobile || "",
       address:              m.address || "",
       email:                m.email || "",
+      tin:                  m.tin || "",
       beneficiary_name:     m.beneficiary_name || "",
       beneficiary_relation: m.beneficiary_relation || "",
       date_joined:          m.date_joined || "",
@@ -227,7 +229,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     loadMemberData(m.id);
   };
 
-  // ── Photo upload for member ──
+  // ── Photo upload ──
   const compressToWebP = (file: File): Promise<Blob> =>
     new Promise((resolve, reject) => {
       const img = document.createElement("img") as HTMLImageElement;
@@ -267,7 +269,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
     setPhotoUploading(false);
   };
 
-  // ── Save profile edit ──
+  // ── Save profile edit — includes TIN ──
   const handleSaveProfile = async () => {
     setEditSaving(true);
     const { error } = await supabase.from("members").update({
@@ -277,6 +279,7 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
       birthdate:            editForm.birthdate || null,
       mobile:               editForm.mobile || null,
       address:              editForm.address || null,
+      tin:                  editForm.tin || null,
       beneficiary_name:     editForm.beneficiary_name || null,
       beneficiary_relation: editForm.beneficiary_relation || null,
       date_joined:          editForm.date_joined || null,
@@ -298,64 +301,18 @@ export default function MembersTab({ canCRUD, supabase, currentUser, currentRole
   };
 
   // ── Delete member ──
-  // ── Delete member ──
-const handleDeleteMember = async () => {
-  if (!selected) return;
-
-  // 1. Count their related records first
-  const [{ count: payCount }, { count: subCount }] = await Promise.all([
-    supabase.from("payments").select("*", { count: "exact", head: true }).eq("member_id", selected.id),
-    supabase.from("payment_submissions").select("*", { count: "exact", head: true }).eq("member_id", selected.id),
-  ]);
-
-  // 2. Build a detailed warning message
-  const lines = [
-    `Delete ${selected.first_name} ${selected.last_name}?`,
-    ``,
-    `This will permanently remove:`,
-    `  • 1 member profile`,
-    payCount  ? `  • ${payCount} payment record(s)`            : `  • 0 payment records`,
-    subCount  ? `  • ${subCount} GCash submission(s)`          : `  • 0 GCash submissions`,
-    ``,
-    `This cannot be undone. Are you sure?`,
-  ];
-
-  const confirmed = window.confirm(lines.join("\n"));
-  if (!confirmed) return;
-
-  // 3. Delete in correct order (children first, then parent)
-  const { error: subError } = await supabase
-    .from("payment_submissions")
-    .delete()
-    .eq("member_id", selected.id);
-
-  if (subError) { alert("Error deleting submissions: " + subError.message); return; }
-
-  const { error: payError } = await supabase
-    .from("payments")
-    .delete()
-    .eq("member_id", selected.id);
-
-  if (payError) { alert("Error deleting payments: " + payError.message); return; }
-
-  const { error: memberError } = await supabase
-    .from("members")
-    .delete()
-    .eq("id", selected.id);
-
-  if (memberError) { alert("Error deleting member: " + memberError.message); return; }
-
-  // 4. Log and refresh
-  await logActivity("MEMBER_DELETED", {
-    for_member:        `${selected.first_name} ${selected.last_name}`,
-    member_id:         selected.id,
-    payments_deleted:  payCount  || 0,
-    submissions_deleted: subCount || 0,
-  });
-
-  setSelected(null);
-  await loadMembers();
-};
+  const handleDeleteMember = async () => {
+    if (!selected) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selected.first_name} ${selected.last_name}?\n\nThis will permanently remove the member and cannot be undone.`
+    );
+    if (!confirmed) return;
+    const { error } = await supabase.from("members").delete().eq("id", selected.id);
+    if (error) { alert("Error deleting member: " + error.message); return; }
+    await logActivity("MEMBER_DELETED", { for_member: `${selected.first_name} ${selected.last_name}`, member_id: selected.id });
+    setSelected(null);
+    await loadMembers();
+  };
 
   // ── Approve / Reject ──
   const handleApprove = async () => {
@@ -384,7 +341,7 @@ const handleDeleteMember = async () => {
     setMembers(prev => prev.map(m => m.id === selected.id ? { ...m, status: newStatus } : m));
   };
 
-  // ── Record payment inline ──
+  // ── Record payment ──
   const isAlreadyPaid = (type: string) => {
     if (type === "lifetime") return memberPayments.some(p => p.type === "lifetime");
     return memberPayments.some(p => p.type === type && p.year === payYear);
@@ -393,9 +350,8 @@ const handleDeleteMember = async () => {
   const handleRecordPayment = async () => {
     if (payTypes.length === 0) { alert("Select at least one payment type."); return; }
     if (!payOR.trim()) { alert("Enter the Official Receipt (OR) number."); return; }
+    if (!feeSchedule) { alert("No fee schedule found for this year. Set it up in CMS → Fee Schedules."); return; }
     setPaySaving(true);
-
-    if (!feeSchedule) { alert("No fee schedule found for this year. Set it up in CMS → Fee Schedules."); setPaySaving(false); return; }
     const inserts = payTypes.map(type => ({
       member_id:       selected.id,
       year:            payYear,
@@ -406,16 +362,9 @@ const handleDeleteMember = async () => {
       recorded_by:     currentMemberName || "Officer",
       fee_schedule_id: feeSchedule.id,
     }));
-
     const { error } = await supabase.from("payments").insert(inserts);
     if (!error) {
-      await logActivity("PAYMENT_RECORDED", {
-        for_member:   `${selected.first_name} ${selected.last_name}`,
-        year:         payYear,
-        types:        payTypes,
-        total_amount: inserts.reduce((s, i) => s + i.amount, 0),
-        or_number:    payOR.trim(),
-      });
+      await logActivity("PAYMENT_RECORDED", { for_member: `${selected.first_name} ${selected.last_name}`, year: payYear, types: payTypes, total_amount: inserts.reduce((s, i) => s + i.amount, 0), or_number: payOR.trim() });
       await loadMemberData(selected.id);
       setShowPayForm(false);
       setPayTypes([]);
@@ -426,7 +375,7 @@ const handleDeleteMember = async () => {
     setPaySaving(false);
   };
 
-  // ── Save edited payment ──
+  // ── Edit payment ──
   const handleSaveEditPayment = async () => {
     if (!editPayOR.trim()) { alert("OR number is required."); return; }
     setEditPaySaving(true);
@@ -439,33 +388,23 @@ const handleDeleteMember = async () => {
     if (error) {
       alert("Error saving: " + error.message);
     } else {
-      await logActivity("PAYMENT_EDITED", {
-        for_member: `${selected.first_name} ${selected.last_name}`,
-        payment_id: editingPayment.id,
-        new_or:     editPayOR.trim(),
-        new_amount: editPayAmount,
-      });
+      await logActivity("PAYMENT_EDITED", { for_member: `${selected.first_name} ${selected.last_name}`, payment_id: editingPayment.id, new_or: editPayOR.trim(), new_amount: editPayAmount });
       await loadMemberData(selected.id);
       setEditingPayment(null);
     }
     setEditPaySaving(false);
   };
 
-  // ── Delete payment ──
   const handleDeletePayment = async (paymentId: string, paymentType: string) => {
     const confirmed = window.confirm(`Delete this ${paymentType.toUpperCase()} payment record?\n\nThis cannot be undone.`);
     if (!confirmed) return;
     const { error } = await supabase.from("payments").delete().eq("id", paymentId);
     if (error) { alert("Error: " + error.message); return; }
-    await logActivity("PAYMENT_DELETED", {
-      for_member: `${selected.first_name} ${selected.last_name}`,
-      payment_id: paymentId,
-      type:       paymentType,
-    });
+    await logActivity("PAYMENT_DELETED", { for_member: `${selected.first_name} ${selected.last_name}`, payment_id: paymentId, type: paymentType });
     await loadMemberData(selected.id);
   };
 
-  // ── Add member ──
+  // ── Add member — includes TIN ──
   const handleAddMember = async () => {
     if (!addForm.first_name.trim() || !addForm.last_name.trim()) { alert("First and last name required."); return; }
     setAddSaving(true);
@@ -477,13 +416,22 @@ const handleDeleteMember = async () => {
         first_name:  addForm.first_name.trim(),
         last_name:   addForm.last_name.trim(),
         middle_name: addForm.middle_name.trim() || null,
-approval_status: "approved",
-status:          addForm.status.toLowerCase(),
-
+        tin:         addForm.tin.trim() || null,
+        approval_status: "approved",
+        status:          addForm.status.toLowerCase(),
       });
       if (error) throw error;
       await loadMembers();
       setShowAddForm(false);
+      setAddForm({
+        first_name: "", middle_name: "", last_name: "",
+        birthdate: "", mobile: "", address: "", email: "",
+        tin: "",
+        beneficiary_name: "", beneficiary_relation: "",
+        gender: "male", citizenship: "Filipino",
+        date_joined: new Date().toISOString().split("T")[0],
+        status: "Active",
+      });
     } catch (err: any) { alert("Error: " + err.message); }
     setAddSaving(false);
   };
@@ -503,7 +451,7 @@ status:          addForm.status.toLowerCase(),
     return matchFilter && matchSearch;
   });
 
-  const pendingCount = members.filter(m => (m.approval_status || "").toLowerCase() === "pending").length;
+  const pendingCount       = members.filter(m => (m.approval_status || "").toLowerCase() === "pending").length;
   const totalPaidForMember = memberPayments.reduce((s, p) => s + Number(p.amount), 0);
 
   const inputCls: React.CSSProperties = {
@@ -526,11 +474,8 @@ status:          addForm.status.toLowerCase(),
     color: "#888", marginBottom: 6,
   };
 
-  // ────────────────────────────────────────
   return (
     <div style={{ fontFamily: "'DM Sans',sans-serif" }}>
-
-      {/* ── Mobile-responsive styles ── */}
       <style>{`
         @media (max-width: 640px) {
           .members-header { flex-direction: column !important; align-items: flex-start !important; }
@@ -579,11 +524,11 @@ status:          addForm.status.toLowerCase(),
       {/* ── Stats ── */}
       <div className="members-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: "0.8rem", marginBottom: "1.5rem" }}>
         {[
-          { label: "Total",      value: members.length,                                                                    color: "var(--gold)" },
-          { label: "Active",     value: members.filter(m => (m.status||"").toLowerCase() === "active").length,             color: "#2E8B44" },
-          { label: "Pending",    value: pendingCount,                                                                      color: "#2B5FA8" },
-          { label: "Non-active", value: members.filter(m => (m.status||"").toLowerCase() === "non-active").length,         color: "#D4A017" },
-          { label: "Dropped",    value: members.filter(m => (m.status||"").toLowerCase() === "dropped").length,            color: "#C0392B" },
+          { label: "Total",      value: members.length,                                                            color: "var(--gold)" },
+          { label: "Active",     value: members.filter(m => (m.status||"").toLowerCase() === "active").length,     color: "#2E8B44" },
+          { label: "Pending",    value: pendingCount,                                                              color: "#2B5FA8" },
+          { label: "Non-active", value: members.filter(m => (m.status||"").toLowerCase() === "non-active").length, color: "#D4A017" },
+          { label: "Dropped",    value: members.filter(m => (m.status||"").toLowerCase() === "dropped").length,    color: "#C0392B" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "white", borderRadius: 10, padding: "0.9rem 1rem", border: "1px solid rgba(26,92,42,0.08)", borderTop: `4px solid ${color}` }}>
             <p style={{ fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.25rem" }}>{label}</p>
@@ -635,18 +580,12 @@ status:          addForm.status.toLowerCase(),
                 <div key={m.id} onClick={() => openMember(m)}
                   style={{ padding: "1rem 1.1rem", borderBottom: i < filtered.length - 1 ? "1px solid rgba(26,92,42,0.07)" : "none", background: i % 2 === 0 ? "white" : "#FAFAF9", cursor: "pointer", display: "flex", gap: 12, alignItems: "center" }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--green-dk)", border: "2px solid rgba(201,168,76,0.3)", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {m.avatar_url ? (
-                      <img src={m.avatar_url} alt={m.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.85rem", color: "#C9A84C", fontWeight: 700 }}>
-                        {m.first_name?.[0]}{m.last_name?.[0]}
-                      </span>
+                    {m.avatar_url ? <img src={m.avatar_url} alt={m.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                      <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.85rem", color: "#C9A84C", fontWeight: 700 }}>{m.first_name?.[0]}{m.last_name?.[0]}</span>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--green-dk)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {m.first_name} {m.last_name}
-                    </p>
+                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--green-dk)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.first_name} {m.last_name}</p>
                     <p style={{ fontSize: "0.72rem", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.mobile || m.email}</p>
                     <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
                       <span style={{ background: as.bg, color: as.text, fontSize: "0.6rem", fontWeight: 600, padding: "2px 7px", borderRadius: 20, textTransform: "capitalize" }}>{m.approval_status || "—"}</span>
@@ -674,25 +613,17 @@ status:          addForm.status.toLowerCase(),
                   const as = getApprovalStyle(m.approval_status);
                   return (
                     <tr key={m.id} style={{ borderBottom: "1px solid rgba(26,92,42,0.06)", background: i % 2 === 0 ? "white" : "var(--cream)" }}>
-                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "monospace" }}>
-                        {m.membership_number ? `#${m.membership_number}` : "—"}
-                      </td>
+                      <td style={{ padding: "0.9rem 1rem", fontSize: "0.75rem", color: "var(--muted)", fontFamily: "monospace" }}>{m.membership_number ? `#${m.membership_number}` : "—"}</td>
                       <td style={{ padding: "0.9rem 1rem" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{ width: 34, height: 34, borderRadius: "50%", background: "var(--green-dk)", border: "2px solid rgba(201,168,76,0.3)", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {m.avatar_url ? (
-                              <img src={m.avatar_url} alt={m.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            ) : (
-                              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.8rem", color: "#C9A84C", fontWeight: 700 }}>
-                                {m.first_name?.[0]}{m.last_name?.[0]}
-                              </span>
+                            {m.avatar_url ? <img src={m.avatar_url} alt={m.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                              <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "0.8rem", color: "#C9A84C", fontWeight: 700 }}>{m.first_name?.[0]}{m.last_name?.[0]}</span>
                             )}
                           </div>
                           <div>
                             <button onClick={() => openMember(m)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", fontFamily: "'DM Sans',sans-serif" }}>
-                              <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--green-dk)", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}>
-                                {m.first_name} {m.last_name}
-                              </p>
+                              <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--green-dk)", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}>{m.first_name} {m.last_name}</p>
                             </button>
                             <p style={{ fontSize: "0.7rem", color: "var(--muted)" }}>{m.email}</p>
                           </div>
@@ -736,18 +667,14 @@ status:          addForm.status.toLowerCase(),
         <div className="modal-wrap" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 0 : "1rem", overflowY: "auto" }}>
           <div className="modal-inner" style={{ background: "white", borderRadius: isMobile ? "16px 16px 0 0" : 16, maxWidth: 620, width: "100%", maxHeight: isMobile ? "92vh" : "95vh", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.35)", overflow: "hidden", marginTop: isMobile ? "auto" : undefined }}>
 
-            {/* ── Modal Header ── */}
+            {/* Modal Header */}
             <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", padding: "1.2rem 1.4rem", flexShrink: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <div style={{ width: 52, height: 52, borderRadius: "50%", border: "3px solid #C9A84C", overflow: "hidden", background: "rgba(201,168,76,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {selected.avatar_url ? (
-                        <img src={selected.avatar_url} alt={selected.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.2rem", color: "#C9A84C", fontWeight: 700 }}>
-                          {selected.first_name?.[0]}{selected.last_name?.[0]}
-                        </span>
+                      {selected.avatar_url ? <img src={selected.avatar_url} alt={selected.first_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                        <span style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.2rem", color: "#C9A84C", fontWeight: 700 }}>{selected.first_name?.[0]}{selected.last_name?.[0]}</span>
                       )}
                     </div>
                     {canCRUD && (
@@ -771,22 +698,14 @@ status:          addForm.status.toLowerCase(),
                 </button>
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: "0.8rem", flexWrap: "wrap" }}>
-                {(() => { const ss = getStatusStyle(selected.status); return (
-                  <span style={{ background: ss.bg, color: ss.text, border: `1px solid ${ss.border}`, fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, textTransform: "capitalize" }}>{selected.status || "—"}</span>
-                ); })()}
-                {(() => { const as = getApprovalStyle(selected.approval_status); return (
-                  <span style={{ background: as.bg, color: as.text, fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, textTransform: "capitalize" }}>{selected.approval_status || "—"}</span>
-                ); })()}
-                {selected.membership_number && (
-                  <span style={{ background: "rgba(201,168,76,0.2)", color: "#C9A84C", fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20 }}>#{selected.membership_number}</span>
-                )}
-                {totalPaidForMember > 0 && (
-                  <span style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", fontSize: "0.65rem", fontWeight: 600, padding: "2px 10px", borderRadius: 20 }}>₱{totalPaidForMember.toLocaleString()} paid</span>
-                )}
+                {(() => { const ss = getStatusStyle(selected.status); return <span style={{ background: ss.bg, color: ss.text, border: `1px solid ${ss.border}`, fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, textTransform: "capitalize" }}>{selected.status || "—"}</span>; })()}
+                {(() => { const as = getApprovalStyle(selected.approval_status); return <span style={{ background: as.bg, color: as.text, fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20, textTransform: "capitalize" }}>{selected.approval_status || "—"}</span>; })()}
+                {selected.membership_number && <span style={{ background: "rgba(201,168,76,0.2)", color: "#C9A84C", fontSize: "0.65rem", fontWeight: 700, padding: "2px 10px", borderRadius: 20 }}>#{selected.membership_number}</span>}
+                {totalPaidForMember > 0 && <span style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", fontSize: "0.65rem", fontWeight: 600, padding: "2px 10px", borderRadius: 20 }}>₱{totalPaidForMember.toLocaleString()} paid</span>}
               </div>
             </div>
 
-            {/* ── Modal Tabs ── */}
+            {/* Modal Tabs */}
             <div style={{ display: "flex", background: "#F9F8F5", borderBottom: "1px solid rgba(26,92,42,0.08)", flexShrink: 0, overflowX: "auto" }}>
               {([
                 { id: "profile",     label: "Profile",  icon: Users      },
@@ -805,7 +724,7 @@ status:          addForm.status.toLowerCase(),
               ))}
             </div>
 
-            {/* ── Tab Content ── */}
+            {/* Tab Content */}
             <div style={{ overflowY: "auto", flex: 1, padding: "1.2rem 1.4rem" }}>
 
               {/* ═══ PROFILE TAB ═══ */}
@@ -822,12 +741,10 @@ status:          addForm.status.toLowerCase(),
                         </div>
                       ) : (
                         <div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => setEditMode(true)}
-                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "var(--green-dk)" }}>
+                          <button onClick={() => setEditMode(true)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.15)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "var(--green-dk)" }}>
                             <Edit3 size={12} /> Edit Profile
                           </button>
-                          <button onClick={handleDeleteMember}
-                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "#C0392B" }}>
+                          <button onClick={handleDeleteMember} style={{ display: "flex", alignItems: "center", gap: 5, padding: "0.4rem 1rem", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.25)", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", color: "#C0392B" }}>
                             <XCircle size={12} /> Delete
                           </button>
                         </div>
@@ -846,11 +763,7 @@ status:          addForm.status.toLowerCase(),
                         ))}
                       </div>
                       <div className="edit-info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
-                        {[
-                          ["Mobile", "mobile", "tel"],
-                          ["Date of Birth", "birthdate", "date"],
-                          ["Date Joined", "date_joined", "date"],
-                        ].map(([label, key, type]) => (
+                        {[["Mobile", "mobile", "tel"], ["Date of Birth", "birthdate", "date"], ["Date Joined", "date_joined", "date"]].map(([label, key, type]) => (
                           <div key={key}>
                             <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>{label}</label>
                             <input type={type} value={editForm[key] || ""} onChange={e => setEditForm((p: any) => ({ ...p, [key]: e.target.value }))} style={inputCls} />
@@ -860,6 +773,11 @@ status:          addForm.status.toLowerCase(),
                       <div>
                         <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>Address</label>
                         <input value={editForm.address || ""} onChange={e => setEditForm((p: any) => ({ ...p, address: e.target.value }))} style={inputCls} placeholder="Barangay, Municipality, Province" />
+                      </div>
+                      {/* ── TIN field in edit mode ── */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.62rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginBottom: 4 }}>TIN (Tax Identification Number)</label>
+                        <input value={editForm.tin || ""} onChange={e => setEditForm((p: any) => ({ ...p, tin: e.target.value }))} style={{ ...inputCls, fontFamily: "monospace" }} placeholder="e.g. 123-456-789-000" />
                       </div>
                       <div className="edit-info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
                         {[["Beneficiary Name", "beneficiary_name"], ["Relationship", "beneficiary_relation"]].map(([label, key]) => (
@@ -889,14 +807,16 @@ status:          addForm.status.toLowerCase(),
                     </div>
                   ) : (
                     <div className="info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.7rem" }}>
-                      <InfoCard icon={CreditCard} label="Member ID"    value={selected.member_id_code || `#${selected.membership_number || "—"}`} />
-                      <InfoCard icon={Calendar}   label="Date Joined"  value={selected.date_joined ? new Date(selected.date_joined).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
-                      <InfoCard icon={Phone}      label="Mobile"       value={selected.mobile || "—"} />
+                      <InfoCard icon={CreditCard} label="Member ID"     value={selected.member_id_code || `#${selected.membership_number || "—"}`} />
+                      <InfoCard icon={Calendar}   label="Date Joined"   value={selected.date_joined ? new Date(selected.date_joined).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
+                      <InfoCard icon={Phone}      label="Mobile"        value={selected.mobile || "—"} />
                       <InfoCard icon={Calendar}   label="Date of Birth" value={selected.birthdate ? new Date(selected.birthdate).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—"} />
-                      <InfoCard icon={MapPin}     label="Address"      value={selected.address || "—"} />
-                      <InfoCard icon={Heart}      label="Beneficiary"  value={selected.beneficiary_name ? `${selected.beneficiary_name} (${selected.beneficiary_relation || "—"})` : "—"} />
-                      <InfoCard icon={Shield}     label="Member No."   value={selected.membership_number ? `#${selected.membership_number}` : "—"} />
-                      <InfoCard icon={Calendar}   label="Date Applied" value={selected.created_at ? new Date(selected.created_at).toLocaleDateString("en-PH") : "—"} />
+                      <InfoCard icon={MapPin}     label="Address"       value={selected.address || "—"} />
+                      <InfoCard icon={Heart}      label="Beneficiary"   value={selected.beneficiary_name ? `${selected.beneficiary_name} (${selected.beneficiary_relation || "—"})` : "—"} />
+                      <InfoCard icon={Shield}     label="Member No."    value={selected.membership_number ? `#${selected.membership_number}` : "—"} />
+                      {/* ── TIN shown in profile view ── */}
+                      <InfoCard icon={FileText}   label="TIN"           value={selected.tin || "Not provided"} mono />
+                      <InfoCard icon={Calendar}   label="Date Applied"  value={selected.created_at ? new Date(selected.created_at).toLocaleDateString("en-PH") : "—"} />
                     </div>
                   )}
                 </div>
@@ -905,13 +825,12 @@ status:          addForm.status.toLowerCase(),
               {/* ═══ PAYMENTS TAB ═══ */}
               {modalTab === "payments" && (
                 <div>
-                  {/* Summary cards */}
                   <div className="pay-summary" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.6rem", marginBottom: "1.2rem" }}>
                     {[
-                      { label: "Total Paid", value: `₱${totalPaidForMember.toLocaleString()}`,                                  color: "var(--gold)" },
-                      { label: "Lifetime",   value: memberPayments.some(p => p.type === "lifetime") ? "✓ Paid" : "Not yet",     color: "#6B3FA0" },
-                      { label: "AOF",        value: String(memberPayments.filter(p => p.type === "aof").length),                 color: "#2B5FA8" },
-                      { label: "MAS",        value: String(memberPayments.filter(p => p.type === "mas").length),                 color: "#2E8B44" },
+                      { label: "Total Paid", value: `₱${totalPaidForMember.toLocaleString()}`,                              color: "var(--gold)" },
+                      { label: "Lifetime",   value: memberPayments.some(p => p.type === "lifetime") ? "✓ Paid" : "Not yet", color: "#6B3FA0" },
+                      { label: "AOF",        value: String(memberPayments.filter(p => p.type === "aof").length),             color: "#2B5FA8" },
+                      { label: "MAS",        value: String(memberPayments.filter(p => p.type === "mas").length),             color: "#2E8B44" },
                     ].map(({ label, value, color }) => (
                       <div key={label} style={{ background: "#F9F8F5", borderRadius: 10, padding: "0.8rem 0.9rem", borderTop: `3px solid ${color}` }}>
                         <p style={{ fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: 3 }}>{label}</p>
@@ -920,11 +839,10 @@ status:          addForm.status.toLowerCase(),
                     ))}
                   </div>
 
-                  {/* Record payment button / form */}
                   {canCRUD && (
                     <div style={{ marginBottom: "1.2rem" }}>
                       {!showPayForm ? (
-                     <button onClick={() => { setShowPayForm(true); fetchFeeSchedule(payYear); }}
+                        <button onClick={() => { setShowPayForm(true); fetchFeeSchedule(payYear); }}
                           style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--gold)", color: "var(--green-dk)", border: "none", padding: "0.6rem 1.2rem", borderRadius: 8, fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
                           <PlusCircle size={14} /> Record Payment
                         </button>
@@ -994,7 +912,6 @@ status:          addForm.status.toLowerCase(),
                     </div>
                   )}
 
-                  {/* Payment records table */}
                   {paymentsLoading ? (
                     <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>Loading payments...</div>
                   ) : memberPayments.length === 0 ? (
@@ -1028,22 +945,10 @@ status:          addForm.status.toLowerCase(),
                                 {canCRUD && (
                                   <td style={{ padding: "0.65rem 0.8rem" }}>
                                     <div style={{ display: "flex", gap: 5 }}>
-                                      <button
-                                        onClick={() => {
-                                          setEditingPayment(p);
-                                          setEditPayOR(p.receipt_number || "");
-                                          setEditPayAmount(String(p.amount));
-                                          setEditPayDate(p.date_paid || new Date().toISOString().split("T")[0]);
-                                          setEditPayYear(p.year || new Date().getFullYear());
-                                        }}
-                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.2)", borderRadius: 6, cursor: "pointer", color: "var(--green-dk)", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeletePayment(p.id, p.type)}
-                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 6, cursor: "pointer", color: "#C0392B", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>
-                                        Del
-                                      </button>
+                                      <button onClick={() => { setEditingPayment(p); setEditPayOR(p.receipt_number || ""); setEditPayAmount(String(p.amount)); setEditPayDate(p.date_paid || new Date().toISOString().split("T")[0]); setEditPayYear(p.year || new Date().getFullYear()); }}
+                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(26,92,42,0.07)", border: "1px solid rgba(26,92,42,0.2)", borderRadius: 6, cursor: "pointer", color: "var(--green-dk)", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>Edit</button>
+                                      <button onClick={() => handleDeletePayment(p.id, p.type)}
+                                        style={{ fontSize: "0.68rem", padding: "3px 10px", background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 6, cursor: "pointer", color: "#C0392B", fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>Del</button>
                                     </div>
                                   </td>
                                 )}
@@ -1094,9 +999,7 @@ status:          addForm.status.toLowerCase(),
                                 <p style={{ fontSize: "0.7rem", color: "var(--muted)" }}>Ref: {sub.gcash_reference}</p>
                               </div>
                               {sub.screenshot_url && (
-                                <a href={sub.screenshot_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--green-dk)", textDecoration: "none", background: "rgba(26,92,42,0.08)", padding: "0.3rem 0.7rem", borderRadius: 6 }}>
-                                  View Receipt
-                                </a>
+                                <a href={sub.screenshot_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.72rem", color: "var(--green-dk)", textDecoration: "none", background: "rgba(26,92,42,0.08)", padding: "0.3rem 0.7rem", borderRadius: 6 }}>View Receipt</a>
                               )}
                             </div>
                             {sub.status === "rejected" && sub.rejection_reason && (
@@ -1115,9 +1018,7 @@ status:          addForm.status.toLowerCase(),
                 <div>
                   <div style={{ background: "rgba(43,95,168,0.06)", border: "1px solid rgba(43,95,168,0.2)", borderRadius: 10, padding: "1rem 1.1rem", marginBottom: "1.2rem" }}>
                     <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "#2B5FA8", marginBottom: 4 }}>📋 Application Review</p>
-                    <p style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.6 }}>
-                      Review the member's information in the Profile tab before taking action. Approving will set their status to Active and record their date joined.
-                    </p>
+                    <p style={{ fontSize: "0.78rem", color: "#555", lineHeight: 1.6 }}>Review the member's information in the Profile tab before taking action. Approving will set their status to Active and record their date joined.</p>
                   </div>
                   <div style={{ marginBottom: "1.2rem" }}>
                     <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#888", marginBottom: 6 }}>
@@ -1150,88 +1051,43 @@ status:          addForm.status.toLowerCase(),
       {editingPayment && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
           <div style={{ background: "white", borderRadius: 16, maxWidth: 460, width: "100%", boxShadow: "0 32px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
-
-            {/* Header */}
             <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", padding: "1.2rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <p style={{ fontSize: "0.55rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 2 }}>Payment Record</p>
                 <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.15rem", color: "#C9A84C" }}>Edit Payment</h2>
-                <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
-                  {selected?.first_name} {selected?.last_name} · {(editingPayment.type || "").toUpperCase()} · {editingPayment.year}
-                </p>
+                <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.4)", marginTop: 2 }}>{selected?.first_name} {selected?.last_name} · {(editingPayment.type || "").toUpperCase()} · {editingPayment.year}</p>
               </div>
-              <button onClick={() => setEditingPayment(null)}
-                style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={14} />
-              </button>
+              <button onClick={() => setEditingPayment(null)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", width: 30, height: 30, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
             </div>
-
-            {/* Type badge strip */}
             <div style={{ background: "#F9F8F5", borderBottom: "1px solid rgba(26,92,42,0.08)", padding: "0.7rem 1.5rem", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{
-                background: editingPayment.type === "mas" ? "rgba(46,139,68,0.12)" : editingPayment.type === "aof" ? "rgba(43,95,168,0.12)" : "rgba(107,63,160,0.12)",
-                color:      editingPayment.type === "mas" ? "#2E7D32"             : editingPayment.type === "aof" ? "#1565C0"             : "#6B3FA0",
-                fontSize: "0.65rem", fontWeight: 700, padding: "3px 12px", borderRadius: 20, textTransform: "uppercase",
-              }}>{editingPayment.type}</span>
-              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
-                Editing record — changes save immediately
-              </span>
+              <span style={{ background: editingPayment.type === "mas" ? "rgba(46,139,68,0.12)" : editingPayment.type === "aof" ? "rgba(43,95,168,0.12)" : "rgba(107,63,160,0.12)", color: editingPayment.type === "mas" ? "#2E7D32" : editingPayment.type === "aof" ? "#1565C0" : "#6B3FA0", fontSize: "0.65rem", fontWeight: 700, padding: "3px 12px", borderRadius: 20, textTransform: "uppercase" }}>{editingPayment.type}</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>Editing record — changes save immediately</span>
             </div>
-
-            {/* Form fields */}
             <div style={{ padding: "1.4rem 1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-
-              {/* OR Number */}
               <div>
                 <label style={modalLabelCls}>Official Receipt (OR) Number *</label>
-                <input
-                  type="text"
-                  value={editPayOR}
-                  onChange={e => setEditPayOR(e.target.value)}
-                  style={{ ...modalInputCls, fontWeight: 600, letterSpacing: "0.03em" }}
-                  placeholder="e.g. OR-2026-00225"
-                />
+                <input type="text" value={editPayOR} onChange={e => setEditPayOR(e.target.value)} style={{ ...modalInputCls, fontWeight: 600, letterSpacing: "0.03em" }} placeholder="e.g. OR-2026-00225" />
               </div>
-
-              {/* Amount + Year */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
                 <div>
                   <label style={modalLabelCls}>Amount (₱)</label>
-                  <input
-                    type="number"
-                    value={editPayAmount}
-                    onChange={e => setEditPayAmount(e.target.value)}
-                    style={modalInputCls}
-                  />
+                  <input type="number" value={editPayAmount} onChange={e => setEditPayAmount(e.target.value)} style={modalInputCls} />
                 </div>
                 <div>
                   <label style={modalLabelCls}>Year</label>
                   <select value={editPayYear} onChange={e => setEditPayYear(Number(e.target.value))} style={{ ...modalInputCls, background: "white" }}>
-                    {Array.from({ length: 16 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
+                    {Array.from({ length: 16 }, (_, i) => new Date().getFullYear() - i).map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
               </div>
-
-              {/* Date Paid */}
               <div>
                 <label style={modalLabelCls}>Date Paid</label>
-                <input
-                  type="date"
-                  value={editPayDate}
-                  onChange={e => setEditPayDate(e.target.value)}
-                  style={modalInputCls}
-                />
+                <input type="date" value={editPayDate} onChange={e => setEditPayDate(e.target.value)} style={modalInputCls} />
               </div>
-
-              {/* Live preview card */}
               <div style={{ background: "linear-gradient(135deg,#0D3320,#1A5C2A)", borderRadius: 10, padding: "1rem 1.2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>Amount to save</p>
-                  <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.5rem", fontWeight: 700, color: "#C9A84C" }}>
-                    ₱{Number(editPayAmount || 0).toLocaleString()}
-                  </p>
+                  <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "1.5rem", fontWeight: 700, color: "#C9A84C" }}>₱{Number(editPayAmount || 0).toLocaleString()}</p>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <p style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.38)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>OR No.</p>
@@ -1239,26 +1095,19 @@ status:          addForm.status.toLowerCase(),
                   <p style={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{editPayYear}</p>
                 </div>
               </div>
-
-              {/* Action buttons */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.7rem" }}>
-                <button onClick={() => setEditingPayment(null)}
-                  style={{ padding: "0.78rem", background: "#F5F5F5", border: "none", borderRadius: 8, fontSize: "0.85rem", color: "#777", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>
-                  Cancel
-                </button>
-                <button onClick={handleSaveEditPayment} disabled={editPaySaving || !editPayOR.trim()}
-                  style={{ padding: "0.78rem", background: editPaySaving || !editPayOR.trim() ? "#CCC" : "var(--gold)", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, color: "var(--green-dk)", cursor: editPaySaving || !editPayOR.trim() ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                <button onClick={() => setEditingPayment(null)} style={{ padding: "0.78rem", background: "#F5F5F5", border: "none", borderRadius: 8, fontSize: "0.85rem", color: "#777", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>Cancel</button>
+                <button onClick={handleSaveEditPayment} disabled={editPaySaving || !editPayOR.trim()} style={{ padding: "0.78rem", background: editPaySaving || !editPayOR.trim() ? "#CCC" : "var(--gold)", border: "none", borderRadius: 8, fontSize: "0.85rem", fontWeight: 700, color: "var(--green-dk)", cursor: editPaySaving || !editPayOR.trim() ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif" }}>
                   {editPaySaving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
       {/* ════════════════════════════════════════
-          ADD MEMBER MODAL
+          ADD MEMBER MODAL — now with TIN
       ════════════════════════════════════════ */}
       {showAddForm && (
         <div className="modal-wrap" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 400, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : "1rem", overflowY: "auto" }}>
@@ -1273,6 +1122,7 @@ status:          addForm.status.toLowerCase(),
             <div style={{ overflowY: "auto", padding: "1.2rem 1.4rem" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
+                {/* Full Name */}
                 <div>
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>Full Name</p>
                   <div className="add-name-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
@@ -1285,6 +1135,7 @@ status:          addForm.status.toLowerCase(),
                   </div>
                 </div>
 
+                {/* Basic Info */}
                 <div>
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>Basic Info</p>
                   <div className="add-info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
@@ -1311,6 +1162,7 @@ status:          addForm.status.toLowerCase(),
                   </div>
                 </div>
 
+                {/* Contact */}
                 <div>
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>Contact</p>
                   <div className="add-info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginBottom: "0.5rem" }}>
@@ -1325,6 +1177,21 @@ status:          addForm.status.toLowerCase(),
                   <input value={addForm.address || ""} onChange={e => setAddForm((p: any) => ({ ...p, address: e.target.value }))} placeholder="Barangay, Municipality, Province" style={inputCls} />
                 </div>
 
+                {/* ── TIN Field ── */}
+                <div>
+                  <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>Government ID</p>
+                  <label style={{ display: "block", fontSize: "0.6rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#AAA", marginBottom: 3 }}>TIN (Tax Identification Number)</label>
+                  <input
+                    type="text"
+                    value={addForm.tin || ""}
+                    onChange={e => setAddForm((p: any) => ({ ...p, tin: e.target.value }))}
+                    placeholder="e.g. 123-456-789-000"
+                    style={{ ...inputCls, fontFamily: "monospace" }}
+                  />
+                  <p style={{ fontSize: "0.65rem", color: "#AAA", marginTop: "0.3rem" }}>Required for SEC General Information Sheet (GIS). Optional if not yet issued.</p>
+                </div>
+
+                {/* Beneficiary */}
                 <div>
                   <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--muted)", marginBottom: "0.5rem" }}>Beneficiary (MAS)</p>
                   <div className="add-info-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
