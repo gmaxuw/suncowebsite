@@ -485,12 +485,11 @@ export default function SettingsPanel({ supabase }: Props) {
                     </div>
                   </div>
                   <div style={{ padding:"0.8rem 1.5rem", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>© {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>ï¿½ {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
                     <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
                   </div>
                 </div>
-              )}
-
+              )}{currentYear}
               {/* 3-column footer editor */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
 
@@ -561,13 +560,13 @@ export default function SettingsPanel({ supabase }: Props) {
                 <div className="sp-card-body">
                   {/* Live preview */}
                   <div style={{ background:"#080f0a", borderRadius:8, padding:"0.7rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem" }}>
-                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>© {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
+                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>ï¿½ {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
                     <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
                   </div>
                   <div className="sp-grid-2">
                     <div className="sp-field">
                       <label className="sp-label">Left Copyright Text</label>
-                      <p className="sp-hint">Year © {currentYear} is auto-prepended. Edit the full text freely.</p>
+                      <p className="sp-hint">Year ï¿½ {currentYear} is auto-prepended. Edit the full text freely.</p>
                       <textarea className="sp-textarea" rows={2} value={get("footer_copyright_text")} onChange={e => update("footer_copyright_text", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc. All rights reserved." />
                     </div>
                     <div className="sp-field">
