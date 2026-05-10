@@ -895,7 +895,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#0D3320", marginBottom: 3 }}>Profile Photo</p>
-                  <p style={{ fontSize: "0.75rem", color: "#BBB", marginBottom: 7 }}>Auto-compressed & saved as WebP</p>
+                  <p style={{ fontSize: "0.75rem", color: "#BBB", marginBottom: 7 }}>Upload with JPG, PNG, or WebP</p>
                   <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ display: "flex", alignItems: "center", gap: 6, background: "#0D3320", color: "white", border: "none", padding: "0.35rem 0.9rem", borderRadius: 6, fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
                     <Upload size={12} /> {uploading ? "Uploading..." : "Change Photo"}
                   </button>
