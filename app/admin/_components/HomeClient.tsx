@@ -40,20 +40,22 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const feeMas = s("fee_mas", "0");
 
   const NAV_LINKS = [
-    ["#about",      s("nav_link1_label", "About")],
-    ["#programs",   s("nav_link2_label", "Programs")],
-    ["#membership", s("nav_link3_label", "Membership")],
-    ["#officers",   s("nav_link4_label", "Officers")],
-    ["#news",       s("nav_link5_label", "News")],
+    [s("nav_link1_href", "#about"),      s("nav_link1_label", "About")],
+    [s("nav_link2_href", "#programs"),   s("nav_link2_label", "Programs")],
+    [s("nav_link3_href", "#membership"), s("nav_link3_label", "Membership")],
+    [s("nav_link4_href", "#officers"),   s("nav_link4_label", "Officers")],
+    [s("nav_link5_href", "#news"),       s("nav_link5_label", "News")],
   ];
 
   const FOOTER_LINKS = [
-    ["#about",      s("footer_link1_label", "About SUNCO")],
-    ["#programs",   s("footer_link2_label", "Programs & Rights")],
-    ["#membership", s("footer_link3_label", "Membership")],
-    ["#officers",   s("footer_link4_label", "Officers & BOD")],
-    ["#news",       s("footer_link5_label", "News & Updates")],
+    [s("footer_link1_href", "#about"),      s("footer_link1_label", "About SUNCO")],
+    [s("footer_link2_href", "#programs"),   s("footer_link2_label", "Programs & Rights")],
+    [s("footer_link3_href", "#membership"), s("footer_link3_label", "Membership")],
+    [s("footer_link4_href", "#officers"),   s("footer_link4_label", "Officers & BOD")],
+    [s("footer_link5_href", "#news"),       s("footer_link5_label", "News & Updates")],
   ];
+
+  const currentYear = new Date().getFullYear();
 
   return (
     <div style={{ position: "relative" }}>
@@ -76,7 +78,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           : !authLoading && <a href="/login" style={{ color: "rgba(255,255,255,0.75)", textDecoration: "none", fontSize: "0.78rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0 0.9rem", height: "64px", display: "flex", alignItems: "center" }}>{s("nav_login_label", "Login")}</a>
         }
         {!authLoading && !authUser && (
-          <a href="/register" style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>{s("nav_join_label", "Join Now")}</a>
+          <a href={s("nav_join_href", "/register")} style={{ background: "var(--gold)", color: "var(--green-dk)", padding: "0.45rem 1.2rem", borderRadius: 4, fontSize: "0.78rem", fontWeight: 500, textTransform: "uppercase", textDecoration: "none", marginLeft: "0.5rem" }}>{s("nav_join_label", "Join Now")}</a>
         )}
       </div>
 
@@ -96,7 +98,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           : !authLoading && <a href="/login" onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: "0.88rem", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.85rem 0", borderBottom: "1px solid rgba(255,255,255,0.07)", display: "block" }}>{s("nav_login_label", "Login")}</a>
         }
         {!authLoading && !authUser && (
-          <a href="/register" onClick={() => setMenuOpen(false)} style={{ marginTop: "0.8rem", background: "var(--gold)", color: "var(--green-dk)", textAlign: "center", padding: "0.75rem", borderRadius: 4, fontWeight: 600, textDecoration: "none", display: "block" }}>{s("nav_join_label", "Join Now")}</a>
+          <a href={s("nav_join_href", "/register")} onClick={() => setMenuOpen(false)} style={{ marginTop: "0.8rem", background: "var(--gold)", color: "var(--green-dk)", textAlign: "center", padding: "0.75rem", borderRadius: 4, fontWeight: 600, textDecoration: "none", display: "block" }}>{s("nav_join_label", "Join Now")}</a>
         )}
       </div>
     )}
@@ -407,9 +409,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
                       return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
                     })()}
                   </div>
-                  <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>
-                    {article.title}
-                  </h3>
+                  <h3 className="sourceserif" style={{ fontSize: i === 0 ? "1.1rem" : "0.95rem", fontWeight: 400, color: "white", lineHeight: 1.4, marginBottom: "0.5rem" }}>{article.title}</h3>
                   <p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.5)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: i === 0 ? 4 : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                     {article.excerpt || article.body?.substring(0, 150)}
                   </p>
@@ -443,7 +443,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "1rem" }}>Quick Links</h4>
+            <h4 style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "1rem" }}>{s("footer_links_title","Quick Links")}</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
               {FOOTER_LINKS.map(([href, label]) => (
                 <a key={href} href={href} style={{ fontSize: "0.83rem", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>{label}</a>
@@ -451,7 +451,7 @@ export default function HomeClient({ settings, officers, programs, articles }: P
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "1rem" }}>Contact</h4>
+            <h4 style={{ fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "1rem" }}>{s("footer_contact_title","Contact")}</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.83rem", color: "rgba(255,255,255,0.5)" }}>
                 <MapPin size={14} style={{ marginTop: 2, flexShrink: 0, color: "var(--gold)" }} />
@@ -467,8 +467,8 @@ export default function HomeClient({ settings, officers, programs, articles }: P
           </div>
         </div>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
-          <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.25)" }}>2026 {s("org_name","Surigao del Norte Consumers Organization, Inc.")}. All rights reserved.</p>
-          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.1)", padding: "3px 10px", borderRadius: 3 }}>SEC Registered - Est. {s("org_established","2011")}</div>
+          <p style={{ fontSize: "0.73rem", color: "rgba(255,255,255,0.25)" }}>{currentYear} {s("org_name","Surigao del Norte Consumers Organization, Inc.")}. {s("footer_copyright_text","All rights reserved.")}</p>
+          <div style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.1)", padding: "3px 10px", borderRadius: 3 }}>{s("footer_sec_badge","SEC Registered - Est. 2011")}</div>
         </div>
       </div>
     </footer>

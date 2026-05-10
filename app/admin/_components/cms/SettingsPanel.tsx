@@ -127,8 +127,8 @@ export default function SettingsPanel({ supabase }: Props) {
     setLogoUploading(false);
   };
 
-  const activeMeta = GROUPS.find(g => g.id === activeGroup)!;
-  const isOpen     = get("registration_open", "true") === "true";
+  const activeMeta  = GROUPS.find(g => g.id === activeGroup)!;
+  const isOpen      = get("registration_open", "true") === "true";
   const currentYear = new Date().getFullYear();
 
   if (loading) return (
@@ -141,10 +141,10 @@ export default function SettingsPanel({ supabase }: Props) {
   return (
     <>
       <style>{`
-        .sp-field { margin-bottom: 0; }
+        .sp-field { margin-bottom:0; }
         .sp-label { display:block; font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#0A2818; margin-bottom:0.3rem; opacity:0.55; }
         .sp-hint  { font-size:0.68rem; color:var(--muted); margin-bottom:0.4rem; line-height:1.5; opacity:0.8; }
-        .sp-input { width:100%; padding:0.72rem 1rem; border:1.5px solid rgba(26,92,42,0.14); border-radius:9px; font-size:0.88rem; font-family:'DM Sans',sans-serif; color:#0D3320; background:white; outline:none; box-sizing:border-box; transition:border-color 0.15s, box-shadow 0.15s; }
+        .sp-input { width:100%; padding:0.72rem 1rem; border:1.5px solid rgba(26,92,42,0.14); border-radius:9px; font-size:0.88rem; font-family:'DM Sans',sans-serif; color:#0D3320; background:white; outline:none; box-sizing:border-box; transition:border-color 0.15s,box-shadow 0.15s; }
         .sp-input:focus { border-color:rgba(26,92,42,0.4); box-shadow:0 0 0 3px rgba(26,92,42,0.06); }
         .sp-textarea { width:100%; padding:0.72rem 1rem; border:1.5px solid rgba(26,92,42,0.14); border-radius:9px; font-size:0.88rem; font-family:'DM Sans',sans-serif; color:#0D3320; background:white; outline:none; resize:vertical; line-height:1.7; box-sizing:border-box; transition:border-color 0.15s; }
         .sp-textarea:focus { border-color:rgba(26,92,42,0.4); box-shadow:0 0 0 3px rgba(26,92,42,0.06); }
@@ -158,11 +158,11 @@ export default function SettingsPanel({ supabase }: Props) {
         .sp-nav-btn.active { background:rgba(26,92,42,0.08); }
         .sp-preview { background:linear-gradient(135deg,#0A2818 0%,#1A5C2A 100%); border-radius:14px; overflow:hidden; }
         .sp-footer-preview { background:#080f0a; border-radius:14px; overflow:hidden; border:1px solid rgba(212,160,23,0.2); margin-bottom:1rem; }
-        .sp-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.7rem; background:rgba(26,92,42,0.02); border-radius:8px; border:1px solid rgba(26,92,42,0.06); }
-        .sp-nav-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.8rem; background:rgba(196,107,26,0.03); border-radius:8px; border:1px solid rgba(196,107,26,0.1); }
+        .sp-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.6rem; background:rgba(43,95,168,0.03); border-radius:8px; border:1px solid rgba(43,95,168,0.08); }
+        .sp-nav-row  { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.6rem; background:rgba(196,107,26,0.03); border-radius:8px; border:1px solid rgba(196,107,26,0.08); }
         @keyframes sp-fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        .sp-section { animation: sp-fade 0.2s ease; }
-        @media(max-width:900px){ .sp-grid-2,.sp-grid-3,.sp-link-row,.sp-nav-link-row{grid-template-columns:1fr;} }
+        .sp-section { animation:sp-fade 0.2s ease; }
+        @media(max-width:900px){ .sp-grid-2,.sp-grid-3,.sp-link-row,.sp-nav-row{grid-template-columns:1fr;} }
       `}</style>
 
       {saveStatus === "saved" && (
@@ -180,17 +180,17 @@ export default function SettingsPanel({ supabase }: Props) {
 
       <div style={{ display:"grid", gridTemplateColumns:"200px 1fr", gap:"1.2rem", alignItems:"start" }}>
 
-        {/* Left sidebar */}
+        {/* Sidebar */}
         <div style={{ background:"white", borderRadius:14, border:"1px solid rgba(26,92,42,0.07)", padding:"0.6rem", position:"sticky", top:80, boxShadow:"0 1px 8px rgba(0,0,0,0.04)" }}>
           {GROUPS.map(g => {
             const Icon = g.icon;
             const isActive = activeGroup === g.id;
             return (
               <button key={g.id} className={`sp-nav-btn${isActive ? " active" : ""}`} onClick={() => setActiveGroup(g.id)}>
-                <div style={{ width:32, height:32, borderRadius:8, background: isActive ? g.color : "rgba(26,92,42,0.06)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s" }}>
+                <div style={{ width:32, height:32, borderRadius:8, background:isActive ? g.color : "rgba(26,92,42,0.06)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s" }}>
                   <Icon size={14} color={isActive ? "white" : "var(--muted)"} />
                 </div>
-                <div style={{ fontSize:"0.82rem", fontWeight: isActive ? 700 : 500, color: isActive ? "#0D3320" : "var(--muted)" }}>{g.label}</div>
+                <div style={{ fontSize:"0.82rem", fontWeight:isActive ? 700 : 500, color:isActive ? "#0D3320" : "var(--muted)" }}>{g.label}</div>
                 {isActive && <ChevronRight size={12} color="var(--muted)" style={{ marginLeft:"auto" }} />}
               </button>
             );
@@ -204,9 +204,9 @@ export default function SettingsPanel({ supabase }: Props) {
           </div>
         </div>
 
-        {/* Right: form */}
+        {/* Main form */}
         <div>
-          {/* Section header */}
+          {/* Header bar */}
           <div style={{ background:"linear-gradient(135deg,#0A2818,#1A5C2A)", borderRadius:14, padding:"1.2rem 1.5rem", marginBottom:"1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ width:40, height:40, borderRadius:10, background:"rgba(201,168,76,0.2)", border:"1.5px solid rgba(201,168,76,0.35)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -218,101 +218,66 @@ export default function SettingsPanel({ supabase }: Props) {
               </div>
             </div>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <a href="/" target="_blank" rel="noreferrer"
-                style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.6)", padding:"0.5rem 0.9rem", borderRadius:8, fontSize:"0.75rem", textDecoration:"none", fontFamily:"'DM Sans',sans-serif" }}>
+              <a href="/" target="_blank" rel="noreferrer" style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.6)", padding:"0.5rem 0.9rem", borderRadius:8, fontSize:"0.75rem", textDecoration:"none", fontFamily:"'DM Sans',sans-serif" }}>
                 <ExternalLink size={12} /> View Site
               </a>
               <button onClick={handleSave} disabled={saving}
-                style={{ display:"flex", alignItems:"center", gap:6, background: saving ? "rgba(201,168,76,0.5)" : "#C9A84C", color:"#0A2818", border:"none", padding:"0.55rem 1.3rem", borderRadius:8, fontSize:"0.82rem", fontWeight:700, cursor: saving ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
+                style={{ display:"flex", alignItems:"center", gap:6, background:saving ? "rgba(201,168,76,0.5)" : "#C9A84C", color:"#0A2818", border:"none", padding:"0.55rem 1.3rem", borderRadius:8, fontSize:"0.82rem", fontWeight:700, cursor:saving ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
                 {saving ? <><RefreshCw size={13}/> Saving...</> : <><Save size={13}/> Save {activeMeta.label}</>}
               </button>
             </div>
           </div>
 
-          {/* IDENTITY */}
+          {/* ── IDENTITY ── */}
           {activeGroup === "identity" && (
             <div className="sp-section">
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <Building2 size={14} color="#C9A84C" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Identity</span>
-                </div>
+                <div className="sp-card-header"><Building2 size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Identity</span></div>
                 <div className="sp-card-body">
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">Full Organization Name</label>
-                      <p className="sp-hint">Legal name as registered with SEC</p>
-                      <input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Short Name / Abbreviation</label>
-                      <p className="sp-hint">Used in nav bar and footer</p>
-                      <input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Full Organization Name</label><p className="sp-hint">Legal name as registered with SEC</p><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." /></div>
+                    <div className="sp-field"><label className="sp-label">Short Name / Abbreviation</label><p className="sp-hint">Used in nav bar and footer</p><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" /></div>
                   </div>
                   <div className="sp-grid-3">
-                    <div className="sp-field">
-                      <label className="sp-label">Year Established</label>
-                      <p className="sp-hint">Founding year</p>
-                      <input className="sp-input" type="number" value={get("org_established")} onChange={e => update("org_established", e.target.value)} placeholder="2011" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">SEC Registration No.</label>
-                      <p className="sp-hint">Certificate number</p>
-                      <input className="sp-input" value={get("org_sec_number")} onChange={e => update("org_sec_number", e.target.value)} placeholder="CN 2011-31-445" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Region</label>
-                      <p className="sp-hint">Administrative region</p>
-                      <input className="sp-input" value={get("org_region")} onChange={e => update("org_region", e.target.value)} placeholder="Caraga Region (Region XIII)" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Year Established</label><input className="sp-input" type="number" value={get("org_established")} onChange={e => update("org_established", e.target.value)} placeholder="2011" /></div>
+                    <div className="sp-field"><label className="sp-label">SEC Registration No.</label><input className="sp-input" value={get("org_sec_number")} onChange={e => update("org_sec_number", e.target.value)} placeholder="CN 2011-31-445" /></div>
+                    <div className="sp-field"><label className="sp-label">Region</label><input className="sp-input" value={get("org_region")} onChange={e => update("org_region", e.target.value)} placeholder="Caraga Region (Region XIII)" /></div>
                   </div>
                 </div>
               </div>
-
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <ImageIcon size={14} color="#C9A84C" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Logo / Seal</span>
-                </div>
+                <div className="sp-card-header"><ImageIcon size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Logo / Seal</span></div>
                 <div className="sp-card-body">
                   <div style={{ display:"flex", alignItems:"center", gap:"1.5rem", flexWrap:"wrap" }}>
                     <div style={{ width:90, height:90, borderRadius:"50%", background:"#0D3318", border:"3px solid rgba(201,168,76,0.35)", overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                      <img src={get("hero_logo_url") || "/images/sunco-logo.png"} alt="Logo preview" style={{ width:"100%", height:"100%", objectFit:"contain", padding:4 }} />
+                      <img src={get("hero_logo_url") || "/images/sunco-logo.png"} alt="Logo" style={{ width:"100%", height:"100%", objectFit:"contain", padding:4 }} />
                     </div>
                     <div>
                       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoUpload} style={{ display:"none" }} />
                       <button onClick={() => fileRef.current?.click()} disabled={logoUploading}
-                        style={{ display:"inline-flex", alignItems:"center", gap:7, background: logoUploading ? "rgba(26,92,42,0.1)" : "#0D3318", color: logoUploading ? "var(--muted)" : "white", padding:"0.6rem 1.2rem", borderRadius:9, fontSize:"0.82rem", fontWeight:600, cursor: logoUploading ? "not-allowed" : "pointer", border:"none", fontFamily:"'DM Sans',sans-serif", marginBottom:"0.5rem" }}>
+                        style={{ display:"inline-flex", alignItems:"center", gap:7, background:logoUploading ? "rgba(26,92,42,0.1)" : "#0D3318", color:logoUploading ? "var(--muted)" : "white", padding:"0.6rem 1.2rem", borderRadius:9, fontSize:"0.82rem", fontWeight:600, cursor:logoUploading ? "not-allowed" : "pointer", border:"none", fontFamily:"'DM Sans',sans-serif", marginBottom:"0.5rem" }}>
                         <Upload size={13}/> {logoUploading ? "Uploading..." : "Upload New Logo"}
                       </button>
-                      <p style={{ fontSize:"0.7rem", color:"var(--muted)", lineHeight:1.6 }}>PNG, JPG or WebP. Auto-compressed.<br/>Recommended: square, minimum 400x400px.</p>
+                      <p style={{ fontSize:"0.7rem", color:"var(--muted)", lineHeight:1.6 }}>PNG, JPG or WebP. Auto-compressed to WebP.<br/>Recommended: square, minimum 400x400px.</p>
                     </div>
                   </div>
                 </div>
               </div>
-
               <div className="sp-card">
                 <div className="sp-card-header">
                   {isOpen ? <ToggleRight size={14} color="#2E8B44" /> : <ToggleLeft size={14} color="#C0392B" />}
                   <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Membership Registration</span>
-                  <span style={{ marginLeft:"auto", fontSize:"0.7rem", fontWeight:700, color: isOpen ? "#2E8B44" : "#C0392B", background: isOpen ? "rgba(46,139,68,0.1)" : "rgba(192,57,43,0.08)", padding:"2px 10px", borderRadius:20, border:`1px solid ${isOpen ? "rgba(46,139,68,0.25)" : "rgba(192,57,43,0.2)"}` }}>
-                    {isOpen ? "Open" : "Closed"}
-                  </span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.7rem", fontWeight:700, color:isOpen ? "#2E8B44" : "#C0392B", background:isOpen ? "rgba(46,139,68,0.1)" : "rgba(192,57,43,0.08)", padding:"2px 10px", borderRadius:20, border:`1px solid ${isOpen ? "rgba(46,139,68,0.25)" : "rgba(192,57,43,0.2)"}` }}>{isOpen ? "Open" : "Closed"}</span>
                 </div>
                 <div className="sp-card-body">
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0.9rem 1rem", background: isOpen ? "rgba(46,139,68,0.04)" : "rgba(192,57,43,0.04)", borderRadius:10, border:`1px solid ${isOpen ? "rgba(46,139,68,0.12)" : "rgba(192,57,43,0.12)"}` }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0.9rem 1rem", background:isOpen ? "rgba(46,139,68,0.04)" : "rgba(192,57,43,0.04)", borderRadius:10, border:`1px solid ${isOpen ? "rgba(46,139,68,0.12)" : "rgba(192,57,43,0.12)"}` }}>
                     <div>
-                      <p style={{ fontSize:"0.88rem", fontWeight:600, color:"#0D3320", marginBottom:3 }}>
-                        {isOpen ? "Registration is currently open" : "Registration is currently closed"}
-                      </p>
-                      <p style={{ fontSize:"0.72rem", color:"var(--muted)" }}>
-                        {isOpen ? "New members can register through the public website." : "The membership form will be hidden from the public site."}
-                      </p>
+                      <p style={{ fontSize:"0.88rem", fontWeight:600, color:"#0D3320", marginBottom:3 }}>{isOpen ? "Registration is currently open" : "Registration is currently closed"}</p>
+                      <p style={{ fontSize:"0.72rem", color:"var(--muted)" }}>{isOpen ? "New members can register through the public website." : "The membership form will be hidden from the public site."}</p>
                     </div>
                     <button onClick={() => update("registration_open", isOpen ? "false" : "true")}
-                      style={{ width:52, height:28, borderRadius:14, background: isOpen ? "#2E8B44" : "rgba(0,0,0,0.15)", border:"none", cursor:"pointer", position:"relative", transition:"background 0.2s", flexShrink:0 }}>
-                      <div style={{ position:"absolute", top:3, left: isOpen ? 27 : 3, width:22, height:22, borderRadius:"50%", background:"white", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.25)" }} />
+                      style={{ width:52, height:28, borderRadius:14, background:isOpen ? "#2E8B44" : "rgba(0,0,0,0.15)", border:"none", cursor:"pointer", position:"relative", transition:"background 0.2s", flexShrink:0 }}>
+                      <div style={{ position:"absolute", top:3, left:isOpen ? 27 : 3, width:22, height:22, borderRadius:"50%", background:"white", transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.25)" }} />
                     </button>
                   </div>
                   <p style={{ fontSize:"0.7rem", color:"var(--muted)", fontStyle:"italic" }}>Remember to click "Save Identity" after toggling.</p>
@@ -321,7 +286,7 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* HERO */}
+          {/* ── HERO ── */}
           {activeGroup === "hero" && (
             <div className="sp-section">
               {showPreview && (
@@ -333,99 +298,43 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.6rem", fontWeight:900, color:"white", lineHeight:1.1, marginBottom:"0.4rem" }}>
                     {get("hero_title_line1","Protecting")} <em style={{ fontStyle:"italic", color:"#F0C842" }}>{get("hero_title_highlight","Consumers,")}</em><br/>
-                    {get("hero_title_line2","Empowering")}<br/>
-                    {get("hero_title_line3","Communities.")}
+                    {get("hero_title_line2","Empowering")}<br/>{get("hero_title_line3","Communities.")}
                   </div>
                   <p style={{ fontSize:"0.78rem", fontStyle:"italic", color:"rgba(255,255,255,0.45)", marginBottom:"0.5rem" }}>{get("hero_subtitle","SEC Registered - DTI Partner Organization")}</p>
                   <div style={{ display:"flex", gap:"1.5rem", paddingTop:"0.8rem", borderTop:"1px solid rgba(212,160,23,0.2)", flexWrap:"wrap" }}>
-                    {[
-                      [get("hero_stat1_num","2011"),           get("hero_stat1_label","Year Founded")],
-                      [get("hero_stat2_num","CN 2011-31-445"), get("hero_stat2_label","SEC Registered")],
-                      [get("hero_stat3_num","DTI"),            get("hero_stat3_label","Accredited Partner")],
-                    ].map(([num, label]) => (
-                      <div key={label}>
-                        <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842" }}>{num}</div>
-                        <div style={{ fontSize:"0.6rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginTop:2 }}>{label}</div>
-                      </div>
+                    {[[get("hero_stat1_num","2011"),get("hero_stat1_label","Year Founded")],[get("hero_stat2_num","CN 2011-31-445"),get("hero_stat2_label","SEC Registered")],[get("hero_stat3_num","DTI"),get("hero_stat3_label","Accredited Partner")]].map(([num,label]) => (
+                      <div key={label}><div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842" }}>{num}</div><div style={{ fontSize:"0.6rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginTop:2 }}>{label}</div></div>
                     ))}
                   </div>
                 </div>
               )}
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <Sparkles size={14} color="#C9A84C" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Eyebrow &amp; Headline</span>
-                </div>
+                <div className="sp-card-header"><Sparkles size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Eyebrow &amp; Headline</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field">
-                    <label className="sp-label">Eyebrow Text</label>
-                    <p className="sp-hint">Small uppercase text above the headline</p>
-                    <input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Surigao del Norte - Est. 2011" />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Eyebrow Text</label><p className="sp-hint">Small uppercase text above the headline</p><input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Surigao del Norte - Est. 2011" /></div>
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">Headline Line 1</label>
-                      <input className="sp-input" value={get("hero_title_line1")} onChange={e => update("hero_title_line1", e.target.value)} placeholder="Protecting" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Highlighted Word (golden italic)</label>
-                      <input className="sp-input" value={get("hero_title_highlight")} onChange={e => update("hero_title_highlight", e.target.value)} placeholder="Consumers," />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Headline Line 2</label>
-                      <input className="sp-input" value={get("hero_title_line2")} onChange={e => update("hero_title_line2", e.target.value)} placeholder="Empowering" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Headline Line 3</label>
-                      <input className="sp-input" value={get("hero_title_line3")} onChange={e => update("hero_title_line3", e.target.value)} placeholder="Communities." />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Headline Line 1</label><input className="sp-input" value={get("hero_title_line1")} onChange={e => update("hero_title_line1", e.target.value)} placeholder="Protecting" /></div>
+                    <div className="sp-field"><label className="sp-label">Highlighted Word (golden italic)</label><input className="sp-input" value={get("hero_title_highlight")} onChange={e => update("hero_title_highlight", e.target.value)} placeholder="Consumers," /></div>
+                    <div className="sp-field"><label className="sp-label">Headline Line 2</label><input className="sp-input" value={get("hero_title_line2")} onChange={e => update("hero_title_line2", e.target.value)} placeholder="Empowering" /></div>
+                    <div className="sp-field"><label className="sp-label">Headline Line 3</label><input className="sp-input" value={get("hero_title_line3")} onChange={e => update("hero_title_line3", e.target.value)} placeholder="Communities." /></div>
                   </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Subtitle / Tagline</label>
-                    <p className="sp-hint">Italic text below the headline</p>
-                    <input className="sp-input" value={get("hero_subtitle")} onChange={e => update("hero_subtitle", e.target.value)} placeholder="SEC Registered - DTI Partner Organization" />
-                  </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Hero Description</label>
-                    <p className="sp-hint">Paragraph text in the hero section</p>
-                    <textarea className="sp-textarea" rows={3} value={get("hero_description")} onChange={e => update("hero_description", e.target.value)} placeholder="SUNCO is the voice of consumers..." />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Subtitle / Tagline</label><p className="sp-hint">Italic text below the headline</p><input className="sp-input" value={get("hero_subtitle")} onChange={e => update("hero_subtitle", e.target.value)} placeholder="SEC Registered - DTI Partner Organization" /></div>
+                  <div className="sp-field"><label className="sp-label">Hero Description</label><p className="sp-hint">Paragraph text in the hero section</p><textarea className="sp-textarea" rows={3} value={get("hero_description")} onChange={e => update("hero_description", e.target.value)} placeholder="SUNCO is the voice of consumers..." /></div>
                 </div>
               </div>
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <Globe size={14} color="#2B5FA8" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Buttons &amp; Stats</span>
-                </div>
+                <div className="sp-card-header"><Globe size={14} color="#2B5FA8" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Buttons &amp; Stats</span></div>
                 <div className="sp-card-body">
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">Button 1 Text</label>
-                      <p className="sp-hint">Primary CTA button</p>
-                      <input className="sp-input" value={get("hero_btn1_text")} onChange={e => update("hero_btn1_text", e.target.value)} placeholder="Become a Member" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Button 2 Text</label>
-                      <p className="sp-hint">Secondary button</p>
-                      <input className="sp-input" value={get("hero_btn2_text")} onChange={e => update("hero_btn2_text", e.target.value)} placeholder="Our Mission" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Button 1 Text</label><p className="sp-hint">Primary CTA button</p><input className="sp-input" value={get("hero_btn1_text")} onChange={e => update("hero_btn1_text", e.target.value)} placeholder="Become a Member" /></div>
+                    <div className="sp-field"><label className="sp-label">Button 2 Text</label><p className="sp-hint">Secondary button</p><input className="sp-input" value={get("hero_btn2_text")} onChange={e => update("hero_btn2_text", e.target.value)} placeholder="Our Mission" /></div>
                   </div>
                   <div className="sp-grid-3">
-                    {[
-                      ["hero_stat1_num","hero_stat1_label","Stat 1"],
-                      ["hero_stat2_num","hero_stat2_label","Stat 2"],
-                      ["hero_stat3_num","hero_stat3_label","Stat 3"],
-                    ].map(([numKey, labelKey, title]) => (
+                    {[["hero_stat1_num","hero_stat1_label","Stat 1"],["hero_stat2_num","hero_stat2_label","Stat 2"],["hero_stat3_num","hero_stat3_label","Stat 3"]].map(([numKey,labelKey,title]) => (
                       <div key={title} style={{ background:"rgba(26,92,42,0.03)", borderRadius:10, padding:"0.9rem", border:"1px solid rgba(26,92,42,0.07)" }}>
                         <p style={{ fontSize:"0.65rem", fontWeight:700, color:"#C9A84C", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"0.6rem" }}>{title}</p>
-                        <div className="sp-field" style={{ marginBottom:"0.6rem" }}>
-                          <label className="sp-label">Number</label>
-                          <input className="sp-input" value={get(numKey)} onChange={e => update(numKey, e.target.value)} style={{ fontSize:"0.82rem" }} />
-                        </div>
-                        <div className="sp-field">
-                          <label className="sp-label">Label</label>
-                          <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} style={{ fontSize:"0.82rem" }} />
-                        </div>
+                        <div className="sp-field" style={{ marginBottom:"0.6rem" }}><label className="sp-label">Number</label><input className="sp-input" value={get(numKey)} onChange={e => update(numKey, e.target.value)} style={{ fontSize:"0.82rem" }} /></div>
+                        <div className="sp-field"><label className="sp-label">Label</label><input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} style={{ fontSize:"0.82rem" }} /></div>
                       </div>
                     ))}
                   </div>
@@ -434,269 +343,150 @@ export default function SettingsPanel({ supabase }: Props) {
             </div>
           )}
 
-          {/* ABOUT */}
+          {/* ── ABOUT ── */}
           {activeGroup === "about" && (
             <div className="sp-section">
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <Info size={14} color="#2B5FA8" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>About Section Content</span>
-                </div>
+                <div className="sp-card-header"><Info size={14} color="#2B5FA8" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>About Section Content</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field">
-                    <label className="sp-label">Section Headline</label>
-                    <p className="sp-hint">Main heading for the About section</p>
-                    <textarea className="sp-textarea" rows={2} value={get("about_title")} onChange={e => update("about_title", e.target.value)} placeholder="A trusted organization built for every consumer." />
-                  </div>
-                  {["about_p1","about_p2","about_p3"].map((key, i) => (
-                    <div key={key} className="sp-field">
-                      <label className="sp-label">Paragraph {i + 1}</label>
-                      <textarea className="sp-textarea" rows={4} value={get(key)} onChange={e => update(key, e.target.value)} />
-                    </div>
+                  <div className="sp-field"><label className="sp-label">Section Headline</label><p className="sp-hint">Main heading for the About section</p><textarea className="sp-textarea" rows={2} value={get("about_title")} onChange={e => update("about_title", e.target.value)} placeholder="A trusted organization built for every consumer." /></div>
+                  {["about_p1","about_p2","about_p3"].map((key,i) => (
+                    <div key={key} className="sp-field"><label className="sp-label">Paragraph {i+1}</label><textarea className="sp-textarea" rows={4} value={get(key)} onChange={e => update(key, e.target.value)} /></div>
                   ))}
                 </div>
               </div>
             </div>
           )}
 
-          {/* CONTACT */}
+          {/* ── CONTACT ── */}
           {activeGroup === "contact" && (
             <div className="sp-section">
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <MapPin size={14} color="#9A2020" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Address &amp; Contact</span>
-                </div>
+                <div className="sp-card-header"><MapPin size={14} color="#9A2020" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Address &amp; Contact</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field">
-                    <label className="sp-label">Office Address</label>
-                    <p className="sp-hint">Shown in the footer</p>
-                    <textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Caraga Region, Philippines" />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Office Address</label><p className="sp-hint">Shown in the footer</p><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Caraga Region, Philippines" /></div>
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">Email Address</label>
-                      <input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Phone Number</label>
-                      <input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Email Address</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Phone Number</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" /></div>
                   </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Facebook Page URL</label>
-                    <p className="sp-hint">Full URL e.g. https://facebook.com/suncosurigao</p>
-                    <input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" />
-                  </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Footer Tagline</label>
-                    <p className="sp-hint">Short description shown in the footer left column</p>
-                    <textarea className="sp-textarea" rows={2} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">Full URL e.g. https://facebook.com/suncosurigao</p><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
+                  <div className="sp-field"><label className="sp-label">Footer Tagline</label><p className="sp-hint">Short description in the footer left column</p><textarea className="sp-textarea" rows={2} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} /></div>
                 </div>
               </div>
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <DollarSign size={14} color="#2E8B44" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>GCash Payment Details</span>
-                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Shown on membership form</span>
-                </div>
+                <div className="sp-card-header"><DollarSign size={14} color="#2E8B44" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>GCash Payment Details</span><span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Shown on membership form</span></div>
                 <div className="sp-card-body">
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">GCash Number</label>
-                      <input className="sp-input" value={get("gcash_number")} onChange={e => update("gcash_number", e.target.value)} placeholder="09XX-XXX-XXXX" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">GCash Account Name</label>
-                      <input className="sp-input" value={get("gcash_name")} onChange={e => update("gcash_name", e.target.value)} placeholder="SUNCO Inc." />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">GCash Number</label><input className="sp-input" value={get("gcash_number")} onChange={e => update("gcash_number", e.target.value)} placeholder="09XX-XXX-XXXX" /></div>
+                    <div className="sp-field"><label className="sp-label">GCash Account Name</label><input className="sp-input" value={get("gcash_name")} onChange={e => update("gcash_name", e.target.value)} placeholder="SUNCO Inc." /></div>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* SEO */}
+          {/* ── SEO ── */}
           {activeGroup === "seo" && (
             <div className="sp-section">
-              <div className="sp-card" style={{ marginBottom:"1rem" }}>
-                <div className="sp-card-header">
-                  <Search size={14} color="#2B5FA8" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Google Search Preview</span>
-                </div>
+              <div className="sp-card">
+                <div className="sp-card-header"><Search size={14} color="#2B5FA8" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Google Search Preview</span></div>
                 <div className="sp-card-body">
                   <div style={{ background:"white", border:"1px solid #E0E0E0", borderRadius:10, padding:"1rem 1.2rem" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:"0.35rem" }}>
-                      <div style={{ width:16, height:16, background:"#0D3318", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                        <span style={{ color:"#C9A84C", fontSize:"0.5rem", fontWeight:800 }}>S</span>
-                      </div>
+                      <div style={{ width:16, height:16, background:"#0D3318", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"#C9A84C", fontSize:"0.5rem", fontWeight:800 }}>S</span></div>
                       <span style={{ fontSize:"0.72rem", color:"#202124" }}>{get("site_url","https://sunco.org.ph")}</span>
                     </div>
-                    <p style={{ fontSize:"1rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.2rem", lineHeight:1.3 }}>
-                      {get("seo_title") || `SUNCO -- ${get("org_name","Surigao del Norte Consumers Organization")}`}
-                    </p>
-                    <p style={{ fontSize:"0.82rem", color:"#4D5156", lineHeight:1.55, fontFamily:"Arial,sans-serif" }}>
-                      {get("seo_description") || get("hero_description","SUNCO is the voice of consumers in Surigao del Norte...")}
-                    </p>
+                    <p style={{ fontSize:"1rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.2rem", lineHeight:1.3 }}>{get("seo_title") || `SUNCO -- ${get("org_name","Surigao del Norte Consumers Organization")}`}</p>
+                    <p style={{ fontSize:"0.82rem", color:"#4D5156", lineHeight:1.55, fontFamily:"Arial,sans-serif" }}>{get("seo_description") || get("hero_description","SUNCO is the voice of consumers in Surigao del Norte...")}</p>
                   </div>
                 </div>
               </div>
               <div className="sp-card">
-                <div className="sp-card-header">
-                  <Search size={14} color="#1A7A8A" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>SEO Settings</span>
-                </div>
+                <div className="sp-card-header"><Search size={14} color="#1A7A8A" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>SEO Settings</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field">
-                    <label className="sp-label">Page Title</label>
-                    <p className="sp-hint">Shown in Google results. Leave blank to auto-generate.</p>
-                    <input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="SUNCO -- Protecting Consumers in Surigao del Norte" />
-                    <p style={{ fontSize:"0.65rem", color: get("seo_title").length > 60 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_title").length}/60</p>
-                  </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Meta Description</label>
-                    <p className="sp-hint">Shown under title in Google. Leave blank to auto-generate.</p>
-                    <textarea className="sp-textarea" rows={3} value={get("seo_description")} onChange={e => update("seo_description", e.target.value)} placeholder="150-160 characters..." />
-                    <p style={{ fontSize:"0.65rem", color: get("seo_description").length > 160 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_description").length}/160</p>
-                  </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Social Sharing Image URL</label>
-                    <p className="sp-hint">Shown when sharing on Facebook/Messenger. Leave blank to use logo.</p>
-                    <input className="sp-input" value={get("seo_og_image_url")} onChange={e => update("seo_og_image_url", e.target.value)} placeholder="https://..." />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Page Title</label><p className="sp-hint">Shown in Google results. Leave blank to auto-generate.</p><input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="SUNCO -- Protecting Consumers in Surigao del Norte" /><p style={{ fontSize:"0.65rem", color:get("seo_title").length > 60 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_title").length}/60</p></div>
+                  <div className="sp-field"><label className="sp-label">Meta Description</label><p className="sp-hint">Shown under title in Google. Leave blank to auto-generate.</p><textarea className="sp-textarea" rows={3} value={get("seo_description")} onChange={e => update("seo_description", e.target.value)} placeholder="150-160 characters..." /><p style={{ fontSize:"0.65rem", color:get("seo_description").length > 160 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_description").length}/160</p></div>
+                  <div className="sp-field"><label className="sp-label">Social Sharing Image URL</label><p className="sp-hint">Shown when sharing on Facebook/Messenger. Leave blank to use logo.</p><input className="sp-input" value={get("seo_og_image_url")} onChange={e => update("seo_og_image_url", e.target.value)} placeholder="https://..." /></div>
                   <div className="sp-grid-2">
-                    <div className="sp-field">
-                      <label className="sp-label">Website URL</label>
-                      <p className="sp-hint">Your live domain. Important for SEO.</p>
-                      <input className="sp-input" value={get("site_url")} onChange={e => update("site_url", e.target.value)} placeholder="https://sunco.org.ph" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Facebook Page URL</label>
-                      <p className="sp-hint">For Open Graph meta tags.</p>
-                      <input className="sp-input" value={get("facebook_page")} onChange={e => update("facebook_page", e.target.value)} placeholder="https://facebook.com/suncosurigao" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Website URL</label><p className="sp-hint">Your live domain. Important for SEO.</p><input className="sp-input" value={get("site_url")} onChange={e => update("site_url", e.target.value)} placeholder="https://sunco.org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">For Open Graph meta tags.</p><input className="sp-input" value={get("facebook_page")} onChange={e => update("facebook_page", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
                   </div>
-                  <div className="sp-field">
-                    <label className="sp-label">Google Search Console Verification</label>
-                    <p className="sp-hint">Verification code from Google Search Console.</p>
-                    <input className="sp-input" value={get("google_site_verification")} onChange={e => update("google_site_verification", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxx" />
-                  </div>
+                  <div className="sp-field"><label className="sp-label">Google Search Console Verification</label><p className="sp-hint">Verification code from Google Search Console.</p><input className="sp-input" value={get("google_site_verification")} onChange={e => update("google_site_verification", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxx" /></div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* NAVIGATION & FOOTER */}
+          {/* ── NAVIGATION & FOOTER ── */}
           {activeGroup === "navigation" && (
             <div className="sp-section">
 
-              {/* Navigation Bar */}
+              {/* Nav bar — label + link side by side */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Navigation size={14} color="#C46B1A" />
-                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Navigation Bar Links</span>
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Navigation Bar</span>
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Top nav + mobile menu</span>
                 </div>
                 <div className="sp-card-body">
-                  {/* Header row */}
-                  <div style={{ display:"grid", gridTemplateColumns:"auto 1fr 1fr", gap:"0.6rem", padding:"0 0.2rem", marginBottom:"0.2rem" }}>
-                    <div style={{ width:60 }} />
-                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"var(--muted)", opacity:0.7 }}>Label (shown in nav)</p>
-                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"var(--muted)", opacity:0.7 }}>Link / URL</p>
+                  {/* Column headers */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.6rem", padding:"0 0.6rem 0" }}>
+                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#C46B1A", margin:0 }}>Label (what visitor sees)</p>
+                    <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#C46B1A", margin:0 }}>Link (where it goes)</p>
                   </div>
                   {[
-                    ["nav_link1_label","nav_link1_href","Link 1","About","#about"],
-                    ["nav_link2_label","nav_link2_href","Link 2","Programs","#programs"],
-                    ["nav_link3_label","nav_link3_href","Link 3","Membership","#membership"],
-                    ["nav_link4_label","nav_link4_href","Link 4","Officers","#officers"],
-                    ["nav_link5_label","nav_link5_href","Link 5","News","#news"],
-                  ].map(([labelKey, hrefKey, title, labelPh, hrefPh]) => (
-                    <div key={labelKey} className="sp-nav-link-row">
-                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <div style={{ width:20, height:20, borderRadius:5, background:"rgba(196,107,26,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                          <span style={{ fontSize:"0.6rem", fontWeight:700, color:"#C46B1A" }}>{title.split(" ")[1]}</span>
-                        </div>
-                        <span style={{ fontSize:"0.72rem", fontWeight:600, color:"var(--muted)", whiteSpace:"nowrap" }}>{title}</span>
+                    ["nav_link1_label","nav_link1_href","Nav Link 1","About","#about"],
+                    ["nav_link2_label","nav_link2_href","Nav Link 2","Programs","#programs"],
+                    ["nav_link3_label","nav_link3_href","Nav Link 3","Membership","#membership"],
+                    ["nav_link4_label","nav_link4_href","Nav Link 4","Officers","#officers"],
+                    ["nav_link5_label","nav_link5_href","Nav Link 5","News","#news"],
+                    ["nav_join_label", "nav_join_href", "Join Button","Join Now","/register"],
+                  ].map(([labelKey, hrefKey, title, lp, hp]) => (
+                    <div key={labelKey} className="sp-nav-row">
+                      <div className="sp-field">
+                        <label className="sp-label">{title} Label</label>
+                        <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={lp} />
                       </div>
                       <div className="sp-field">
-                        <label className="sp-label">Label</label>
-                        <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={labelPh} style={{ fontSize:"0.84rem" }} />
-                      </div>
-                      <div className="sp-field">
-                        <label className="sp-label">Link / URL</label>
-                        <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hrefPh} style={{ fontSize:"0.84rem", fontFamily:"monospace" }} />
+                        <label className="sp-label">{title} Link</label>
+                        <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hp} style={{ fontFamily:"monospace", fontSize:"0.85rem" }} />
                       </div>
                     </div>
                   ))}
-
-                  {/* Join + Login buttons */}
-                  <div style={{ borderTop:"1px solid rgba(26,92,42,0.08)", paddingTop:"0.8rem", marginTop:"0.2rem" }}>
-                    <p style={{ fontSize:"0.65rem", fontWeight:700, color:"var(--muted)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:"0.6rem" }}>Action Buttons</p>
-                    <div className="sp-grid-2">
-                      <div className="sp-nav-link-row" style={{ gridTemplateColumns:"1fr 1fr" }}>
-                        <div className="sp-field">
-                          <label className="sp-label">Join Button Label</label>
-                          <input className="sp-input" value={get("nav_join_label")} onChange={e => update("nav_join_label", e.target.value)} placeholder="Join Now" style={{ fontSize:"0.84rem" }} />
-                        </div>
-                        <div className="sp-field">
-                          <label className="sp-label">Join Button Link</label>
-                          <input className="sp-input" value={get("nav_join_href")} onChange={e => update("nav_join_href", e.target.value)} placeholder="/register" style={{ fontSize:"0.84rem", fontFamily:"monospace" }} />
-                        </div>
-                      </div>
-                      <div className="sp-nav-link-row" style={{ gridTemplateColumns:"1fr" }}>
-                        <div className="sp-field">
-                          <label className="sp-label">Login Link Label</label>
-                          <p className="sp-hint">Shown when user is not logged in</p>
-                          <input className="sp-input" value={get("nav_login_label")} onChange={e => update("nav_login_label", e.target.value)} placeholder="Login" style={{ fontSize:"0.84rem" }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Live footer preview */}
               {showPreview && (
                 <div className="sp-footer-preview">
-                  <div style={{ padding:"1rem 1.5rem", borderBottom:"1px solid rgba(212,160,23,0.15)" }}>
+                  <div style={{ padding:"0.8rem 1.5rem", borderBottom:"1px solid rgba(212,160,23,0.15)" }}>
                     <p style={{ fontSize:"0.6rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.12em", textTransform:"uppercase", margin:0 }}>Footer Preview</p>
                   </div>
                   <div style={{ padding:"1.5rem", display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr", gap:"2rem" }}>
                     <div>
                       <p style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842", marginBottom:"0.3rem" }}>{get("org_short_name","SUNCO")} Inc.</p>
                       <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:"0.5rem" }}>{get("org_name","Surigao del Norte Consumers Organization")}</p>
-                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare...")}</p>
+                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare of consumers...")}</p>
                       <div style={{ display:"inline-flex", alignItems:"center", background:"rgba(212,160,23,0.1)", border:"1px solid rgba(212,160,23,0.25)", padding:"3px 10px", borderRadius:4, fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"#F0C842" }}>
                         {get("footer_badge_text","DTI Accredited Partner")}
                       </div>
                     </div>
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_links_title","Quick Links")}</p>
-                      {[
-                        [get("footer_link1_href","#about"),      get("footer_link1_label","About SUNCO")],
-                        [get("footer_link2_href","#programs"),   get("footer_link2_label","Programs & Rights")],
-                        [get("footer_link3_href","#membership"), get("footer_link3_label","Membership")],
-                        [get("footer_link4_href","#officers"),   get("footer_link4_label","Officers & BOD")],
-                        [get("footer_link5_href","#news"),       get("footer_link5_label","News & Updates")],
-                      ].map(([href, label]) => (
-                        <p key={href} style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{label}</p>
+                      {[["footer_link1_href","footer_link1_label","#about","About SUNCO"],["footer_link2_href","footer_link2_label","#programs","Programs & Rights"],["footer_link3_href","footer_link3_label","#membership","Membership"],["footer_link4_href","footer_link4_label","#officers","Officers & BOD"],["footer_link5_href","footer_link5_label","#news","News & Updates"]].map(([hk,lk,hfb,lfb]) => (
+                        <p key={hk} style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get(lk,lfb)}</p>
                       ))}
                     </div>
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_contact_title","Contact")}</p>
                       <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_address","Surigao del Norte, Philippines")}</p>
                       <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_email","")}</p>
-                      {get("org_phone") && <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)" }}>{get("org_phone")}</p>}
+                      {get("org_phone") && <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_phone")}</p>}
                     </div>
                   </div>
                   <div style={{ padding:"0.8rem 1.5rem", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>
-                      {currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}
-                    </p>
-                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>
-                      {get("footer_sec_badge","SEC Registered - Est. 2011")}
-                    </p>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>{currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}</p>
+                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
                   </div>
                 </div>
               )}
@@ -704,43 +494,31 @@ export default function SettingsPanel({ supabase }: Props) {
               {/* 3-column footer editor */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
 
-                {/* Col 1 */}
+                {/* Col 1 — About */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
-                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.03))" }}>
+                  <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.04))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#C9A84C" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 1 — About</span>
                   </div>
                   <div className="sp-card-body">
-                    <div className="sp-field">
-                      <label className="sp-label">Org Short Name</label>
-                      <p className="sp-hint">e.g. SUNCO Inc.</p>
-                      <input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Full Org Name</label>
-                      <input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Footer Tagline</label>
-                      <textarea className="sp-textarea" rows={3} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} placeholder="Protecting the rights and welfare..." />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Gold Badge Text</label>
-                      <input className="sp-input" value={get("footer_badge_text")} onChange={e => update("footer_badge_text", e.target.value)} placeholder="DTI Accredited Partner" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Org Short Name</label><p className="sp-hint">Shown as bold title e.g. SUNCO Inc.</p><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" /></div>
+                    <div className="sp-field"><label className="sp-label">Full Org Name</label><p className="sp-hint">Shown in small caps below short name</p><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." /></div>
+                    <div className="sp-field"><label className="sp-label">Footer Tagline</label><p className="sp-hint">Description paragraph below org name</p><textarea className="sp-textarea" rows={3} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} placeholder="Protecting the rights and welfare..." /></div>
+                    <div className="sp-field"><label className="sp-label">Gold Badge Text</label><p className="sp-hint">The gold outlined badge below the tagline</p><input className="sp-input" value={get("footer_badge_text")} onChange={e => update("footer_badge_text", e.target.value)} placeholder="DTI Accredited Partner" /></div>
                   </div>
                 </div>
 
-                {/* Col 2 */}
+                {/* Col 2 — Links */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(43,95,168,0.08),rgba(43,95,168,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#2B5FA8" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 2 — Links</span>
                   </div>
                   <div className="sp-card-body">
-                    <div className="sp-field">
-                      <label className="sp-label">Column Title</label>
-                      <input className="sp-input" value={get("footer_links_title")} onChange={e => update("footer_links_title", e.target.value)} placeholder="Quick Links" />
+                    <div className="sp-field"><label className="sp-label">Column Title</label><input className="sp-input" value={get("footer_links_title")} onChange={e => update("footer_links_title", e.target.value)} placeholder="Quick Links" /></div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.4rem", padding:"0 0.2rem" }}>
+                      <p style={{ fontSize:"0.6rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#2B5FA8", margin:0 }}>Label</p>
+                      <p style={{ fontSize:"0.6rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#2B5FA8", margin:0 }}>Link / URL</p>
                     </div>
                     {[
                       ["footer_link1_label","footer_link1_href","Link 1","About SUNCO","#about"],
@@ -748,48 +526,27 @@ export default function SettingsPanel({ supabase }: Props) {
                       ["footer_link3_label","footer_link3_href","Link 3","Membership","#membership"],
                       ["footer_link4_label","footer_link4_href","Link 4","Officers & BOD","#officers"],
                       ["footer_link5_label","footer_link5_href","Link 5","News & Updates","#news"],
-                    ].map(([labelKey, hrefKey, title, lPh, hPh]) => (
-                      <div key={labelKey} className="sp-link-row">
-                        <div className="sp-field">
-                          <label className="sp-label">{title} Label</label>
-                          <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={lPh} style={{ fontSize:"0.82rem" }} />
-                        </div>
-                        <div className="sp-field">
-                          <label className="sp-label">{title} Link</label>
-                          <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hPh} style={{ fontSize:"0.82rem", fontFamily:"monospace" }} />
-                        </div>
+                    ].map(([lk,hk,title,lp,hp]) => (
+                      <div key={lk} className="sp-link-row">
+                        <div className="sp-field"><label className="sp-label">{title} Label</label><input className="sp-input" value={get(lk)} onChange={e => update(lk, e.target.value)} placeholder={lp} style={{ fontSize:"0.82rem" }} /></div>
+                        <div className="sp-field"><label className="sp-label">{title} Link</label><input className="sp-input" value={get(hk)} onChange={e => update(hk, e.target.value)} placeholder={hp} style={{ fontSize:"0.82rem", fontFamily:"monospace" }} /></div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Col 3 */}
+                {/* Col 3 — Contact */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(154,32,32,0.07),rgba(154,32,32,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#9A2020" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 3 — Contact</span>
                   </div>
                   <div className="sp-card-body">
-                    <div className="sp-field">
-                      <label className="sp-label">Column Title</label>
-                      <input className="sp-input" value={get("footer_contact_title")} onChange={e => update("footer_contact_title", e.target.value)} placeholder="Contact" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Address</label>
-                      <textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Philippines" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Email</label>
-                      <input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Phone</label>
-                      <input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" />
-                    </div>
-                    <div className="sp-field">
-                      <label className="sp-label">Facebook URL</label>
-                      <input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" />
-                    </div>
+                    <div className="sp-field"><label className="sp-label">Column Title</label><input className="sp-input" value={get("footer_contact_title")} onChange={e => update("footer_contact_title", e.target.value)} placeholder="Contact" /></div>
+                    <div className="sp-field"><label className="sp-label">Address</label><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Philippines" /></div>
+                    <div className="sp-field"><label className="sp-label">Email</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Phone</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" /></div>
+                    <div className="sp-field"><label className="sp-label">Facebook URL</label><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
                   </div>
                 </div>
               </div>
@@ -802,23 +559,20 @@ export default function SettingsPanel({ supabase }: Props) {
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Bottom strip of footer</span>
                 </div>
                 <div className="sp-card-body">
-                  <div style={{ background:"#080f0a", borderRadius:8, padding:"0.7rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem", marginBottom:"0.5rem" }}>
-                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>
-                      {currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}
-                    </p>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>
-                      {get("footer_sec_badge","SEC Registered - Est. 2011")}
-                    </p>
+                  {/* Live preview */}
+                  <div style={{ background:"#080f0a", borderRadius:8, padding:"0.7rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem" }}>
+                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>{currentYear} {get("org_name","Surigao del Norte Consumers Organization, Inc.")}. {get("footer_copyright_text","All rights reserved.")}</p>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
                   </div>
                   <div className="sp-grid-2">
                     <div className="sp-field">
                       <label className="sp-label">Copyright Text</label>
-                      <p className="sp-hint">Text after the year and org name. Year is auto-set to current year.</p>
+                      <p className="sp-hint">Shown after the current year and org name. Year auto-updates every year.</p>
                       <input className="sp-input" value={get("footer_copyright_text")} onChange={e => update("footer_copyright_text", e.target.value)} placeholder="All rights reserved." />
                     </div>
                     <div className="sp-field">
                       <label className="sp-label">Right Badge Text</label>
-                      <p className="sp-hint">Badge shown on the right side of copyright bar.</p>
+                      <p className="sp-hint">Badge on the right side of the copyright bar.</p>
                       <input className="sp-input" value={get("footer_sec_badge")} onChange={e => update("footer_sec_badge", e.target.value)} placeholder="SEC Registered - Est. 2011" />
                     </div>
                   </div>
@@ -831,7 +585,7 @@ export default function SettingsPanel({ supabase }: Props) {
           {/* Bottom save */}
           <div style={{ display:"flex", justifyContent:"flex-end", paddingTop:"0.5rem" }}>
             <button onClick={handleSave} disabled={saving}
-              style={{ display:"flex", alignItems:"center", gap:7, background: saving ? "rgba(201,168,76,0.5)" : "linear-gradient(135deg,#0A2818,#1A5C2A)", color: saving ? "#888" : "white", border:"none", padding:"0.8rem 1.8rem", borderRadius:10, fontSize:"0.85rem", fontWeight:700, cursor: saving ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif", boxShadow: saving ? "none" : "0 4px 16px rgba(10,40,24,0.3)" }}>
+              style={{ display:"flex", alignItems:"center", gap:7, background:saving ? "rgba(201,168,76,0.5)" : "linear-gradient(135deg,#0A2818,#1A5C2A)", color:saving ? "#888" : "white", border:"none", padding:"0.8rem 1.8rem", borderRadius:10, fontSize:"0.85rem", fontWeight:700, cursor:saving ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:saving ? "none" : "0 4px 16px rgba(10,40,24,0.3)" }}>
               {saving ? <><RefreshCw size={14}/> Saving...</> : <><Save size={14}/> Save {activeMeta.label}</>}
             </button>
           </div>
