@@ -287,7 +287,17 @@ export default function HomeClient({ settings, officers, programs, articles }: P
               </div>
             ))}
           </div>
-          <MembershipForm feeLifetime={Number(feeLifetime)} feeAof={Number(feeAof)} feeMas={Number(feeMas)} />
+          {s("registration_open","true") === "true" ? (
+  <MembershipForm feeLifetime={Number(feeLifetime)} feeAof={Number(feeAof)} feeMas={Number(feeMas)} />
+) : (
+  <div style={{ background:"white", borderRadius:12, padding:"2.5rem", border:"1px solid rgba(26,92,42,0.12)", textAlign:"center" }}>
+    <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(192,57,43,0.08)", border:"2px solid rgba(192,57,43,0.2)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 1rem" }}>
+      <span style={{ fontSize:"1.5rem" }}>🔒</span>
+    </div>
+    <h3 style={{ fontFamily:"'Playfair Display', serif", fontSize:"1.1rem", color:"var(--green-dk)", marginBottom:"0.5rem" }}>Registration Closed</h3>
+    <p style={{ fontSize:"0.85rem", color:"var(--muted)", lineHeight:1.7 }}>Membership registration is currently closed. Please check back later or contact SUNCO officers directly.</p>
+  </div>
+)}
         </div>
       </div>
     </section>
