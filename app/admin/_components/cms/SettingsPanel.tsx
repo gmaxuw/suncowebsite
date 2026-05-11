@@ -19,12 +19,12 @@ type Setting = {
 };
 
 const GROUPS = [
-  { id: "identity",   label: "Identity",     icon: Building2,  desc: "Logo, org name, short name, registration numbers.", color: "#C9A84C" },
-  { id: "hero",       label: "Hero Section", icon: Sparkles,   desc: "Homepage banner -- headline, stats, buttons.",      color: "#2E8B44" },
-  { id: "about",      label: "About",        icon: Info,       desc: "About section headline and paragraphs.",            color: "#2B5FA8" },
-  { id: "contact",    label: "Contact",      icon: Phone,      desc: "Address, email, phone, Facebook, GCash.",           color: "#9A2020" },
-  { id: "seo",        label: "SEO & Meta",   icon: Search,     desc: "Google title, description, social sharing image.",  color: "#1A7A8A" },
-  { id: "navigation", label: "Nav & Footer", icon: Navigation, desc: "Navigation links, footer columns, copyright.",      color: "#C46B1A" },
+  { id: "identity",   label: "Identity",     icon: Building2,  desc: "Logo, org name, registration, gold band, labels.", color: "#C9A84C" },
+  { id: "hero",       label: "Hero Section", icon: Sparkles,   desc: "Homepage banner -- headline, stats, buttons.",     color: "#2E8B44" },
+  { id: "about",      label: "About",        icon: Info,       desc: "About section, feature cards, history timeline.",  color: "#2B5FA8" },
+  { id: "contact",    label: "Contact",      icon: Phone,      desc: "Address, email, phone, Facebook, GCash.",          color: "#9A2020" },
+  { id: "seo",        label: "SEO & Meta",   icon: Search,     desc: "Google title, description, social sharing image.", color: "#1A7A8A" },
+  { id: "navigation", label: "Nav & Footer", icon: Navigation, desc: "Navigation links, footer columns, copyright.",     color: "#C46B1A" },
 ];
 
 const GROUP_MAP: Record<string, string[]> = {
@@ -36,8 +36,12 @@ const GROUP_MAP: Record<string, string[]> = {
   navigation: ["navigation"],
 };
 
-const IDENTITY_KEYS = ["org_name","org_short_name","org_established","org_sec_number","org_region","registration_open"];
-const CONTACT_KEYS  = ["org_address","org_email","org_phone","org_facebook","gcash_number","gcash_name","footer_tagline"];
+const IDENTITY_KEYS = [
+  "org_name","org_short_name","org_established","org_sec_number","org_region","registration_open",
+  "gold_band1","gold_band2","gold_band3","gold_band4","gold_band5",
+  "membership_section_label","officers_election_label","programs_subtitle",
+];
+const CONTACT_KEYS = ["org_address","org_email","org_phone","org_facebook","gcash_number","gcash_name","footer_tagline"];
 
 const compressToWebP = (file: File): Promise<Blob> =>
   new Promise((resolve, reject) => {
@@ -160,6 +164,7 @@ export default function SettingsPanel({ supabase }: Props) {
         .sp-footer-preview { background:#080f0a; border-radius:14px; overflow:hidden; border:1px solid rgba(212,160,23,0.2); margin-bottom:1rem; }
         .sp-link-row { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.6rem; background:rgba(43,95,168,0.03); border-radius:8px; border:1px solid rgba(43,95,168,0.08); }
         .sp-nav-row  { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; align-items:start; padding:0.6rem; background:rgba(196,107,26,0.03); border-radius:8px; border:1px solid rgba(196,107,26,0.08); }
+        .sp-history-row { padding:0.9rem; background:rgba(26,92,42,0.02); border-radius:10px; border:1px solid rgba(26,92,42,0.07); display:flex; flex-direction:column; gap:0.7rem; }
         @keyframes sp-fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         .sp-section { animation:sp-fade 0.2s ease; }
         @media(max-width:900px){ .sp-grid-2,.sp-grid-3,.sp-link-row,.sp-nav-row{grid-template-columns:1fr;} }
@@ -231,20 +236,24 @@ export default function SettingsPanel({ supabase }: Props) {
           {/* ── IDENTITY ── */}
           {activeGroup === "identity" && (
             <div className="sp-section">
+
+              {/* Org Identity */}
               <div className="sp-card">
                 <div className="sp-card-header"><Building2 size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Identity</span></div>
                 <div className="sp-card-body">
                   <div className="sp-grid-2">
-                    <div className="sp-field"><label className="sp-label">Full Organization Name</label><p className="sp-hint">Legal name as registered with SEC</p><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." /></div>
-                    <div className="sp-field"><label className="sp-label">Short Name / Abbreviation</label><p className="sp-hint">Used in nav bar and footer</p><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" /></div>
+                    <div className="sp-field"><label className="sp-label">Full Organization Name</label><p className="sp-hint">Legal name as registered with SEC</p><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Organization Full Name, Inc." /></div>
+                    <div className="sp-field"><label className="sp-label">Short Name / Abbreviation</label><p className="sp-hint">Used in nav bar and footer</p><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="ORG" /></div>
                   </div>
                   <div className="sp-grid-3">
                     <div className="sp-field"><label className="sp-label">Year Established</label><input className="sp-input" type="number" value={get("org_established")} onChange={e => update("org_established", e.target.value)} placeholder="2011" /></div>
-                    <div className="sp-field"><label className="sp-label">SEC Registration No.</label><input className="sp-input" value={get("org_sec_number")} onChange={e => update("org_sec_number", e.target.value)} placeholder="CN 2011-31-445" /></div>
-                    <div className="sp-field"><label className="sp-label">Region</label><input className="sp-input" value={get("org_region")} onChange={e => update("org_region", e.target.value)} placeholder="Caraga Region (Region XIII)" /></div>
+                    <div className="sp-field"><label className="sp-label">SEC Registration No.</label><input className="sp-input" value={get("org_sec_number")} onChange={e => update("org_sec_number", e.target.value)} placeholder="CN 0000-00-000" /></div>
+                    <div className="sp-field"><label className="sp-label">Region</label><input className="sp-input" value={get("org_region")} onChange={e => update("org_region", e.target.value)} placeholder="Region XIII (Caraga)" /></div>
                   </div>
                 </div>
               </div>
+
+              {/* Logo */}
               <div className="sp-card">
                 <div className="sp-card-header"><ImageIcon size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Organization Logo / Seal</span></div>
                 <div className="sp-card-body">
@@ -263,6 +272,8 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Registration toggle */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   {isOpen ? <ToggleRight size={14} color="#2E8B44" /> : <ToggleLeft size={14} color="#C0392B" />}
@@ -283,6 +294,39 @@ export default function SettingsPanel({ supabase }: Props) {
                   <p style={{ fontSize:"0.7rem", color:"var(--muted)", fontStyle:"italic" }}>Remember to click "Save Identity" after toggling.</p>
                 </div>
               </div>
+
+              {/* Gold Band */}
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <div style={{ width:14, height:14, background:"var(--gold)", borderRadius:3 }} />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Gold Band (Below Hero)</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>5 items shown in the gold strip</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-grid-3">
+                    {[["gold_band1","Item 1","Consumer Protection"],["gold_band2","Item 2","Welfare Advocacy"],["gold_band3","Item 3","DTI Partnership"],["gold_band4","Item 4","Mortuary Assistance"],["gold_band5","Item 5","Our Region"]].map(([key,label,placeholder]) => (
+                      <div key={key} className="sp-field"><label className="sp-label">{label}</label><input className="sp-input" value={get(key)} onChange={e => update(key, e.target.value)} placeholder={placeholder} /></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Labels */}
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <Info size={14} color="#C9A84C" />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Section Labels</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Labels shown on various sections</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-grid-3">
+                    <div className="sp-field"><label className="sp-label">Membership Section Label</label><p className="sp-hint">Small label above "Membership & Annual Fees"</p><input className="sp-input" value={get("membership_section_label")} onChange={e => update("membership_section_label", e.target.value)} placeholder="Join Now" /></div>
+                    <div className="sp-field"><label className="sp-label">Officers Election Label</label><p className="sp-hint">Badge shown on the Officers section</p><input className="sp-input" value={get("officers_election_label")} onChange={e => update("officers_election_label", e.target.value)} placeholder="Election of Officers - 2025" /></div>
+                    <div className="sp-field"><label className="sp-label">Programs Subtitle</label><p className="sp-hint">Italic text below Programs section heading</p><textarea className="sp-textarea" rows={2} value={get("programs_subtitle")} onChange={e => update("programs_subtitle", e.target.value)} placeholder="Every member has rights protected by law..." /></div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -294,7 +338,7 @@ export default function SettingsPanel({ supabase }: Props) {
                   <p style={{ fontSize:"0.6rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"0.8rem" }}>Live Preview</p>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:"0.8rem" }}>
                     <div style={{ width:20, height:1.5, background:"#C9A84C" }} />
-                    <span style={{ fontSize:"0.65rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#C9A84C" }}>{get("hero_eyebrow","Surigao del Norte - Est. 2011")}</span>
+                    <span style={{ fontSize:"0.65rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#C9A84C" }}>{get("hero_eyebrow","Est. 2011")}</span>
                   </div>
                   <div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1.6rem", fontWeight:900, color:"white", lineHeight:1.1, marginBottom:"0.4rem" }}>
                     {get("hero_title_line1","Protecting")} <em style={{ fontStyle:"italic", color:"#F0C842" }}>{get("hero_title_highlight","Consumers,")}</em><br/>
@@ -302,7 +346,7 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                   <p style={{ fontSize:"0.78rem", fontStyle:"italic", color:"rgba(255,255,255,0.45)", marginBottom:"0.5rem" }}>{get("hero_subtitle","SEC Registered - DTI Partner Organization")}</p>
                   <div style={{ display:"flex", gap:"1.5rem", paddingTop:"0.8rem", borderTop:"1px solid rgba(212,160,23,0.2)", flexWrap:"wrap" }}>
-                    {[[get("hero_stat1_num","2011"),get("hero_stat1_label","Year Founded")],[get("hero_stat2_num","CN 2011-31-445"),get("hero_stat2_label","SEC Registered")],[get("hero_stat3_num","DTI"),get("hero_stat3_label","Accredited Partner")]].map(([num,label]) => (
+                    {[[get("hero_stat1_num","2011"),get("hero_stat1_label","Year Founded")],[get("hero_stat2_num","SEC"),get("hero_stat2_label","Registered Org.")],[get("hero_stat3_num","DTI"),get("hero_stat3_label","Accredited Partner")]].map(([num,label]) => (
                       <div key={label}><div style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842" }}>{num}</div><div style={{ fontSize:"0.6rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"rgba(255,255,255,0.35)", marginTop:2 }}>{label}</div></div>
                     ))}
                   </div>
@@ -311,7 +355,7 @@ export default function SettingsPanel({ supabase }: Props) {
               <div className="sp-card">
                 <div className="sp-card-header"><Sparkles size={14} color="#C9A84C" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Eyebrow &amp; Headline</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field"><label className="sp-label">Eyebrow Text</label><p className="sp-hint">Small uppercase text above the headline</p><input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Surigao del Norte - Est. 2011" /></div>
+                  <div className="sp-field"><label className="sp-label">Eyebrow Text</label><p className="sp-hint">Small uppercase text above the headline</p><input className="sp-input" value={get("hero_eyebrow")} onChange={e => update("hero_eyebrow", e.target.value)} placeholder="Est. 2011" /></div>
                   <div className="sp-grid-2">
                     <div className="sp-field"><label className="sp-label">Headline Line 1</label><input className="sp-input" value={get("hero_title_line1")} onChange={e => update("hero_title_line1", e.target.value)} placeholder="Protecting" /></div>
                     <div className="sp-field"><label className="sp-label">Highlighted Word (golden italic)</label><input className="sp-input" value={get("hero_title_highlight")} onChange={e => update("hero_title_highlight", e.target.value)} placeholder="Consumers," /></div>
@@ -319,7 +363,7 @@ export default function SettingsPanel({ supabase }: Props) {
                     <div className="sp-field"><label className="sp-label">Headline Line 3</label><input className="sp-input" value={get("hero_title_line3")} onChange={e => update("hero_title_line3", e.target.value)} placeholder="Communities." /></div>
                   </div>
                   <div className="sp-field"><label className="sp-label">Subtitle / Tagline</label><p className="sp-hint">Italic text below the headline</p><input className="sp-input" value={get("hero_subtitle")} onChange={e => update("hero_subtitle", e.target.value)} placeholder="SEC Registered - DTI Partner Organization" /></div>
-                  <div className="sp-field"><label className="sp-label">Hero Description</label><p className="sp-hint">Paragraph text in the hero section</p><textarea className="sp-textarea" rows={3} value={get("hero_description")} onChange={e => update("hero_description", e.target.value)} placeholder="SUNCO is the voice of consumers..." /></div>
+                  <div className="sp-field"><label className="sp-label">Hero Description</label><p className="sp-hint">Paragraph text in the hero section</p><textarea className="sp-textarea" rows={3} value={get("hero_description")} onChange={e => update("hero_description", e.target.value)} placeholder="We are a registered consumer organization..." /></div>
                 </div>
               </div>
               <div className="sp-card">
@@ -346,6 +390,8 @@ export default function SettingsPanel({ supabase }: Props) {
           {/* ── ABOUT ── */}
           {activeGroup === "about" && (
             <div className="sp-section">
+
+              {/* Main content */}
               <div className="sp-card">
                 <div className="sp-card-header"><Info size={14} color="#2B5FA8" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>About Section Content</span></div>
                 <div className="sp-card-body">
@@ -355,6 +401,64 @@ export default function SettingsPanel({ supabase }: Props) {
                   ))}
                 </div>
               </div>
+
+              {/* Feature cards */}
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <div style={{ width:14, height:14, background:"var(--gold)", borderRadius:"50%" }} />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Feature Cards</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>4 cards shown below the about text</span>
+                </div>
+                <div className="sp-card-body">
+                  <div className="sp-grid-2">
+                    {[
+                      ["about_card1_title","about_card1_desc","Card 1","Rights Education","Informing members of their basic rights..."],
+                      ["about_card2_title","about_card2_desc","Card 2","DTI Partnership","Coordinating with DTI on consumer affairs..."],
+                      ["about_card3_title","about_card3_desc","Card 3","Advocacy","Representing consumer interests..."],
+                      ["about_card4_title","about_card4_desc","Card 4","Welfare Services","Providing mutual aid and welfare assistance..."],
+                    ].map(([titleKey,descKey,label,titlePh,descPh]) => (
+                      <div key={titleKey} style={{ background:"rgba(43,95,168,0.03)", borderRadius:10, padding:"0.9rem", border:"1px solid rgba(43,95,168,0.07)", display:"flex", flexDirection:"column", gap:"0.7rem" }}>
+                        <p style={{ fontSize:"0.65rem", fontWeight:700, color:"#2B5FA8", letterSpacing:"0.1em", textTransform:"uppercase", margin:0 }}>{label}</p>
+                        <div className="sp-field"><label className="sp-label">Title</label><input className="sp-input" value={get(titleKey)} onChange={e => update(titleKey, e.target.value)} placeholder={titlePh} style={{ fontSize:"0.85rem" }} /></div>
+                        <div className="sp-field"><label className="sp-label">Description</label><textarea className="sp-textarea" rows={2} value={get(descKey)} onChange={e => update(descKey, e.target.value)} placeholder={descPh} style={{ fontSize:"0.82rem" }} /></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* History timeline */}
+              <div className="sp-card">
+                <div className="sp-card-header">
+                  <div style={{ width:14, height:14, background:"linear-gradient(to bottom, var(--gold), var(--green-lt))", borderRadius:"50%" }} />
+                  <span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>History Timeline</span>
+                  <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>4 entries shown on the right column of About</span>
+                </div>
+                <div className="sp-card-body">
+                  {[
+                    ["history1_year","history1_title","history1_text","Entry 1","2011","Foundation","Formally established and registered..."],
+                    ["history2_year","history2_title","history2_text","Entry 2","Early Years","DTI Accreditation","Secured accreditation as an official DTI partner..."],
+                    ["history3_year","history3_title","history3_text","Entry 3","Growth Period","Expanding Membership","Expanded membership and introduced the mutual assistance program..."],
+                    ["history4_year","history4_title","history4_text","Entry 4 (uses Year Established)","","Election of New Officers","New officers elected at the General Assembly..."],
+                  ].map(([yearKey,titleKey,textKey,label,yearPh,titlePh,textPh]) => (
+                    <div key={titleKey} className="sp-history-row">
+                      <p style={{ fontSize:"0.65rem", fontWeight:700, color:"#C9A84C", letterSpacing:"0.1em", textTransform:"uppercase", margin:0 }}>{label}</p>
+                      <div className="sp-grid-2">
+                        <div className="sp-field">
+                          <label className="sp-label">Year / Period</label>
+                          {yearKey === "history4_year"
+                            ? <p style={{ fontSize:"0.72rem", color:"var(--muted)", fontStyle:"italic", margin:0 }}>Auto-uses "Year Established" from Identity settings</p>
+                            : <input className="sp-input" value={get(yearKey)} onChange={e => update(yearKey, e.target.value)} placeholder={yearPh} />
+                          }
+                        </div>
+                        <div className="sp-field"><label className="sp-label">Title</label><input className="sp-input" value={get(titleKey)} onChange={e => update(titleKey, e.target.value)} placeholder={titlePh} /></div>
+                      </div>
+                      <div className="sp-field"><label className="sp-label">Description</label><textarea className="sp-textarea" rows={2} value={get(textKey)} onChange={e => update(textKey, e.target.value)} placeholder={textPh} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -364,12 +468,12 @@ export default function SettingsPanel({ supabase }: Props) {
               <div className="sp-card">
                 <div className="sp-card-header"><MapPin size={14} color="#9A2020" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>Address &amp; Contact</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field"><label className="sp-label">Office Address</label><p className="sp-hint">Shown in the footer</p><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Caraga Region, Philippines" /></div>
+                  <div className="sp-field"><label className="sp-label">Office Address</label><p className="sp-hint">Shown in the footer</p><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Province, Region, Philippines" /></div>
                   <div className="sp-grid-2">
-                    <div className="sp-field"><label className="sp-label">Email Address</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" /></div>
-                    <div className="sp-field"><label className="sp-label">Phone Number</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" /></div>
+                    <div className="sp-field"><label className="sp-label">Email Address</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@organization.org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Phone Number</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="09XX-XXX-XXXX" /></div>
                   </div>
-                  <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">Full URL e.g. https://facebook.com/suncosurigao</p><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
+                  <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">Full URL e.g. https://facebook.com/yourpage</p><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/yourpage" /></div>
                   <div className="sp-field"><label className="sp-label">Footer Tagline</label><p className="sp-hint">Short description in the footer left column</p><textarea className="sp-textarea" rows={2} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} /></div>
                 </div>
               </div>
@@ -378,7 +482,7 @@ export default function SettingsPanel({ supabase }: Props) {
                 <div className="sp-card-body">
                   <div className="sp-grid-2">
                     <div className="sp-field"><label className="sp-label">GCash Number</label><input className="sp-input" value={get("gcash_number")} onChange={e => update("gcash_number", e.target.value)} placeholder="09XX-XXX-XXXX" /></div>
-                    <div className="sp-field"><label className="sp-label">GCash Account Name</label><input className="sp-input" value={get("gcash_name")} onChange={e => update("gcash_name", e.target.value)} placeholder="SUNCO Inc." /></div>
+                    <div className="sp-field"><label className="sp-label">GCash Account Name</label><input className="sp-input" value={get("gcash_name")} onChange={e => update("gcash_name", e.target.value)} placeholder="Organization Name" /></div>
                   </div>
                 </div>
               </div>
@@ -394,22 +498,22 @@ export default function SettingsPanel({ supabase }: Props) {
                   <div style={{ background:"white", border:"1px solid #E0E0E0", borderRadius:10, padding:"1rem 1.2rem" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:"0.35rem" }}>
                       <div style={{ width:16, height:16, background:"#0D3318", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ color:"#C9A84C", fontSize:"0.5rem", fontWeight:800 }}>S</span></div>
-                      <span style={{ fontSize:"0.72rem", color:"#202124" }}>{get("site_url","https://sunco.org.ph")}</span>
+                      <span style={{ fontSize:"0.72rem", color:"#202124" }}>{get("site_url","https://yoursite.org.ph")}</span>
                     </div>
-                    <p style={{ fontSize:"1rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.2rem", lineHeight:1.3 }}>{get("seo_title") || `SUNCO -- ${get("org_name","Surigao del Norte Consumers Organization")}`}</p>
-                    <p style={{ fontSize:"0.82rem", color:"#4D5156", lineHeight:1.55, fontFamily:"Arial,sans-serif" }}>{get("seo_description") || get("hero_description","SUNCO is the voice of consumers in Surigao del Norte...")}</p>
+                    <p style={{ fontSize:"1rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.2rem", lineHeight:1.3 }}>{get("seo_title") || get("org_name","Your Organization")}</p>
+                    <p style={{ fontSize:"0.82rem", color:"#4D5156", lineHeight:1.55, fontFamily:"Arial,sans-serif" }}>{get("seo_description") || get("hero_description","Your organization description...")}</p>
                   </div>
                 </div>
               </div>
               <div className="sp-card">
                 <div className="sp-card-header"><Search size={14} color="#1A7A8A" /><span style={{ fontSize:"0.78rem", fontWeight:700, color:"#0D3320" }}>SEO Settings</span></div>
                 <div className="sp-card-body">
-                  <div className="sp-field"><label className="sp-label">Page Title</label><p className="sp-hint">Shown in Google results. Leave blank to auto-generate.</p><input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="SUNCO -- Protecting Consumers in Surigao del Norte" /><p style={{ fontSize:"0.65rem", color:get("seo_title").length > 60 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_title").length}/60</p></div>
+                  <div className="sp-field"><label className="sp-label">Page Title</label><p className="sp-hint">Shown in Google results. Leave blank to auto-generate.</p><input className="sp-input" value={get("seo_title")} onChange={e => update("seo_title", e.target.value)} placeholder="Organization -- Your Tagline" /><p style={{ fontSize:"0.65rem", color:get("seo_title").length > 60 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_title").length}/60</p></div>
                   <div className="sp-field"><label className="sp-label">Meta Description</label><p className="sp-hint">Shown under title in Google. Leave blank to auto-generate.</p><textarea className="sp-textarea" rows={3} value={get("seo_description")} onChange={e => update("seo_description", e.target.value)} placeholder="150-160 characters..." /><p style={{ fontSize:"0.65rem", color:get("seo_description").length > 160 ? "#C0392B" : "var(--muted)", marginTop:3, textAlign:"right" }}>{get("seo_description").length}/160</p></div>
                   <div className="sp-field"><label className="sp-label">Social Sharing Image URL</label><p className="sp-hint">Shown when sharing on Facebook/Messenger. Leave blank to use logo.</p><input className="sp-input" value={get("seo_og_image_url")} onChange={e => update("seo_og_image_url", e.target.value)} placeholder="https://..." /></div>
                   <div className="sp-grid-2">
-                    <div className="sp-field"><label className="sp-label">Website URL</label><p className="sp-hint">Your live domain. Important for SEO.</p><input className="sp-input" value={get("site_url")} onChange={e => update("site_url", e.target.value)} placeholder="https://sunco.org.ph" /></div>
-                    <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">For Open Graph meta tags.</p><input className="sp-input" value={get("facebook_page")} onChange={e => update("facebook_page", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
+                    <div className="sp-field"><label className="sp-label">Website URL</label><p className="sp-hint">Your live domain. Important for SEO.</p><input className="sp-input" value={get("site_url")} onChange={e => update("site_url", e.target.value)} placeholder="https://yoursite.org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Facebook Page URL</label><p className="sp-hint">For Open Graph meta tags.</p><input className="sp-input" value={get("facebook_page")} onChange={e => update("facebook_page", e.target.value)} placeholder="https://facebook.com/yourpage" /></div>
                   </div>
                   <div className="sp-field"><label className="sp-label">Google Search Console Verification</label><p className="sp-hint">Verification code from Google Search Console.</p><input className="sp-input" value={get("google_site_verification")} onChange={e => update("google_site_verification", e.target.value)} placeholder="xxxxxxxxxxxxxxxxxxxxxx" /></div>
                 </div>
@@ -421,7 +525,7 @@ export default function SettingsPanel({ supabase }: Props) {
           {activeGroup === "navigation" && (
             <div className="sp-section">
 
-              {/* Nav bar — label + link side by side */}
+              {/* Nav bar */}
               <div className="sp-card">
                 <div className="sp-card-header">
                   <Navigation size={14} color="#C46B1A" />
@@ -429,8 +533,7 @@ export default function SettingsPanel({ supabase }: Props) {
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Top nav + mobile menu</span>
                 </div>
                 <div className="sp-card-body">
-                  {/* Column headers */}
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.6rem", padding:"0 0.6rem 0" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.6rem", padding:"0 0.6rem" }}>
                     <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#C46B1A", margin:0 }}>Label (what visitor sees)</p>
                     <p style={{ fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#C46B1A", margin:0 }}>Link (where it goes)</p>
                   </div>
@@ -441,22 +544,16 @@ export default function SettingsPanel({ supabase }: Props) {
                     ["nav_link4_label","nav_link4_href","Nav Link 4","Officers","#officers"],
                     ["nav_link5_label","nav_link5_href","Nav Link 5","News","#news"],
                     ["nav_join_label", "nav_join_href", "Join Button","Join Now","/register"],
-                  ].map(([labelKey, hrefKey, title, lp, hp]) => (
+                  ].map(([labelKey,hrefKey,title,lp,hp]) => (
                     <div key={labelKey} className="sp-nav-row">
-                      <div className="sp-field">
-                        <label className="sp-label">{title} Label</label>
-                        <input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={lp} />
-                      </div>
-                      <div className="sp-field">
-                        <label className="sp-label">{title} Link</label>
-                        <input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hp} style={{ fontFamily:"monospace", fontSize:"0.85rem" }} />
-                      </div>
+                      <div className="sp-field"><label className="sp-label">{title} Label</label><input className="sp-input" value={get(labelKey)} onChange={e => update(labelKey, e.target.value)} placeholder={lp} /></div>
+                      <div className="sp-field"><label className="sp-label">{title} Link</label><input className="sp-input" value={get(hrefKey)} onChange={e => update(hrefKey, e.target.value)} placeholder={hp} style={{ fontFamily:"monospace", fontSize:"0.85rem" }} /></div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Live footer preview */}
+              {/* Footer preview */}
               {showPreview && (
                 <div className="sp-footer-preview">
                   <div style={{ padding:"0.8rem 1.5rem", borderBottom:"1px solid rgba(212,160,23,0.15)" }}>
@@ -464,50 +561,45 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                   <div style={{ padding:"1.5rem", display:"grid", gridTemplateColumns:"1.4fr 1fr 1fr", gap:"2rem" }}>
                     <div>
-                      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842", marginBottom:"0.3rem" }}>{get("org_short_name","SUNCO")} Inc.</p>
-                      <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:"0.5rem" }}>{get("org_name","Surigao del Norte Consumers Organization")}</p>
-                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare of consumers...")}</p>
-                      <div style={{ display:"inline-flex", alignItems:"center", background:"rgba(212,160,23,0.1)", border:"1px solid rgba(212,160,23,0.25)", padding:"3px 10px", borderRadius:4, fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"#F0C842" }}>
-                        {get("footer_badge_text","DTI Accredited Partner")}
-                      </div>
+                      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:"1rem", fontWeight:700, color:"#F0C842", marginBottom:"0.3rem" }}>{get("org_short_name","ORG")} Inc.</p>
+                      <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:"0.5rem" }}>{get("org_name","Organization Name")}</p>
+                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.45)", lineHeight:1.6, marginBottom:"0.6rem" }}>{get("footer_tagline","Protecting the rights and welfare...")}</p>
+                      <div style={{ display:"inline-flex", alignItems:"center", background:"rgba(212,160,23,0.1)", border:"1px solid rgba(212,160,23,0.25)", padding:"3px 10px", borderRadius:4, fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"#F0C842" }}>{get("footer_badge_text","Accredited Partner")}</div>
                     </div>
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_links_title","Quick Links")}</p>
-                      {[["footer_link1_href","footer_link1_label","#about","About SUNCO"],["footer_link2_href","footer_link2_label","#programs","Programs & Rights"],["footer_link3_href","footer_link3_label","#membership","Membership"],["footer_link4_href","footer_link4_label","#officers","Officers & BOD"],["footer_link5_href","footer_link5_label","#news","News & Updates"]].map(([hk,lk,hfb,lfb]) => (
-                        <p key={hk} style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get(lk,lfb)}</p>
+                      {[["footer_link1_label","About"],["footer_link2_label","Programs"],["footer_link3_label","Membership"],["footer_link4_label","Officers"],["footer_link5_label","News"]].map(([lk,fb]) => (
+                        <p key={lk} style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get(lk,fb)}</p>
                       ))}
                     </div>
                     <div>
                       <p style={{ fontSize:"0.62rem", fontWeight:500, letterSpacing:"0.14em", textTransform:"uppercase", color:"#F0C842", marginBottom:"0.7rem" }}>{get("footer_contact_title","Contact")}</p>
-                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_address","Surigao del Norte, Philippines")}</p>
+                      <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_address","Province, Philippines")}</p>
                       <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_email","")}</p>
                       {get("org_phone") && <p style={{ fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", marginBottom:"0.35rem" }}>{get("org_phone")}</p>}
                     </div>
                   </div>
                   <div style={{ padding:"0.8rem 1.5rem", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>� {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
-                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.25)", margin:0 }}>© {currentYear} {get("footer_copyright_text","Organization Name. All rights reserved.")}</p>
+                    <p style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered")}</p>
                   </div>
                 </div>
-              )}{currentYear}
+              )}
+
               {/* 3-column footer editor */}
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
-
-                {/* Col 1 — About */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.04))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#C9A84C" }} />
                     <span style={{ fontSize:"0.75rem", fontWeight:700, color:"#0D3320" }}>Column 1 — About</span>
                   </div>
                   <div className="sp-card-body">
-                    <div className="sp-field"><label className="sp-label">Org Short Name</label><p className="sp-hint">Shown as bold title e.g. SUNCO Inc.</p><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="SUNCO" /></div>
-                    <div className="sp-field"><label className="sp-label">Full Org Name</label><p className="sp-hint">Shown in small caps below short name</p><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc." /></div>
-                    <div className="sp-field"><label className="sp-label">Footer Tagline</label><p className="sp-hint">Description paragraph below org name</p><textarea className="sp-textarea" rows={3} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} placeholder="Protecting the rights and welfare..." /></div>
-                    <div className="sp-field"><label className="sp-label">Gold Badge Text</label><p className="sp-hint">The gold outlined badge below the tagline</p><input className="sp-input" value={get("footer_badge_text")} onChange={e => update("footer_badge_text", e.target.value)} placeholder="DTI Accredited Partner" /></div>
+                    <div className="sp-field"><label className="sp-label">Org Short Name</label><input className="sp-input" value={get("org_short_name")} onChange={e => update("org_short_name", e.target.value)} placeholder="ORG" /></div>
+                    <div className="sp-field"><label className="sp-label">Full Org Name</label><input className="sp-input" value={get("org_name")} onChange={e => update("org_name", e.target.value)} placeholder="Organization Full Name, Inc." /></div>
+                    <div className="sp-field"><label className="sp-label">Footer Tagline</label><textarea className="sp-textarea" rows={3} value={get("footer_tagline")} onChange={e => update("footer_tagline", e.target.value)} /></div>
+                    <div className="sp-field"><label className="sp-label">Gold Badge Text</label><input className="sp-input" value={get("footer_badge_text")} onChange={e => update("footer_badge_text", e.target.value)} placeholder="DTI Accredited Partner" /></div>
                   </div>
                 </div>
-
-                {/* Col 2 — Links */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(43,95,168,0.08),rgba(43,95,168,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#2B5FA8" }} />
@@ -519,13 +611,7 @@ export default function SettingsPanel({ supabase }: Props) {
                       <p style={{ fontSize:"0.6rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#2B5FA8", margin:0 }}>Label</p>
                       <p style={{ fontSize:"0.6rem", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#2B5FA8", margin:0 }}>Link / URL</p>
                     </div>
-                    {[
-                      ["footer_link1_label","footer_link1_href","Link 1","About SUNCO","#about"],
-                      ["footer_link2_label","footer_link2_href","Link 2","Programs & Rights","#programs"],
-                      ["footer_link3_label","footer_link3_href","Link 3","Membership","#membership"],
-                      ["footer_link4_label","footer_link4_href","Link 4","Officers & BOD","#officers"],
-                      ["footer_link5_label","footer_link5_href","Link 5","News & Updates","#news"],
-                    ].map(([lk,hk,title,lp,hp]) => (
+                    {[["footer_link1_label","footer_link1_href","Link 1","About","#about"],["footer_link2_label","footer_link2_href","Link 2","Programs","#programs"],["footer_link3_label","footer_link3_href","Link 3","Membership","#membership"],["footer_link4_label","footer_link4_href","Link 4","Officers","#officers"],["footer_link5_label","footer_link5_href","Link 5","News","#news"]].map(([lk,hk,title,lp,hp]) => (
                       <div key={lk} className="sp-link-row">
                         <div className="sp-field"><label className="sp-label">{title} Label</label><input className="sp-input" value={get(lk)} onChange={e => update(lk, e.target.value)} placeholder={lp} style={{ fontSize:"0.82rem" }} /></div>
                         <div className="sp-field"><label className="sp-label">{title} Link</label><input className="sp-input" value={get(hk)} onChange={e => update(hk, e.target.value)} placeholder={hp} style={{ fontSize:"0.82rem", fontFamily:"monospace" }} /></div>
@@ -533,8 +619,6 @@ export default function SettingsPanel({ supabase }: Props) {
                     ))}
                   </div>
                 </div>
-
-                {/* Col 3 — Contact */}
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(154,32,32,0.07),rgba(154,32,32,0.02))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#9A2020" }} />
@@ -542,10 +626,10 @@ export default function SettingsPanel({ supabase }: Props) {
                   </div>
                   <div className="sp-card-body">
                     <div className="sp-field"><label className="sp-label">Column Title</label><input className="sp-input" value={get("footer_contact_title")} onChange={e => update("footer_contact_title", e.target.value)} placeholder="Contact" /></div>
-                    <div className="sp-field"><label className="sp-label">Address</label><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Surigao del Norte, Philippines" /></div>
-                    <div className="sp-field"><label className="sp-label">Email</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@sunco.org.ph" /></div>
-                    <div className="sp-field"><label className="sp-label">Phone</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="0946-365-7331" /></div>
-                    <div className="sp-field"><label className="sp-label">Facebook URL</label><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/suncosurigao" /></div>
+                    <div className="sp-field"><label className="sp-label">Address</label><textarea className="sp-textarea" rows={2} value={get("org_address")} onChange={e => update("org_address", e.target.value)} placeholder="Province, Philippines" /></div>
+                    <div className="sp-field"><label className="sp-label">Email</label><input className="sp-input" type="email" value={get("org_email")} onChange={e => update("org_email", e.target.value)} placeholder="info@org.ph" /></div>
+                    <div className="sp-field"><label className="sp-label">Phone</label><input className="sp-input" value={get("org_phone")} onChange={e => update("org_phone", e.target.value)} placeholder="09XX-XXX-XXXX" /></div>
+                    <div className="sp-field"><label className="sp-label">Facebook URL</label><input className="sp-input" value={get("org_facebook")} onChange={e => update("org_facebook", e.target.value)} placeholder="https://facebook.com/yourpage" /></div>
                   </div>
                 </div>
               </div>
@@ -558,16 +642,15 @@ export default function SettingsPanel({ supabase }: Props) {
                   <span style={{ marginLeft:"auto", fontSize:"0.68rem", color:"var(--muted)" }}>Bottom strip of footer</span>
                 </div>
                 <div className="sp-card-body">
-                  {/* Live preview */}
                   <div style={{ background:"#080f0a", borderRadius:8, padding:"0.7rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem" }}>
-                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>� {currentYear} {get("footer_copyright_text",`Surigao del Norte Consumers Organization, Inc. All rights reserved.`)}</p>
-                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered - Est. 2011")}</p>
+                    <p style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.25)", margin:0 }}>© {currentYear} {get("footer_copyright_text","Organization Name. All rights reserved.")}</p>
+                    <p style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.3)", border:"1px solid rgba(255,255,255,0.1)", padding:"2px 8px", borderRadius:3, margin:0 }}>{get("footer_sec_badge","SEC Registered")}</p>
                   </div>
                   <div className="sp-grid-2">
                     <div className="sp-field">
                       <label className="sp-label">Left Copyright Text</label>
-                      <p className="sp-hint">Year � {currentYear} is auto-prepended. Edit the full text freely.</p>
-                      <textarea className="sp-textarea" rows={2} value={get("footer_copyright_text")} onChange={e => update("footer_copyright_text", e.target.value)} placeholder="Surigao del Norte Consumers Organization, Inc. All rights reserved." />
+                      <p className="sp-hint">Year © {currentYear} is auto-prepended. Edit the full text freely.</p>
+                      <textarea className="sp-textarea" rows={2} value={get("footer_copyright_text")} onChange={e => update("footer_copyright_text", e.target.value)} placeholder="Organization Name. All rights reserved." />
                     </div>
                     <div className="sp-field">
                       <label className="sp-label">Right Badge Text</label>
@@ -594,4 +677,3 @@ export default function SettingsPanel({ supabase }: Props) {
     </>
   );
 }
-
