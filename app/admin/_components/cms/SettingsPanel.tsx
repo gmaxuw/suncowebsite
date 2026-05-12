@@ -587,7 +587,7 @@ export default function SettingsPanel({ supabase }: Props) {
               )}
 
               {/* 3-column footer editor */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"1rem", marginBottom:"1rem" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:"1rem", marginBottom:"1rem" }}>
                 <div className="sp-card" style={{ marginBottom:0 }}>
                   <div className="sp-card-header" style={{ background:"linear-gradient(to right,rgba(201,168,76,0.1),rgba(201,168,76,0.04))" }}>
                     <div style={{ width:10, height:10, borderRadius:"50%", background:"#C9A84C" }} />
