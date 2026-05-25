@@ -33,6 +33,7 @@ function AdminPageInner() {
   const [pendingSubmissions, setPendingSubmissions] = useState(0);
   const [loading,            setLoading]            = useState(true);
   const [sidebarOpen,        setSidebarOpen]        = useState(false);
+  const [orgShortName, setOrgShortName] = useState("SUNCO");
 
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -92,8 +93,13 @@ function AdminPageInner() {
         .from("payment_submissions")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
-      setPendingSubmissions(count || 0);
-      setLoading(false);
+        setPendingSubmissions(count || 0);
+        const { data: siteSettings } = await supabase
+          .from("site_settings")
+          .select("short_name")
+          .single();
+        if (siteSettings?.short_name) setOrgShortName(siteSettings.short_name);
+        setLoading(false);
     };
     load();
   }, []);
@@ -161,7 +167,7 @@ function AdminPageInner() {
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <img src="/images/sunco-logo.png" alt="SUNCO" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "contain" }} />
             <div>
-              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.9rem", fontWeight: 700, color: "var(--gold-lt)" }}>SUNCO</span>
+              <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.9rem", fontWeight: 700, color: "var(--gold-lt)" }}>{orgShortName}</span>
               <span style={{ display: "block", fontSize: "0.5rem", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1 }}>Admin Panel</span>
             </div>
           </div>
@@ -249,8 +255,9 @@ function AdminPageInner() {
                     width: "100%", display: "flex", alignItems: "center", gap: 10,
                     padding: "0.72rem 1.2rem",
                     background: isActive ? "rgba(201,168,76,0.15)" : "transparent",
-                    borderLeft: `3px solid ${isActive ? "var(--gold)" : "transparent"}`,
-                    border: "none", borderLeftWidth: 3, borderLeftStyle: "solid",
+                    borderTop: "none", borderRight: "none", borderBottom: "none",
+                    borderLeftWidth: 3, borderLeftStyle: "solid",
+                    borderLeftColor: isActive ? "var(--gold)" : "transparent",
                     cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
                     color: isActive ? "white" : "rgba(255,255,255,0.55)",
                     textAlign: "left", position: "relative",

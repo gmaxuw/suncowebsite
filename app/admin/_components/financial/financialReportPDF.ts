@@ -7,12 +7,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 // ── Org constants ─────────────────────────────────────────────
-const ORG_NAME    = "Surigao del Norte Consumers Organization, Inc. (SUNCO)";
-const ORG_SEC     = "SEC CN 2011-31-445";
-const ORG_EMAIL   = "gabu.sacro@gmail.com";
-const ORG_MOBILE  = "0946-365-7331";
-const ORG_DTI     = "Accredited Partner — Department of Trade and Industry (DTI), Caraga Region";
-const ORG_ADDRESS = "Surigao City, Surigao del Norte, Philippines";
+let ORG_NAME    = "Surigao del Norte Consumers Organization, Inc. (SUNCO)";
+let ORG_SEC     = "SEC CN 2011-31-445";
+let ORG_EMAIL   = "gabu.sacro@gmail.com";
+let ORG_MOBILE  = "0946-365-7331";
+let ORG_DTI     = "Accredited Partner — Department of Trade and Industry (DTI), Caraga Region";
+let ORG_ADDRESS = "Surigao City, Surigao del Norte, Philippines";
 
 // ── Colours ───────────────────────────────────────────────────
 const GREEN_DK: [number,number,number] = [13, 51, 32];
@@ -215,7 +215,14 @@ async function ensureSpace(
 // ═════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═════════════════════════════════════════════════════════════
-export async function generateFinancialReportPDF(snapshot: any): Promise<void> {
+export async function generateFinancialReportPDF(snapshot: any, orgSettings?: Record<string, string>): Promise<void> {
+  if (orgSettings) {
+    if (orgSettings.org_name)    ORG_NAME    = orgSettings.org_name + " (SUNCO)";
+    if (orgSettings.org_sec)     ORG_SEC     = orgSettings.org_sec;
+    if (orgSettings.org_email)   ORG_EMAIL   = orgSettings.org_email;
+    if (orgSettings.org_mobile)  ORG_MOBILE  = orgSettings.org_mobile;
+    if (orgSettings.org_address) ORG_ADDRESS = orgSettings.org_address;
+  }
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const logoB64 = await loadLogo();
 

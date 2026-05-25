@@ -1,9 +1,17 @@
-// ─────────────────────────────────────────────────────────────
-// reports/ExportPanel.tsx
-// Replace: D:\suncowebsite\app\admin\_components\reports\ExportPanel.tsx
-// ─────────────────────────────────────────────────────────────
+"use client";
 import { useState } from "react";
 import type { ActiveTab, FeeSchedule, OfficerRecord } from "@/utils/export";
+
+interface OrgSettings {
+  org_name:        string;
+  org_short_name:  string;
+  org_established: string;
+  org_sec_number:  string;
+  org_region:      string;
+  org_address:     string;
+  org_email:       string;
+  org_phone:       string;
+}
 
 interface ExportRecord {
   no: number;
@@ -23,15 +31,14 @@ interface ExportRecord {
 }
 
 interface Props {
-  records: ExportRecord[];
-  filename: string;
-  memberCount: number;
+  records:      ExportRecord[];
+  filename:     string;
+  memberCount:  number;
   paymentCount: number;
-  activeTab: ActiveTab;
-  /** Fee schedules from Supabase — used for correct delinquent amounts */
+  activeTab:    ActiveTab;
   feeSchedules: FeeSchedule[];
-  /** Officers from Supabase — used for signature block in PDF & Excel */
-  officers: OfficerRecord[];
+  officers:     OfficerRecord[];
+  orgSettings:  OrgSettings;
 }
 
 const TAB_LABELS: Record<ActiveTab, string> = {
@@ -49,75 +56,44 @@ export default function ExportPanel({
   activeTab,
   feeSchedules,
   officers,
+  orgSettings,
 }: Props) {
   const [exporting, setExporting] = useState("");
 
   const handleExport = async (type: string) => {
     setExporting(type);
-    const { exportToCSV, exportToExcel, exportToPDF } = await import(
-      "@/utils/export"
-    );
-    if (type === "csv")   exportToCSV(records, filename, activeTab, feeSchedules);
-    if (type === "excel") exportToExcel(records, filename, activeTab, feeSchedules, officers);
-    if (type === "pdf")   await exportToPDF(records, filename, activeTab, feeSchedules, officers);
+    const { exportToCSV, exportToExcel, exportToPDF } = await import("@/utils/export");
+    if (type === "csv")   exportToCSV(records, filename, activeTab, feeSchedules, orgSettings);
+    if (type === "excel") exportToExcel(records, filename, activeTab, feeSchedules, officers, orgSettings);
+    if (type === "pdf")   await exportToPDF(records, filename, activeTab, feeSchedules, officers, orgSettings);
     setExporting("");
   };
 
   const buttons = [
     { type: "excel", label: "Export to Excel (.xlsx)", icon: "📊", color: "#1A5C2A" },
-    { type: "csv",   label: "Export to CSV (.csv)",   icon: "📋", color: "#1A3C6E" },
-    { type: "pdf",   label: "Export to PDF (.pdf)",   icon: "📄", color: "#9A2020" },
+    { type: "csv",   label: "Export to CSV (.csv)",    icon: "📋", color: "#1A3C6E" },
+    { type: "pdf",   label: "Export to PDF (.pdf)",    icon: "📄", color: "#9A2020" },
   ];
 
   return (
-    <div
-      style={{
-        background: "white",
-        borderRadius: 10,
-        border: "1px solid rgba(26,92,42,0.08)",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          padding: "1.2rem 1.5rem",
-          borderBottom: "1px solid rgba(26,92,42,0.08)",
-          background: "var(--warm)",
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: "1rem",
-            fontWeight: 700,
-            color: "var(--green-dk)",
-          }}
-        >
+    <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(26,92,42,0.08)", overflow: "hidden" }}>
+      <div style={{ padding: "1.2rem 1.5rem", borderBottom: "1px solid rgba(26,92,42,0.08)", background: "var(--warm)" }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "var(--green-dk)" }}>
           Export Records
         </h2>
         <p style={{ fontSize: "0.78rem", color: "var(--muted)", marginTop: "0.2rem" }}>
-          Exporting:{" "}
-          <strong style={{ color: "var(--green-dk)" }}>{TAB_LABELS[activeTab]}</strong>
+          Exporting: <strong style={{ color: "var(--green-dk)" }}>{TAB_LABELS[activeTab]}</strong>
         </p>
       </div>
 
-      <div
-        style={{
-          padding: "1.5rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.8rem",
-        }}
-      >
+      <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem" }}>
         {buttons.map(({ type, label, icon, color }) => (
           <button
             key={type}
             onClick={() => handleExport(type)}
             disabled={!!exporting}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
+              display: "flex", alignItems: "center", gap: 10,
               padding: "0.9rem 1.2rem",
               background: exporting === type ? "var(--warm)" : "white",
               border: `1.5px solid ${color}22`,
@@ -133,8 +109,7 @@ export default function ExportPanel({
                 {exporting === type ? "Exporting..." : label}
               </div>
               <div style={{ fontSize: "0.72rem", color: "var(--muted)", marginTop: 2 }}>
-                {memberCount} members · {paymentCount} payments ·{" "}
-                <em>{TAB_LABELS[activeTab]}</em>
+                {memberCount} members · {paymentCount} payments · <em>{TAB_LABELS[activeTab]}</em>
               </div>
             </div>
           </button>

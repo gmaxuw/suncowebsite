@@ -7,7 +7,7 @@
 // PaymentCell and ReceiptModal are used from here.
 // ─────────────────────────────────────────────
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import PaymentCell  from "./PaymentCell";
 import ReceiptModal from "./ReceiptModal";
 import type {
@@ -293,14 +293,14 @@ export default function RecordsTable({
                 <tr style={{ background: "rgba(13,51,24,0.9)" }}>
                   <th colSpan={4} />
                   {displayYears.map((year) => (
-                    <>
-                      <th key={`${year}-mas`} style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(212,160,23,0.7)", fontWeight: 500, letterSpacing: "0.06em", borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
+                    <React.Fragment key={year}>
+                      <th style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(212,160,23,0.7)", fontWeight: 500, letterSpacing: "0.06em", borderLeft: "1px solid rgba(255,255,255,0.1)" }}>
                         MAS
                       </th>
-                      <th key={`${year}-aof`} style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(100,150,255,0.7)", fontWeight: 500, letterSpacing: "0.06em" }}>
+                      <th style={{ padding: "0.4rem 0.5rem", textAlign: "center", fontSize: "0.6rem", color: "rgba(100,150,255,0.7)", fontWeight: 500, letterSpacing: "0.06em" }}>
                         AOF
                       </th>
-                    </>
+                    </React.Fragment>
                   ))}
                   <th colSpan={2} style={{ padding: "0.8rem 1rem", textAlign: "right", fontSize: "0.65rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
                     Paid / Owed
@@ -361,10 +361,10 @@ export default function RecordsTable({
 
                     {displayYears.map((year) =>
                       activeFilter === "all" ? (
-                        <>
-                          <PaymentCell key={`${m.id}-${year}-mas`} memberId={m.id} year={year} type="mas" members={members} payments={payments} currentYear={currentYear} onReceiptClick={setReceiptModal} />
-                          <PaymentCell key={`${m.id}-${year}-aof`} memberId={m.id} year={year} type="aof" members={members} payments={payments} currentYear={currentYear} onReceiptClick={setReceiptModal} />
-                        </>
+                    <React.Fragment key={`${m.id}-${year}`}>
+                          <PaymentCell memberId={m.id} year={year} type="mas" members={members} payments={payments} currentYear={currentYear} onReceiptClick={setReceiptModal} />
+                          <PaymentCell memberId={m.id} year={year} type="aof" members={members} payments={payments} currentYear={currentYear} onReceiptClick={setReceiptModal} />
+                    </React.Fragment>
                       ) : activeFilter === "lifetime" ? (
                         year === displayYears[0] ? (
                           <td key={`${m.id}-lifetime`} colSpan={displayYears.length} style={{ padding: "0.7rem 1rem", textAlign: "center" }}>

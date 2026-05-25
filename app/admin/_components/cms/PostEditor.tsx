@@ -396,7 +396,7 @@ export default function PostEditor({ supabase, post, currentMemberName, currentR
                       placeholder="url-slug"
                       style={{ fontFamily:"monospace", fontSize:"0.85rem" }}
                     />
-                    <p style={{ fontSize:"0.65rem", color:"#AAA", marginTop:4 }}>sunco.org/news/{form.slug || "your-slug"}</p>
+                    <p style={{ fontSize:"0.65rem", color:"#AAA", marginTop:4 }}>{typeof window !== "undefined" ? window.location.hostname : "sunco.org"}/news/{form.slug || "your-slug"}</p>
                   </div>
                   <div>
                     <label className="pe-label">Category *</label>
@@ -563,7 +563,7 @@ export default function PostEditor({ supabase, post, currentMemberName, currentR
                         <div style={{ width:16, height:16, background:"#0D3320", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{ color:"#C9A84C", fontSize:"0.5rem", fontWeight:800 }}>S</span>
                         </div>
-                        <span style={{ fontSize:"0.72rem", color:"#202124" }}>sunco.gabrielsacro.com</span>
+                        <span style={{ fontSize:"0.72rem", color:"#202124" }}>{typeof window !== "undefined" ? window.location.hostname : "sunco.gabrielsacro.com"}</span>
                       </div>
                       <p style={{ fontSize:"1.05rem", color:"#1558D6", fontFamily:"Arial,sans-serif", marginBottom:"0.25rem", lineHeight:1.3, fontWeight:400 }}>
                         {form.seo_title || form.title || "Post Title — SUNCO"}
