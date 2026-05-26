@@ -10,9 +10,10 @@ interface Props {
   officers: any[];
   programs: any[];
   articles: any[];
+  navPages?: { title: string; slug: string; nav_label: string; nav_order: number }[];
 }
 
-export default function HomeClient({ settings, officers, programs, articles }: Props) {
+export default function HomeClient({ settings, officers, programs, articles, navPages = [] }: Props) {
   const s = (key: string, fallback = "") => settings[key] || fallback;
   const [menuOpen, setMenuOpen] = useState(false);
   const [authUser, setAuthUser] = useState<any>(null);
@@ -40,12 +41,14 @@ export default function HomeClient({ settings, officers, programs, articles }: P
   const feeMas = s("fee_mas", "0");
 
   const NAV_LINKS = [
-    [s("nav_link1_href", "#about"),      s("nav_link1_label", "About")],
-    [s("nav_link2_href", "#programs"),   s("nav_link2_label", "Programs")],
-    [s("nav_link3_href", "#membership"), s("nav_link3_label", "Membership")],
-    [s("nav_link4_href", "#officers"),   s("nav_link4_label", "Officers")],
-    [s("nav_link5_href", "#news"),       s("nav_link5_label", "News")],
-  ];
+    [s("nav_link1_href", "#about"),      s("nav_link1_label", "")],
+    [s("nav_link2_href", "#programs"),   s("nav_link2_label", "")],
+    [s("nav_link3_href", "#membership"), s("nav_link3_label", "")],
+    [s("nav_link4_href", "#officers"),   s("nav_link4_label", "")],
+    [s("nav_link5_href", "#news"),       s("nav_link5_label", "")],
+    // ── Dynamic pages from CMS ──
+    ...navPages.map(p => [`/${p.slug}`, p.nav_label || p.title]),
+  ].filter(([, label]) => label.trim() !== "");
 
   const FOOTER_LINKS = [
     [s("footer_link1_href", "#about"),      s("footer_link1_label", "About")],

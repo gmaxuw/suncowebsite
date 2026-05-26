@@ -94,11 +94,12 @@ function AdminPageInner() {
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
         setPendingSubmissions(count || 0);
-        const { data: siteSettings } = await supabase
-          .from("site_settings")
-          .select("short_name")
-          .single();
-        if (siteSettings?.short_name) setOrgShortName(siteSettings.short_name);
+      const { data: siteSettings } = await supabase
+        .from("site_settings")
+        .select("key, value")
+        .eq("key", "org_short_name")
+        .single();
+      if (siteSettings?.value) setOrgShortName(siteSettings.value);
         setLoading(false);
     };
     load();

@@ -1,15 +1,8 @@
-// ─────────────────────────────────────────────
-// app/page.tsx
-// Public homepage — pulls content from Supabase
-// SEO: metadata, OpenGraph, structured data
-// Performance: lazy loading, image optimization
-// ─────────────────────────────────────────────
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { Metadata } from "next";
 import HomeClient from "./admin/_components/HomeClient";
 
-// ── SEO Metadata ──
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -24,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = getSetting("hero_description") || "SUNCO is the voice of consumers in Surigao del Norte — advocating for your rights and welfare.";
 
   return {
-  metadataBase: new URL("https://sunco.gabrielsacro.com"),
+    metadataBase: new URL("https://sunco.gabrielsacro.com"),
     title: `SUNCO — ${orgName}`,
     description,
     keywords: ["SUNCO", "Surigao del Norte", "consumers organization", "DTI", "consumer rights", "Philippines", "Caraga"],
@@ -50,29 +43,27 @@ export default async function HomePage() {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Fetch all data in parallel
-const [settingsRes, officersRes, programsRes, articlesRes, feeRes] = await Promise.all([
-  supabase.from("site_settings").select("key, value"),
-  supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
-  supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
-  supabase.from("posts").select("id, title, slug, excerpt, content, category, thumbnail_url, published_at, created_at").eq("status", "published").order("published_at", { ascending: false }).limit(6),
-  supabase.from("fee_schedules").select("*").eq("year", new Date().getFullYear()).single(),  // ← add this
-]);
+  const [settingsRes, officersRes, programsRes, articlesRes, feeRes, navPagesRes] = await Promise.all([
+    supabase.from("site_settings").select("key, value"),
+    supabase.from("officers").select("*").eq("is_active", true).order("order_num"),
+    supabase.from("programs").select("*").eq("is_active", true).order("order_num"),
+    supabase.from("posts").select("id, title, slug, excerpt, content, category, thumbnail_url, published_at, created_at").eq("status", "published").order("published_at", { ascending: false }).limit(6),
+    supabase.from("fee_schedules").select("*").eq("year", new Date().getFullYear()).single(),
+    // ── Fetch published pages marked "show in nav" ──
+    supabase.from("pages").select("title, slug, nav_label, nav_order, show_in_nav").eq("status", "published").eq("show_in_nav", true).order("nav_order"),
+  ]);
 
-  // Build settings map
   const settingsMap: Record<string, string> = {};
   (settingsRes.data || []).forEach(s => { settingsMap[s.key] = s.value; });
 
-
-if (feeRes.data) {
-  settingsMap["fee_lifetime"] = String(feeRes.data.fee_lifetime);
-  settingsMap["fee_aof"]      = String(feeRes.data.fee_aof);
-  settingsMap["fee_mas"]      = String(feeRes.data.fee_mas);
-}
+  if (feeRes.data) {
+    settingsMap["fee_lifetime"] = String(feeRes.data.fee_lifetime);
+    settingsMap["fee_aof"]      = String(feeRes.data.fee_aof);
+    settingsMap["fee_mas"]      = String(feeRes.data.fee_mas);
+  }
 
   return (
     <>
-      {/* ── JSON-LD Structured Data for Google ── */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -98,6 +89,7 @@ if (feeRes.data) {
         officers={officersRes.data || []}
         programs={programsRes.data || []}
         articles={articlesRes.data || []}
+        navPages={navPagesRes.data || []}
       />
     </>
   );

@@ -1,12 +1,8 @@
 "use client";
-// ─────────────────────────────────────────────
-// CmsTab.tsx
-// Tabs: Posts | Ads | Officers | Documents | Logs | Settings | Fee Schedules | Reports | Financial
-// ─────────────────────────────────────────────
 import { useState } from "react";
 import {
   FileText, Megaphone, PlusCircle, Settings, Users,
-  ScrollText, CalendarDays, FolderOpen, BarChart2, Landmark,
+  ScrollText, CalendarDays, FolderOpen, BarChart2, Landmark, Globe,
 } from "lucide-react";
 import PostsList         from "./cms/PostsList";
 import PostEditor        from "./cms/PostEditor";
@@ -17,6 +13,7 @@ import OfficersTab       from "./OfficersTab";
 import LogsTab           from "./LogsTab";
 import DocumentsPanel    from "./cms/DocumentsPanel";
 import ReportsTab        from "./ReportsTab";
+import PagesPanel        from "./cms/PagesPanel";
 import FinancialTab      from "./financial/FinancialTab";
 
 export interface CmsTabProps {
@@ -65,7 +62,7 @@ export const CATEGORIES = [
 type Tab =
   | "posts" | "ads" | "officers" | "documents"
   | "logs"  | "settings" | "fee-schedules"
-  | "reports" | "financial";
+  | "reports" | "financial" | "pages";
 
 const TAB_TITLES: Record<Tab, string> = {
   posts:           "Content Management",
@@ -77,6 +74,7 @@ const TAB_TITLES: Record<Tab, string> = {
   "fee-schedules": "Fee Schedules",
   reports:         "Reports & Records",
   financial:       "Financial Reports",
+  pages:           "Pages",
 };
 
 export default function CmsTab({
@@ -106,15 +104,16 @@ export default function CmsTab({
   };
 
   const TABS = [
-    { id: "posts",          label: "Posts",            icon: FileText,    show: true                },
-    { id: "ads",            label: "Ads",              icon: Megaphone,   show: canCRUD             },
-    { id: "officers",       label: "Officers",         icon: Users,       show: canCRUD             },
-    { id: "documents",      label: "Documents",        icon: FolderOpen,  show: canCRUD             },
-    { id: "logs",           label: "Audit Logs",       icon: ScrollText,  show: isAdmin             },
-    { id: "settings",       label: "Settings",         icon: Settings,    show: canCRUD             },
-    { id: "fee-schedules",  label: "Fee Schedules",    icon: CalendarDays,show: isAdmin             },
-    { id: "reports",        label: "Reports",          icon: BarChart2,   show: isAdmin             },
-    { id: "financial",      label: "Financial",        icon: Landmark,    show: isAdminOrTreasurer  },
+    { id: "posts",          label: "Posts",         icon: FileText,    show: true               },
+    { id: "pages",          label: "Pages",         icon: Globe,       show: canCRUD            },
+    { id: "ads",            label: "Ads",           icon: Megaphone,   show: canCRUD            },
+    { id: "officers",       label: "Officers",      icon: Users,       show: canCRUD            },
+    { id: "documents",      label: "Documents",     icon: FolderOpen,  show: canCRUD            },
+    { id: "logs",           label: "Audit Logs",    icon: ScrollText,  show: isAdmin            },
+    { id: "settings",       label: "Settings",      icon: Settings,    show: canCRUD            },
+    { id: "fee-schedules",  label: "Fee Schedules", icon: CalendarDays,show: isAdmin            },
+    { id: "reports",        label: "Reports",       icon: BarChart2,   show: isAdmin            },
+    { id: "financial",      label: "Financial",     icon: Landmark,    show: isAdminOrTreasurer },
   ].filter(t => t.show) as { id: Tab; label: string; icon: any; show: boolean }[];
 
   return (
@@ -157,6 +156,9 @@ export default function CmsTab({
       {activeTab === "posts" && (
         <PostsList key={refreshKey} canCRUD={canCRUD} supabase={supabase} onEdit={openEdit} onNew={openNew} />
       )}
+      {activeTab === "pages" && (
+        <PagesPanel canCRUD={canCRUD} supabase={supabase} />
+      )}
       {activeTab === "ads" && (
         <AdsManager canCRUD={canCRUD} supabase={supabase} />
       )}
@@ -180,10 +182,7 @@ export default function CmsTab({
         <FeeSchedulesPanel supabase={supabase} />
       )}
       {activeTab === "reports" && (
-        <ReportsTab
-          canCRUD={canCRUD}
-          supabase={supabase}
-        />
+        <ReportsTab canCRUD={canCRUD} supabase={supabase} />
       )}
       {activeTab === "financial" && (
         <FinancialTab
@@ -199,14 +198,14 @@ export default function CmsTab({
 
       {/* ── Post editor overlay ── */}
       {showEditor && editingPost && (
-<PostEditor
-  supabase={supabase}
-  post={editingPost}
-  currentMemberName={currentMemberName}
-  currentRole={currentRole}
-  onSaved={onSaved}
-  onClose={() => setShowEditor(false)}
-/>
+        <PostEditor
+          supabase={supabase}
+          post={editingPost}
+          currentMemberName={currentMemberName}
+          currentRole={currentRole}
+          onSaved={onSaved}
+          onClose={() => setShowEditor(false)}
+        />
       )}
     </div>
   );

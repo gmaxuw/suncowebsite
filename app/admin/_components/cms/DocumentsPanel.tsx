@@ -515,7 +515,7 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
       ══════════════════════════════════════════════════════ */}
       <div style={S.card}>
         {/* Header */}
-        <button onClick={()=>setShowLeads(v=>!v)}
+        <div onClick={()=>setShowLeads(v=>!v)}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1.1rem 1.5rem",background:"var(--green-dk)",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <Users size={16} color="#C9A84C"/>
@@ -542,8 +542,8 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
               </>
             )}
             {showLeads?<ChevronUp size={18} color="rgba(255,255,255,0.5)"/>:<ChevronDown size={18} color="rgba(255,255,255,0.5)"/>}
-          </div>
-        </button>
+                      </div>
+                    </div>
 
         {showLeads&&(
           <div style={{padding:"1.25rem 1.5rem"}}>
