@@ -1,9 +1,4 @@
 "use client";
-// ─────────────────────────────────────────────────────────────
-// cms/DocumentsPanel.tsx — Final version
-// Includes: Upload, Manage, Email Leads Dashboard
-// Leads: searchable table, Copy All (Gmail BCC), Export CSV
-// ─────────────────────────────────────────────────────────────
 import { useEffect, useState, useRef } from "react";
 import {
   Upload, FileText, FileImage, FileSpreadsheet, File,
@@ -42,6 +37,7 @@ type Doc = {
   file_size_kb: number; thumbnail_url: string;
   visibility: "internal"|"public"; category: string;
   tags: string[]; linked_post_ids: string[];
+  linked_page_ids: string[];
   download_count: number; uploaded_by_name: string; created_at: string;
 };
 
@@ -51,6 +47,7 @@ type Lead = {
 };
 
 type Post = { id: string; title: string; slug: string };
+type Page = { id: string; title: string; slug: string };
 
 function detectFileType(file: File): string {
   const n = file.name.toLowerCase();
@@ -90,6 +87,7 @@ function VisBadge({ v }: { v: string }) {
 export default function DocumentsPanel({ supabase, canCRUD, userId, currentMemberName }: Props) {
   const [docs,         setDocs]         = useState<Doc[]>([]);
   const [posts,        setPosts]        = useState<Post[]>([]);
+  const [pages,        setPages]        = useState<Page[]>([]);
   const [leads,        setLeads]        = useState<Lead[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [leadsLoading, setLeadsLoading] = useState(true);
@@ -105,13 +103,13 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
   const [leadSearch,   setLeadSearch]   = useState("");
   const [form, setForm] = useState({
     title: "", description: "", visibility: "internal" as "internal"|"public",
-    category: "", tags: [] as string[], linked_post_ids: [] as string[], tagInput: "",
+    category: "", tags: [] as string[], linked_post_ids: [] as string[],
+    linked_page_ids: [] as string[], tagInput: "",
   });
   const [dragOver,    setDragOver]    = useState(false);
   const [pendingFile, setPendingFile] = useState<File|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // ── Load ───────────────────────────────────────────────────
   const loadDocs = async () => {
     setLoading(true);
     const { data } = await supabase.from("documents").select("*").order("created_at", { ascending: false });
@@ -122,6 +120,12 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
   const loadPosts = async () => {
     const { data } = await supabase.from("posts").select("id,title,slug").eq("status","published").order("created_at",{ascending:false});
     setPosts(data || []);
+  };
+
+  // ── NEW: load pages ────────────────────────────────────────
+  const loadPages = async () => {
+    const { data } = await supabase.from("pages").select("id,title,slug").eq("status","published").order("created_at",{ascending:false});
+    setPages(data || []);
   };
 
   const loadLeads = async () => {
@@ -137,10 +141,9 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
     setLeadsLoading(false);
   };
 
-  useEffect(() => { loadDocs(); loadPosts(); loadLeads(); }, []);
+  useEffect(() => { loadDocs(); loadPosts(); loadPages(); loadLeads(); }, []);
 
-  // ── Derived ────────────────────────────────────────────────
-  const filtered      = docs.filter(d => {
+  const filtered = docs.filter(d => {
     const q = search.toLowerCase();
     return (!q || d.title.toLowerCase().includes(q) || (d.tags||[]).some(t=>t.includes(q)))
       && (filterVis==="all" || d.visibility===filterVis)
@@ -152,10 +155,8 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
     return !q || l.email.toLowerCase().includes(q) || l.doc_title.toLowerCase().includes(q);
   });
 
-  // Unique emails (deduped)
-  const uniqueEmails  = [...new Set(leads.map(l => l.email))];
+  const uniqueEmails = [...new Set(leads.map(l => l.email))];
 
-  // ── Copy BCC ───────────────────────────────────────────────
   const handleCopyBcc = () => {
     navigator.clipboard.writeText(uniqueEmails.join(", ")).then(() => {
       setCopiedBcc(true);
@@ -163,27 +164,19 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
     });
   };
 
-  // ── Export CSV ─────────────────────────────────────────────
   const handleExportCsv = () => {
     const rows = [
       ["Email", "Document Downloaded", "Date"],
-      ...leads.map(l => [
-        l.email,
-        l.doc_title,
-        formatDate(l.created_at),
-      ]),
+      ...leads.map(l => [l.email, l.doc_title, formatDate(l.created_at)]),
     ];
-    const csv     = rows.map(r => r.map(cell => `"${cell.replace(/"/g,'""')}"`).join(",")).join("\n");
-    const blob    = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url     = URL.createObjectURL(blob);
-    const a       = document.createElement("a");
-    a.href        = url;
-    a.download    = `sunco-document-leads-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const csv  = rows.map(r => r.map(cell => `"${cell.replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `sunco-document-leads-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
   };
 
-  // ── Upload ─────────────────────────────────────────────────
   const pickFile = (file: File) => {
     setPendingFile(file);
     if (!form.title) setForm(f => ({ ...f, title: file.name.replace(/\.[^.]+$/,"").replace(/[-_]/g," ") }));
@@ -214,13 +207,14 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
       file_size_kb: sizeKb, thumbnail_url: thumbnailUrl,
       visibility: form.visibility, category: form.category || null,
       tags: form.tags, linked_post_ids: form.linked_post_ids,
+      linked_page_ids: form.linked_page_ids,
       uploaded_by: userId || null, uploaded_by_name: currentMemberName || "",
     });
     if (dbErr) { alert("Database error: " + dbErr.message); setUploading(false); return; }
     setUploadPct(100);
     setTimeout(() => {
       setUploading(false); setUploadPct(0); setShowUploader(false); setPendingFile(null);
-      setForm({ title:"",description:"",visibility:"internal",category:"",tags:[],linked_post_ids:[],tagInput:"" });
+      setForm({ title:"",description:"",visibility:"internal",category:"",tags:[],linked_post_ids:[],linked_page_ids:[],tagInput:"" });
       loadDocs();
     }, 400);
   };
@@ -243,7 +237,9 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
     await supabase.from("documents").update({
       title: editingDoc.title, description: editingDoc.description,
       category: editingDoc.category, tags: editingDoc.tags,
-      linked_post_ids: editingDoc.linked_post_ids, visibility: editingDoc.visibility,
+      linked_post_ids: editingDoc.linked_post_ids,
+      linked_page_ids: editingDoc.linked_page_ids || [],
+      visibility: editingDoc.visibility,
     }).eq("id", editingDoc.id);
     setDocs(prev => prev.map(d => d.id === editingDoc.id ? {...editingDoc} : d));
     setEditingDoc(null);
@@ -283,7 +279,36 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
       color:"#0D3320",marginBottom:"0.3rem",
     },
     card: { background:"white",borderRadius:10,border:"1px solid rgba(26,92,42,0.08)",overflow:"hidden" },
+    // Shared linked list box style
+    linkedBox: {
+      maxHeight:130,overflowY:"auto" as const,
+      border:"1.5px solid rgba(26,92,42,0.15)",
+      borderRadius:7,padding:"0.4rem",
+    },
   };
+
+  // ── Reusable linked-list renderer ──────────────────────────
+  const LinkedList = ({
+    items, selected, onToggle, emptyMsg,
+  }: {
+    items: {id:string;title:string}[];
+    selected: string[];
+    onToggle: (id:string, checked:boolean) => void;
+    emptyMsg: string;
+  }) => (
+    <div style={S.linkedBox}>
+      {items.length === 0
+        ? <p style={{fontSize:"0.78rem",color:"var(--muted)",padding:"0.5rem"}}>{emptyMsg}</p>
+        : items.map(item => (
+          <label key={item.id} style={{display:"flex",alignItems:"center",gap:8,padding:"0.35rem 0.5rem",cursor:"pointer",borderRadius:5,background:selected.includes(item.id)?"rgba(26,92,42,0.05)":"transparent"}}>
+            <input type="checkbox" checked={selected.includes(item.id)}
+              onChange={e => onToggle(item.id, e.target.checked)} />
+            <span style={{fontSize:"0.8rem",color:"var(--text)"}}>{item.title}</span>
+          </label>
+        ))
+      }
+    </div>
+  );
 
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
@@ -376,7 +401,7 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
             <div>
               <label style={S.label}>Description</label>
               <textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-                rows={2} placeholder="Brief description shown in the sidebar card..."
+                rows={2} placeholder="Brief description..."
                 style={{...S.input,resize:"vertical",lineHeight:1.6}}/>
             </div>
             <div>
@@ -389,9 +414,6 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
                   </button>
                 ))}
               </div>
-              <p style={{fontSize:"0.72rem",color:"var(--muted)",marginTop:5}}>
-                {form.visibility==="internal"?"Only visible to logged-in BOD members and officers.":"Visible to the public. Visitors must provide their email to download."}
-              </p>
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem" }}>
               <div>
@@ -413,29 +435,27 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
                 <input value={form.tagInput} onChange={e=>setForm(f=>({...f,tagInput:e.target.value}))}
                   onKeyDown={e=>{if(e.key==="Enter"||e.key===","){e.preventDefault();addTag(form.tagInput);}}}
                   placeholder="Type tag, press Enter" style={{...S.input,fontSize:"0.8rem"}}/>
-                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:6}}>
-                  {TAG_SUGGESTIONS.filter(t=>!form.tags.includes(t)).slice(0,6).map(t=>(
-                    <button key={t} onClick={()=>addTag(t)} style={{background:"none",border:"1px solid rgba(26,92,42,0.15)",borderRadius:20,padding:"0.15rem 0.5rem",fontSize:"0.65rem",color:"var(--muted)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                      +{t}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
+
+            {/* Link to Articles */}
             <div>
               <label style={S.label}>Link to Article(s) <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
-              <div style={{maxHeight:140,overflowY:"auto",border:"1.5px solid rgba(26,92,42,0.15)",borderRadius:7,padding:"0.4rem"}}>
-                {posts.length===0
-                  ?<p style={{fontSize:"0.78rem",color:"var(--muted)",padding:"0.5rem"}}>No published posts found.</p>
-                  :posts.map(p=>(
-                    <label key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"0.35rem 0.5rem",cursor:"pointer",borderRadius:5,background:form.linked_post_ids.includes(p.id)?"rgba(26,92,42,0.05)":"transparent"}}>
-                      <input type="checkbox" checked={form.linked_post_ids.includes(p.id)}
-                        onChange={e=>setForm(f=>({...f,linked_post_ids:e.target.checked?[...f.linked_post_ids,p.id]:f.linked_post_ids.filter(id=>id!==p.id)}))}/>
-                      <span style={{fontSize:"0.8rem",color:"var(--text)"}}>{p.title}</span>
-                    </label>
-                  ))}
-              </div>
+              <LinkedList
+                items={posts} selected={form.linked_post_ids} emptyMsg="No published posts found."
+                onToggle={(id, checked) => setForm(f => ({ ...f, linked_post_ids: checked ? [...f.linked_post_ids, id] : f.linked_post_ids.filter(x => x !== id) }))}
+              />
             </div>
+
+            {/* ── NEW: Link to Pages ── */}
+            <div>
+              <label style={S.label}>Link to Page(s) <span style={{fontWeight:400,textTransform:"none",letterSpacing:0}}>(optional)</span></label>
+              <LinkedList
+                items={pages} selected={form.linked_page_ids} emptyMsg="No published pages found."
+                onToggle={(id, checked) => setForm(f => ({ ...f, linked_page_ids: checked ? [...f.linked_page_ids, id] : f.linked_page_ids.filter(x => x !== id) }))}
+              />
+            </div>
+
             {uploading && (
               <div>
                 <div style={{height:6,background:"rgba(26,92,42,0.1)",borderRadius:3,overflow:"hidden"}}>
@@ -487,6 +507,12 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
                   <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>{formatBytes(doc.file_size_kb)}</span>
                   <span style={{fontSize:"0.68rem",color:"var(--muted)"}}>{formatDate(doc.created_at)}</span>
                   <span style={{display:"flex",alignItems:"center",gap:3,fontSize:"0.68rem",color:"var(--muted)"}}><Download size={10}/>{doc.download_count||0} downloads</span>
+                  {/* Show page links count */}
+                  {(doc.linked_page_ids||[]).length > 0 && (
+                    <span style={{fontSize:"0.65rem",background:"rgba(43,95,168,0.08)",borderRadius:20,padding:"0.15rem 0.5rem",color:"#2B5FA8"}}>
+                      {doc.linked_page_ids.length} page{doc.linked_page_ids.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
               </div>
               {canCRUD&&(
@@ -495,7 +521,7 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
                     style={{flex:1,padding:"0 1rem",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",borderBottom:"1px solid rgba(26,92,42,0.07)"}}>
                     {doc.visibility==="public"?<Eye size={15}/>:<EyeOff size={15}/>}
                   </button>
-                  <button onClick={()=>setEditingDoc(doc)} title="Edit"
+                  <button onClick={()=>setEditingDoc({...doc, linked_page_ids: doc.linked_page_ids || []})} title="Edit"
                     style={{flex:1,padding:"0 1rem",border:"none",background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--muted)",borderBottom:"1px solid rgba(26,92,42,0.07)"}}>
                     <Tag size={15}/>
                   </button>
@@ -510,11 +536,8 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════
-          EMAIL LEADS DASHBOARD
-      ══════════════════════════════════════════════════════ */}
+      {/* ── Email Leads Dashboard ── */}
       <div style={S.card}>
-        {/* Header */}
         <div onClick={()=>setShowLeads(v=>!v)}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"1.1rem 1.5rem",background:"var(--green-dk)",border:"none",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -529,12 +552,10 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {uniqueEmails.length>0&&(
               <>
-                {/* Copy for Gmail BCC */}
                 <button onClick={e=>{e.stopPropagation();handleCopyBcc();}}
                   style={{display:"flex",alignItems:"center",gap:5,background:copiedBcc?"#2E8B44":"rgba(201,168,76,0.15)",color:copiedBcc?"white":"#C9A84C",border:"1px solid rgba(201,168,76,0.3)",padding:"0.45rem 0.9rem",borderRadius:6,fontSize:"0.75rem",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
                   {copiedBcc?<><Check size={12}/> Copied!</>:<><Copy size={12}/> Copy for Gmail BCC</>}
                 </button>
-                {/* Export CSV */}
                 <button onClick={e=>{e.stopPropagation();handleExportCsv();}}
                   style={{display:"flex",alignItems:"center",gap:5,background:"rgba(201,168,76,0.15)",color:"#C9A84C",border:"1px solid rgba(201,168,76,0.3)",padding:"0.45rem 0.9rem",borderRadius:6,fontSize:"0.75rem",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"}}>
                   <FileDown size={12}/> Export CSV
@@ -542,83 +563,61 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
               </>
             )}
             {showLeads?<ChevronUp size={18} color="rgba(255,255,255,0.5)"/>:<ChevronDown size={18} color="rgba(255,255,255,0.5)"/>}
-                      </div>
-                    </div>
+          </div>
+        </div>
 
         {showLeads&&(
           <div style={{padding:"1.25rem 1.5rem"}}>
-
-            {/* How to use tip */}
             <div style={{background:"rgba(201,168,76,0.08)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:8,padding:"0.85rem 1.1rem",marginBottom:"1.1rem"}}>
               <p style={{fontSize:"0.75rem",color:"#A66C00",fontWeight:700,marginBottom:4}}>💡 How to use these emails</p>
               <p style={{fontSize:"0.73rem",color:"#666",lineHeight:1.65}}>
-                <strong>Gmail BCC:</strong> Click "Copy for Gmail BCC" → open Gmail → New email → paste into BCC field → send your newsletter.<br/>
-                <strong>Google Contacts:</strong> Click "Export CSV" → go to contacts.google.com → Import → upload the file.<br/>
-                <strong>Mailchimp / other tools:</strong> Use the CSV export to import your list into any email marketing platform.
+                <strong>Gmail BCC:</strong> Click "Copy for Gmail BCC" → open Gmail → New email → paste into BCC field.<br/>
+                <strong>Export CSV:</strong> Import into Google Contacts or Mailchimp.
               </p>
             </div>
-
-            {/* Unique emails box */}
             {uniqueEmails.length>0&&(
               <div style={{background:"var(--warm)",borderRadius:8,padding:"0.9rem 1.1rem",marginBottom:"1.1rem",border:"1px solid rgba(26,92,42,0.08)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem"}}>
-                  <p style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted)"}}>
-                    All Unique Emails ({uniqueEmails.length})
-                  </p>
+                  <p style={{fontSize:"0.68rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted)"}}>All Unique Emails ({uniqueEmails.length})</p>
                   <button onClick={handleCopyBcc}
                     style={{display:"flex",alignItems:"center",gap:5,background:copiedBcc?"#2E8B44":"var(--gold)",color:copiedBcc?"white":"var(--green-dk)",border:"none",padding:"0.35rem 0.75rem",borderRadius:6,fontSize:"0.72rem",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
                     {copiedBcc?<><Check size={11}/> Copied!</>:<><Copy size={11}/> Copy All</>}
                   </button>
                 </div>
-                <p style={{fontSize:"0.8rem",color:"var(--text)",lineHeight:1.9,wordBreak:"break-all",userSelect:"all"}}>
-                  {uniqueEmails.join(", ")}
-                </p>
+                <p style={{fontSize:"0.8rem",color:"var(--text)",lineHeight:1.9,wordBreak:"break-all",userSelect:"all"}}>{uniqueEmails.join(", ")}</p>
               </div>
             )}
-
-            {/* Search */}
             <div style={{position:"relative",marginBottom:"1rem"}}>
               <Search size={14} style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"var(--muted)"}}/>
               <input value={leadSearch} onChange={e=>setLeadSearch(e.target.value)}
-                placeholder="Search by email or document name..."
-                style={{...S.input,paddingLeft:"2rem"}}/>
+                placeholder="Search by email or document name..." style={{...S.input,paddingLeft:"2rem"}}/>
             </div>
-
-            {/* Table */}
             {leadsLoading?(
-              <div style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}>
-                <RefreshCw size={16} style={{opacity:0.4}}/>
-              </div>
+              <div style={{textAlign:"center",padding:"2rem",color:"var(--muted)"}}><RefreshCw size={16} style={{opacity:0.4}}/></div>
             ):filteredLeads.length===0?(
               <div style={{textAlign:"center",padding:"2.5rem",color:"var(--muted)"}}>
                 <Mail size={32} style={{opacity:0.2,marginBottom:8}}/>
                 <p style={{fontSize:"0.85rem",fontWeight:600}}>No leads yet</p>
-                <p style={{fontSize:"0.78rem",marginTop:4}}>They'll appear here when visitors download public documents.</p>
               </div>
             ):(
               <div style={{border:"1px solid rgba(26,92,42,0.08)",borderRadius:8,overflow:"hidden"}}>
-                {/* Header row */}
                 <div style={{display:"grid",gridTemplateColumns:"1.5fr 2fr 1fr",gap:"1rem",padding:"0.6rem 1rem",background:"rgba(26,92,42,0.04)",borderBottom:"1px solid rgba(26,92,42,0.08)"}}>
                   {["Email Address","Document Downloaded","Date"].map(h=>(
                     <p key={h} style={{fontSize:"0.65rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:"var(--muted)"}}>{h}</p>
                   ))}
                 </div>
-                {/* Data rows */}
                 <div style={{maxHeight:420,overflowY:"auto"}}>
                   {filteredLeads.map((lead,i)=>(
-                    <div key={lead.id}
-                      style={{display:"grid",gridTemplateColumns:"1.5fr 2fr 1fr",gap:"1rem",padding:"0.75rem 1rem",borderBottom:i<filteredLeads.length-1?"1px solid rgba(26,92,42,0.05)":"none",alignItems:"center",background:i%2===0?"white":"rgba(26,92,42,0.01)"}}>
+                    <div key={lead.id} style={{display:"grid",gridTemplateColumns:"1.5fr 2fr 1fr",gap:"1rem",padding:"0.75rem 1rem",borderBottom:i<filteredLeads.length-1?"1px solid rgba(26,92,42,0.05)":"none",alignItems:"center",background:i%2===0?"white":"rgba(26,92,42,0.01)"}}>
                       <p style={{fontSize:"0.82rem",color:"var(--text)",fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lead.email}</p>
                       <p style={{fontSize:"0.78rem",color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lead.doc_title}</p>
                       <p style={{fontSize:"0.72rem",color:"var(--muted)",whiteSpace:"nowrap"}}>{formatDate(lead.created_at)}</p>
                     </div>
                   ))}
                 </div>
-                {/* Footer */}
                 <div style={{padding:"0.6rem 1rem",borderTop:"1px solid rgba(26,92,42,0.07)",background:"rgba(26,92,42,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <p style={{fontSize:"0.72rem",color:"var(--muted)"}}>{filteredLeads.length} record{filteredLeads.length!==1?"s":""}</p>
-                  <button onClick={loadLeads}
-                    style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1.5px solid rgba(26,92,42,0.15)",borderRadius:6,padding:"0.4rem 0.8rem",fontSize:"0.72rem",color:"var(--muted)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                  <button onClick={loadLeads} style={{display:"flex",alignItems:"center",gap:5,background:"none",border:"1.5px solid rgba(26,92,42,0.15)",borderRadius:6,padding:"0.4rem 0.8rem",fontSize:"0.72rem",color:"var(--muted)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
                     <RefreshCw size={11}/> Refresh
                   </button>
                 </div>
@@ -632,7 +631,7 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
       {editingDoc&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}>
           <div style={{background:"white",borderRadius:12,width:"100%",maxWidth:520,maxHeight:"90vh",overflow:"auto"}}>
-            <div style={{padding:"1rem 1.5rem",background:"var(--green-dk)",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0}}>
+            <div style={{padding:"1rem 1.5rem",background:"var(--green-dk)",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:1}}>
               <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:"1rem",color:"#C9A84C"}}>Edit Document</h2>
               <button onClick={()=>setEditingDoc(null)} style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,0.6)"}}><X size={18}/></button>
             </div>
@@ -668,18 +667,25 @@ export default function DocumentsPanel({ supabase, canCRUD, userId, currentMembe
                 <input placeholder="Add tag, press Enter" style={S.input}
                   onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addTag((e.target as HTMLInputElement).value,true);(e.target as HTMLInputElement).value="";}}}/>
               </div>
+
+              {/* Linked Posts */}
               <div>
                 <label style={S.label}>Linked Posts</label>
-                <div style={{maxHeight:130,overflowY:"auto",border:"1.5px solid rgba(26,92,42,0.15)",borderRadius:7,padding:"0.4rem"}}>
-                  {posts.map(p=>(
-                    <label key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"0.3rem 0.5rem",cursor:"pointer"}}>
-                      <input type="checkbox" checked={(editingDoc.linked_post_ids||[]).includes(p.id)}
-                        onChange={e=>setEditingDoc(d=>d?{...d,linked_post_ids:e.target.checked?[...(d.linked_post_ids||[]),p.id]:(d.linked_post_ids||[]).filter(id=>id!==p.id)}:d)}/>
-                      <span style={{fontSize:"0.8rem"}}>{p.title}</span>
-                    </label>
-                  ))}
-                </div>
+                <LinkedList
+                  items={posts} selected={editingDoc.linked_post_ids||[]} emptyMsg="No published posts."
+                  onToggle={(id,checked)=>setEditingDoc(d=>d?{...d,linked_post_ids:checked?[...(d.linked_post_ids||[]),id]:(d.linked_post_ids||[]).filter(x=>x!==id)}:d)}
+                />
               </div>
+
+              {/* ── NEW: Linked Pages ── */}
+              <div>
+                <label style={S.label}>Linked Pages</label>
+                <LinkedList
+                  items={pages} selected={editingDoc.linked_page_ids||[]} emptyMsg="No published pages."
+                  onToggle={(id,checked)=>setEditingDoc(d=>d?{...d,linked_page_ids:checked?[...(d.linked_page_ids||[]),id]:(d.linked_page_ids||[]).filter(x=>x!==id)}:d)}
+                />
+              </div>
+
               <div style={{display:"flex",gap:10,justifyContent:"flex-end",paddingTop:4}}>
                 <button onClick={()=>setEditingDoc(null)} style={{padding:"0.6rem 1.1rem",borderRadius:7,border:"1.5px solid rgba(26,92,42,0.15)",background:"white",color:"var(--muted)",fontSize:"0.82rem",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Cancel</button>
                 <button onClick={saveEdit} style={{display:"flex",alignItems:"center",gap:6,background:"var(--gold)",color:"var(--green-dk)",border:"none",padding:"0.6rem 1.3rem",borderRadius:7,fontSize:"0.82rem",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
