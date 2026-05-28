@@ -3,6 +3,7 @@
 // cms/PagesPanel.tsx — Rebuilt 2026 Edition
 // Same editor quality as PostEditor
 // One layout (3-col news style), AI generation, SEO
+// AI Generator restricted to admin role only
 // ─────────────────────────────────────────────
 import { useEffect, useState, useRef } from "react";
 import {
@@ -81,6 +82,10 @@ export default function PagesPanel({ supabase, canCRUD }: Props) {
   const [aiPrompt,    setAiPrompt]    = useState("");
   const [tagInput,    setTagInput]    = useState("");
   const [contentImgUploading, setContentImgUploading] = useState(false);
+
+  // ── NEW: track whether the logged-in user is an admin ────────
+  const [isAdmin,     setIsAdmin]     = useState(false);
+
   const coverRef      = useRef<HTMLInputElement>(null);
   const contentImgRef = useRef<HTMLInputElement>(null);
 
@@ -91,7 +96,22 @@ export default function PagesPanel({ supabase, canCRUD }: Props) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  // ── NEW: check the current user's role from the user_roles table
+  const checkAdminRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+    setIsAdmin(userRole?.role === "admin");
+  };
+
+  useEffect(() => {
+    load();
+    checkAdminRole();
+  }, []);
 
   const wordCount = (form.content || "").split(/\s+/).filter(Boolean).length;
   const readTime  = Math.max(1, Math.ceil(wordCount / 200));
@@ -412,46 +432,61 @@ export default function PagesPanel({ supabase, canCRUD }: Props) {
                 {/* ══ CONTENT TAB ══ */}
                 {activeTab === "content" && (
                   <div>
-                    {/* AI Generator */}
-                    <div className="pp-ai-panel">
-                      <button className="pp-ai-header" onClick={() => setShowAI(v => !v)}>
-                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                          <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Sparkles size={15} color="#C9A84C" />
-                          </div>
-                          <div style={{ textAlign:"left" }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2 }}>
-                              <span style={{ fontSize:"0.88rem", fontWeight:700, color:"#0D3320" }}>Claude AI Generator</span>
-                              <span className="pp-ai-badge">AI</span>
-                            </div>
-                            <p style={{ fontSize:"0.7rem", color:"#888" }}>Generate full page content + SEO in one click</p>
-                          </div>
-                        </div>
-                        {showAI ? <ChevronUp size={16} color="#888" /> : <ChevronDown size={16} color="#888" />}
-                      </button>
-                      {showAI && (
-                        <div style={{ padding:"1.2rem", borderTop:"1px solid rgba(201,168,76,0.15)" }}>
-                          <div className="pp-field">
-                            <label className="pp-label">Context / instructions (optional)</label>
-                            <textarea className="pp-textarea" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
-                              placeholder="e.g. This is the About page for SUNCO. Include history since 2011, mission, vision, and how to join..." rows={3} />
-                          </div>
-                          {aiError && (
-                            <div style={{ display:"flex", gap:8, padding:"0.75rem 1rem", background:"#FDECEA", borderRadius:10, marginBottom:"0.9rem", border:"1px solid rgba(192,57,43,0.2)" }}>
-                              <AlertCircle size={14} color="#A8200D" style={{ marginTop:1, flexShrink:0 }} />
-                              <p style={{ fontSize:"0.78rem", color:"#A8200D" }}>{aiError}</p>
-                            </div>
-                          )}
+
+                    {/* ── AI Generator — ADMIN ONLY ─────────────────────────
+                        isAdmin is true only when profiles.role === "admin".
+                        Treasurer, secretary, and all other roles never see this block.
+                    ────────────────────────────────────────────────────────── */}
+                    {isAdmin ? (
+                      <div className="pp-ai-panel">
+                        <button className="pp-ai-header" onClick={() => setShowAI(v => !v)}>
                           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                            <button onClick={handleAIGenerate} disabled={aiLoading || !form.title.trim()}
-                              style={{ display:"flex", alignItems:"center", gap:8, background: aiLoading || !form.title.trim() ? "rgba(26,92,42,0.2)" : "linear-gradient(135deg,#0A2818,#1A5C2A)", color: aiLoading || !form.title.trim() ? "#888" : "white", border:"none", padding:"0.72rem 1.5rem", borderRadius:10, fontSize:"0.85rem", fontWeight:700, cursor: aiLoading || !form.title.trim() ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                              {aiLoading ? <><span className="pp-spinner" style={{ display:"inline-block" }}><Zap size={15} /></span> Generating...</> : <><Sparkles size={15} /> Generate Content + SEO</>}
-                            </button>
-                            {!form.title.trim() && <p style={{ fontSize:"0.72rem", color:"#AAA" }}>Enter a title first ↑</p>}
+                            <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                              <Sparkles size={15} color="#C9A84C" />
+                            </div>
+                            <div style={{ textAlign:"left" }}>
+                              <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2 }}>
+                                <span style={{ fontSize:"0.88rem", fontWeight:700, color:"#0D3320" }}>Claude AI Generator</span>
+                                <span className="pp-ai-badge">AI</span>
+                              </div>
+                              <p style={{ fontSize:"0.7rem", color:"#888" }}>Generate full page content + SEO in one click</p>
+                            </div>
                           </div>
+                          {showAI ? <ChevronUp size={16} color="#888" /> : <ChevronDown size={16} color="#888" />}
+                        </button>
+                        {showAI && (
+                          <div style={{ padding:"1.2rem", borderTop:"1px solid rgba(201,168,76,0.15)" }}>
+                            <div className="pp-field">
+                              <label className="pp-label">Context / instructions (optional)</label>
+                              <textarea className="pp-textarea" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
+                                placeholder="e.g. This is the About page for SUNCO. Include history since 2011, mission, vision, and how to join..." rows={3} />
+                            </div>
+                            {aiError && (
+                              <div style={{ display:"flex", gap:8, padding:"0.75rem 1rem", background:"#FDECEA", borderRadius:10, marginBottom:"0.9rem", border:"1px solid rgba(192,57,43,0.2)" }}>
+                                <AlertCircle size={14} color="#A8200D" style={{ marginTop:1, flexShrink:0 }} />
+                                <p style={{ fontSize:"0.78rem", color:"#A8200D" }}>{aiError}</p>
+                              </div>
+                            )}
+                            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                              <button onClick={handleAIGenerate} disabled={aiLoading || !form.title.trim()}
+                                style={{ display:"flex", alignItems:"center", gap:8, background: aiLoading || !form.title.trim() ? "rgba(26,92,42,0.2)" : "linear-gradient(135deg,#0A2818,#1A5C2A)", color: aiLoading || !form.title.trim() ? "#888" : "white", border:"none", padding:"0.72rem 1.5rem", borderRadius:10, fontSize:"0.85rem", fontWeight:700, cursor: aiLoading || !form.title.trim() ? "not-allowed" : "pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                                {aiLoading ? <><span className="pp-spinner" style={{ display:"inline-block" }}><Zap size={15} /></span> Generating...</> : <><Sparkles size={15} /> Generate Content + SEO</>}
+                              </button>
+                              {!form.title.trim() && <p style={{ fontSize:"0.72rem", color:"#AAA" }}>Enter a title first ↑</p>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Non-admin sees a subtle locked notice instead */
+                      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0.9rem 1.1rem", background:"rgba(26,92,42,0.03)", border:"1.5px solid rgba(26,92,42,0.08)", borderRadius:12, marginBottom:"1.6rem" }}>
+                        <span style={{ fontSize:"1rem" }}>🔒</span>
+                        <div>
+                          <p style={{ fontSize:"0.8rem", fontWeight:700, color:"#0D3320", marginBottom:2 }}>AI Generator — Admin Only</p>
+                          <p style={{ fontSize:"0.7rem", color:"#888" }}>Contact your admin to generate content with AI.</p>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* Title */}
                     <div className="pp-field">

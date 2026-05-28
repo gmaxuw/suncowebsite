@@ -1,4 +1,6 @@
 "use client";
+import { createClient } from "@/utils/supabase/client";
+// NewsClient.tsx — Updated: Nav now shows logged-in user name + Sign Out if authenticated
 import { useState, useEffect } from "react";
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -12,21 +14,64 @@ const CATEGORY_META: Record<string, { label: string; color: string; bg: string }
 };
 
 interface Props {
-  allPosts:    any[];
+  allPosts:     any[];
   postsWithAds: any[];
-  shuffledAds: any[];
-  featured:    any;
-  settingsMap: Record<string, string>;
-  orgName:     string;
-  logoUrl:     string;
+  shuffledAds:  any[];
+  featured:     any;
+  settingsMap:  Record<string, string>;
+  orgName:      string;
+  logoUrl:      string;
+}
+
+// ── Auth-aware Nav Button ─────────────────────────────────────
+function NavAuthButton() {
+  const [user,    setUser]    = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }: any) => {
+      setUser(data?.user ?? null);
+      setLoading(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_: any, session: any) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener?.subscription?.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  if (user) {
+    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Account";
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <a href="/cms" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.7)", textDecoration: "none", fontWeight: 500 }}>
+          👤 {name}
+        </a>
+        <button
+          onClick={() => createClient().auth.signOut().then(() => window.location.reload())}
+          style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", padding: "0.38rem 0.9rem", borderRadius: 4, fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.4rem 1rem", borderRadius: 4, fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>
+      Login
+    </a>
+  );
 }
 
 export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featured, settingsMap, orgName, logoUrl }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
-const [shuffled, setShuffled] = useState(shuffledAds);
-useEffect(() => {
-  setShuffled([...shuffledAds].sort(() => Math.random() - 0.5));
-}, []);
+  const [shuffled, setShuffled] = useState(shuffledAds);
+
+  useEffect(() => {
+    setShuffled([...shuffledAds].sort(() => Math.random() - 0.5));
+  }, []);
 
   return (
     <>
@@ -47,7 +92,6 @@ useEffect(() => {
         .main-layout { display: grid; grid-template-columns: 1fr 280px; gap: 2rem; }
         .news-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2rem; }
         .news-sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
-
         @media (max-width: 900px) {
           .main-layout { grid-template-columns: 1fr !important; }
           .news-sidebar { display: none !important; }
@@ -68,9 +112,7 @@ useEffect(() => {
         {/* Masthead */}
         <div className="masthead" style={{ background: "#0D3320", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.45rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
-            <span suppressHydrationWarning>
-  {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}
-</span>
+            <span suppressHydrationWarning>{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}</span>
           </p>
           <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
             SURIGAO DEL NORTE · EST. {settingsMap["org_established"] || "2011"}
@@ -90,7 +132,8 @@ useEffect(() => {
             {["About","Programs","Membership","Officers"].map(label => (
               <a key={label} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
             ))}
-            <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.4rem 1rem", borderRadius: 4, fontSize: "0.72rem", fontWeight: 700, textDecoration: "none" }}>Login</a>
+            {/* ── Auth-aware button: shows name + Sign Out if logged in, Login if not ── */}
+            <NavAuthButton />
           </div>
           <button className="news-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
             <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 3px)" : "none" }} />
@@ -112,15 +155,11 @@ useEffect(() => {
         {/* News Ticker */}
         {allPosts.length > 0 && (
           <div style={{ background: "#C9A84C", padding: "0.45rem 0", display: "flex", alignItems: "center", overflow: "hidden" }}>
-            <div style={{ background: "#0D3320", color: "#C9A84C", padding: "0 1rem", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap", marginRight: "1rem", flexShrink: 0 }}>
-              LATEST
-            </div>
+            <div style={{ background: "#0D3320", color: "#C9A84C", padding: "0 1rem", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap", marginRight: "1rem", flexShrink: 0 }}>LATEST</div>
             <div className="ticker-wrap">
               <div className="ticker-move">
                 {[...allPosts, ...allPosts].map((p, i) => (
-                  <a key={i} href={`/news/${p.slug || p.id}`} style={{ textDecoration: "none", marginRight: "3rem", fontSize: "0.72rem", fontWeight: 600, color: "#0D3320" }}>
-                    ◆ {p.title}
-                  </a>
+                  <a key={i} href={`/news/${p.slug || p.id}`} style={{ textDecoration: "none", marginRight: "3rem", fontSize: "0.72rem", fontWeight: 600, color: "#0D3320" }}>◆ {p.title}</a>
                 ))}
               </div>
             </div>
@@ -150,9 +189,7 @@ useEffect(() => {
                     {CATEGORY_META[featured.category]?.label || featured.category}
                   </span>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(1.2rem, 3vw, 1.8rem)", fontWeight: 900, color: "white", lineHeight: 1.2, marginBottom: "0.8rem" }}>{featured.title}</h2>
-                  {featured.excerpt && (
-                    <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.7, marginBottom: "1rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{featured.excerpt}</p>
-                  )}
+                  {featured.excerpt && <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.55)", lineHeight: 1.7, marginBottom: "1rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{featured.excerpt}</p>}
                   <div suppressHydrationWarning style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.4)" }}>
                     {new Date(featured.published_at || featured.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     {featured.reading_time && ` · ${featured.reading_time} min read`}
@@ -185,8 +222,6 @@ useEffect(() => {
 
           {/* Main Layout */}
           <div className="main-layout">
-
-            {/* Posts Grid */}
             <div className="news-grid">
               {postsWithAds.map((item, i) => {
                 if (item.type === "ad") {
@@ -223,9 +258,7 @@ useEffect(() => {
                         </span>
                       </div>
                       <h3 className="news-card-title" style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.95rem", fontWeight: 700, color: "#0D3320", lineHeight: 1.4, marginBottom: "0.5rem", flex: 1, transition: "color 0.15s" }}>{post.title}</h3>
-                      {post.excerpt && (
-                        <p style={{ fontSize: "0.76rem", color: "#777", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: "0.7rem" }}>{post.excerpt}</p>
-                      )}
+                      {post.excerpt && <p style={{ fontSize: "0.76rem", color: "#777", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: "0.7rem" }}>{post.excerpt}</p>}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.65rem", color: "#AAA", borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: "0.6rem", marginTop: "auto" }}>
                         <span>{post.author_name || "SUNCO Editorial"}</span>
                         {post.reading_time && <span>{post.reading_time} min read</span>}

@@ -1,10 +1,12 @@
 "use client";
+import { createClient } from "@/utils/supabase/client";
 // PostPageClient.tsx — Updated with inline image + slideshow support
 // Changes from original:
 //   1. Replaced dangerouslySetInnerHTML with renderBody() React renderer
 //   2. renderBody handles [img:URL|alt] and [slideshow:...] tags
 //   3. Imported ArticleSlideshow component
 //   4. documents prop and DocumentDownloadSection unchanged
+//   5. Nav now shows logged-in user name + logout instead of hardcoded Login
 
 import { useState, useEffect } from "react";
 import {
@@ -64,27 +66,9 @@ function renderBody(content: string): React.ReactNode[] {
       const alt        = pipeIdx > -1 ? inner.slice(pipeIdx + 1).trim() : "";
       nodes.push(
         <figure key={`img-${i}`} style={{ margin: "2rem 0", textAlign: "center" }}>
-          <img
-            src={url}
-            alt={alt}
-            loading="lazy"
-            style={{
-              maxWidth: "100%",
-              borderRadius: 12,
-              boxShadow: "0 6px 24px rgba(0,0,0,0.14)",
-              display: "block",
-              margin: "0 auto",
-            }}
-          />
+          <img src={url} alt={alt} loading="lazy" style={{ maxWidth: "100%", borderRadius: 12, boxShadow: "0 6px 24px rgba(0,0,0,0.14)", display: "block", margin: "0 auto" }} />
           {alt && (
-            <figcaption style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "0.8rem",
-              color: "#888",
-              marginTop: "0.65rem",
-              fontStyle: "italic",
-              lineHeight: 1.5,
-            }}>
+            <figcaption style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.8rem", color: "#888", marginTop: "0.65rem", fontStyle: "italic", lineHeight: 1.5 }}>
               {alt}
             </figcaption>
           )}
@@ -96,15 +80,7 @@ function renderBody(content: string): React.ReactNode[] {
     // ── Subheading: line ending with colon, under 100 chars ──
     if (p.endsWith(":") && p.length < 100 && !p.includes("\n")) {
       nodes.push(
-        <h3 key={`h-${i}`} style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: "1.35rem",
-          fontWeight: 700,
-          color: "#0D3320",
-          margin: "2rem 0 0.8rem",
-          paddingBottom: "0.4rem",
-          borderBottom: "2px solid #C9A84C",
-        }}>
+        <h3 key={`h-${i}`} style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.35rem", fontWeight: 700, color: "#0D3320", margin: "2rem 0 0.8rem", paddingBottom: "0.4rem", borderBottom: "2px solid #C9A84C" }}>
           {p}
         </h3>
       );
@@ -114,20 +90,10 @@ function renderBody(content: string): React.ReactNode[] {
     // ── Bullet list ──
     if (p.match(/^[•\-]/)) {
       const items = p.split("\n").map((l, li) => (
-        <li key={li} style={{ marginBottom: "0.4rem" }}>
-          {l.replace(/^[•\-]\s*/, "")}
-        </li>
+        <li key={li} style={{ marginBottom: "0.4rem" }}>{l.replace(/^[•\-]\s*/, "")}</li>
       ));
       nodes.push(
-        <ul key={`ul-${i}`} style={{
-          fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: "1.05rem",
-          lineHeight: 1.8,
-          color: "#333",
-          paddingLeft: "1.4rem",
-          marginBottom: "1.4rem",
-          fontWeight: 300,
-        }}>
+        <ul key={`ul-${i}`} style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: "1.05rem", lineHeight: 1.8, color: "#333", paddingLeft: "1.4rem", marginBottom: "1.4rem", fontWeight: 300 }}>
           {items}
         </ul>
       );
@@ -138,14 +104,7 @@ function renderBody(content: string): React.ReactNode[] {
     if (!dropCapDone) {
       dropCapDone = true;
       nodes.push(
-        <p key={`p-${i}`} className="article-paragraph drop-cap" style={{
-          fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: "1.08rem",
-          lineHeight: 1.9,
-          color: "#2A2A2A",
-          marginBottom: "1.4rem",
-          fontWeight: 300,
-        }}>
+        <p key={`p-${i}`} className="article-paragraph drop-cap" style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: "1.08rem", lineHeight: 1.9, color: "#2A2A2A", marginBottom: "1.4rem", fontWeight: 300 }}>
           {p}
         </p>
       );
@@ -154,14 +113,7 @@ function renderBody(content: string): React.ReactNode[] {
 
     // ── Normal paragraph ──
     nodes.push(
-      <p key={`p-${i}`} style={{
-        fontFamily: "'Source Serif 4', Georgia, serif",
-        fontSize: "1.08rem",
-        lineHeight: 1.9,
-        color: "#2A2A2A",
-        marginBottom: "1.4rem",
-        fontWeight: 300,
-      }}>
+      <p key={`p-${i}`} style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: "1.08rem", lineHeight: 1.9, color: "#2A2A2A", marginBottom: "1.4rem", fontWeight: 300 }}>
         {p}
       </p>
     );
@@ -217,9 +169,7 @@ function FileIcon({ type }: { type: string }) {
 }
 
 function fileTypeLabel(type: string) {
-  const map: Record<string, string> = {
-    pdf: "PDF", image: "Image", word: "Word", excel: "Spreadsheet", other: "File",
-  };
+  const map: Record<string, string> = { pdf: "PDF", image: "Image", word: "Word", excel: "Spreadsheet", other: "File" };
   return map[type] || "File";
 }
 
@@ -236,61 +186,39 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
   }, [onClose]);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErrMsg("Please enter a valid email address."); return;
-    }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErrMsg("Please enter a valid email address."); return; }
     if (!agreed) { setErrMsg("Please agree to the terms to continue."); return; }
-    setErrMsg("");
-    setStatus("loading");
+    setErrMsg(""); setStatus("loading");
     try {
-      const res  = await fetch("/api/send-download-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), documentId: doc.id }),
-      });
+      const res  = await fetch("/api/send-download-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), documentId: doc.id }) });
       const json = await res.json();
       if (!res.ok || json.error) { setErrMsg(json.error || "Something went wrong."); setStatus("error"); return; }
       setStatus("success");
-    } catch {
-      setErrMsg("Network error. Please try again."); setStatus("error");
-    }
+    } catch { setErrMsg("Network error. Please try again."); setStatus("error"); }
   };
 
   return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
       style={{ position: "fixed", inset: 0, background: "rgba(13,51,32,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", backdropFilter: "blur(2px)" }}>
       <div style={{ background: "white", borderRadius: 14, width: "100%", maxWidth: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
         <style>{`@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}} @keyframes spin{to{transform:rotate(360deg)}}`}</style>
-
         <div style={{ background: "#0D3320", padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: "rgba(201,168,76,0.15)", borderRadius: 8, padding: "0.4rem", display: "flex" }}>
-              <Download size={16} color="#C9A84C" />
-            </div>
+            <div style={{ background: "rgba(201,168,76,0.15)", borderRadius: 8, padding: "0.4rem", display: "flex" }}><Download size={16} color="#C9A84C" /></div>
             <div>
               <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 2 }}>Free Download</p>
               <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "white", lineHeight: 1.3 }}>{doc.title}</p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 4 }}>
-            <X size={18} />
-          </button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", padding: 4 }}><X size={18} /></button>
         </div>
-
         <div style={{ padding: "1.5rem" }}>
           {status === "success" ? (
             <div style={{ textAlign: "center", padding: "1rem 0" }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(46,139,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-                <CheckCircle size={28} color="#2E8B44" />
-              </div>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(46,139,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}><CheckCircle size={28} color="#2E8B44" /></div>
               <p style={{ fontWeight: 700, fontSize: "1rem", color: "#0D3320", marginBottom: 8 }}>Check your inbox!</p>
-              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.65 }}>
-                We sent a download link to <strong>{email}</strong>.<br />The link expires in <strong>1 hour</strong>.
-              </p>
-              <button onClick={onClose} style={{ marginTop: "1.25rem", background: "#0D3320", color: "white", border: "none", padding: "0.65rem 2rem", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
-                Done
-              </button>
+              <p style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.65 }}>We sent a download link to <strong>{email}</strong>.<br />The link expires in <strong>1 hour</strong>.</p>
+              <button onClick={onClose} style={{ marginTop: "1.25rem", background: "#0D3320", color: "white", border: "none", padding: "0.65rem 2rem", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
             </div>
           ) : (
             <>
@@ -301,57 +229,30 @@ function DownloadGateModal({ doc, onClose }: { doc: any; onClose: () => void }) 
                   <p style={{ fontSize: "0.82rem", color: "#0D3320", fontWeight: 600, lineHeight: 1.3 }}>{doc.title}</p>
                 </div>
               </div>
-
-              <p style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.65, marginBottom: "1.1rem" }}>
-                Enter your email and we'll send you a secure one-time download link.
-              </p>
-
+              <p style={{ fontSize: "0.82rem", color: "#444", lineHeight: 1.65, marginBottom: "1.1rem" }}>Enter your email and we'll send you a secure one-time download link.</p>
               <div style={{ marginBottom: "0.9rem" }}>
-                <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#0D3320", marginBottom: "0.35rem" }}>
-                  Your Email Address *
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value); setErrMsg(""); }}
-                  onKeyDown={e => { if (e.key === "Enter" && agreed) handleSubmit(); }}
-                  placeholder="yourname@email.com"
-                  disabled={status === "loading"}
-                  autoFocus
-                  style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid rgba(26,92,42,0.2)", borderRadius: 8, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
-                />
+                <label style={{ display: "block", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#0D3320", marginBottom: "0.35rem" }}>Your Email Address *</label>
+                <input type="email" value={email} onChange={e => { setEmail(e.target.value); setErrMsg(""); }} onKeyDown={e => { if (e.key === "Enter" && agreed) handleSubmit(); }} placeholder="yourname@email.com" disabled={status === "loading"} autoFocus style={{ width: "100%", padding: "0.7rem 1rem", border: "1.5px solid rgba(26,92,42,0.2)", borderRadius: 8, fontSize: "0.9rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
               </div>
-
               <div style={{ background: "#f5f3ee", borderRadius: 8, padding: "0.85rem 1rem", marginBottom: "0.9rem", fontSize: "0.73rem", color: "#555", lineHeight: 1.65 }}>
                 <p style={{ fontWeight: 700, color: "#0D3320", marginBottom: 3 }}>Terms & Disclaimer</p>
                 <p>This document is published by SUNCO for informational purposes only. By downloading, you agree to use this material solely for personal or educational reference.</p>
               </div>
-
               <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: "1.1rem" }}>
                 <input type="checkbox" checked={agreed} onChange={e => { setAgreed(e.target.checked); setErrMsg(""); }} style={{ marginTop: 2, accentColor: "#0D3320", width: 16, height: 16, flexShrink: 0 }} />
-                <span style={{ fontSize: "0.77rem", color: "#444", lineHeight: 1.55 }}>
-                  I agree to the terms above and consent to receiving SUNCO updates at this email.
-                </span>
+                <span style={{ fontSize: "0.77rem", color: "#444", lineHeight: 1.55 }}>I agree to the terms above and consent to receiving SUNCO updates at this email.</span>
               </label>
-
               {errMsg && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(192,57,43,0.07)", border: "1px solid rgba(192,57,43,0.2)", borderRadius: 7, padding: "0.6rem 0.9rem", marginBottom: "0.9rem" }}>
                   <AlertCircle size={14} color="#C0392B" />
                   <p style={{ fontSize: "0.78rem", color: "#C0392B" }}>{errMsg}</p>
                 </div>
               )}
-
-              <button
-                onClick={handleSubmit}
-                disabled={status === "loading" || !email || !agreed}
+              <button onClick={handleSubmit} disabled={status === "loading" || !email || !agreed}
                 style={{ width: "100%", padding: "0.8rem", borderRadius: 8, border: "none", background: status === "loading" || !email || !agreed ? "rgba(201,168,76,0.35)" : "#C9A84C", color: "#0D3320", fontWeight: 700, fontSize: "0.9rem", cursor: status === "loading" || !email || !agreed ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {status === "loading"
-                  ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Sending link...</>
-                  : <><Download size={15} /> Send me the download link</>}
+                {status === "loading" ? <><RefreshCw size={15} style={{ animation: "spin 1s linear infinite" }} /> Sending link...</> : <><Download size={15} /> Send me the download link</>}
               </button>
-              <p style={{ textAlign: "center", fontSize: "0.68rem", color: "#bbb", marginTop: "0.65rem" }}>
-                🔒 Your email is kept private and never sold.
-              </p>
+              <p style={{ textAlign: "center", fontSize: "0.68rem", color: "#bbb", marginTop: "0.65rem" }}>🔒 Your email is kept private and never sold.</p>
             </>
           )}
         </div>
@@ -396,6 +297,48 @@ function DocumentDownloadSection({ documents }: { documents: any[] }) {
       </div>
       {activeDoc && <DownloadGateModal doc={activeDoc} onClose={() => setActiveDoc(null)} />}
     </>
+  );
+}
+
+// ── Auth-aware Nav Button ─────────────────────────────────────
+function NavAuthButton() {
+  const [user,     setUser]     = useState<any>(null);
+  const [loading,  setLoading]  = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }: any) => {
+      setUser(data?.user ?? null);
+      setLoading(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_: any, session: any) => {
+      setUser(session?.user ?? null);
+    });
+    return () => listener?.subscription?.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  if (user) {
+    const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Account";
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <a href="/cms" style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.7)", textDecoration: "none", fontWeight: 500 }}>
+          👤 {name}
+        </a>
+        <button
+          onClick={() => createClient().auth.signOut().then(() => window.location.reload())}
+          style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)", padding: "0.38rem 0.9rem", borderRadius: 4, fontSize: "0.72rem", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.38rem 1rem", borderRadius: 4, fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>
+      Login
+    </a>
   );
 }
 
@@ -454,7 +397,8 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
               <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
             ))}
             <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
-            <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.38rem 1rem", borderRadius: 4, fontSize: "0.75rem", fontWeight: 600, textDecoration: "none" }}>Login</a>
+            {/* ── Auth-aware button: shows name + Sign Out if logged in, Login if not ── */}
+            <NavAuthButton />
           </div>
           <button className="post-nav-hamburger" onClick={() => setMenuOpen(o => !o)}>
             <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 3px)" : "none" }} />
@@ -495,25 +439,11 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
             <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
                 <Calendar size={13} />
-                <span suppressHydrationWarning>
-                  {pubDate ? new Date(pubDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}
-                </span>
+                <span suppressHydrationWarning>{pubDate ? new Date(pubDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—"}</span>
               </div>
-              {post.author_name && (
-                <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
-                  By <strong style={{ color: "rgba(255,255,255,0.75)" }}>{post.author_name}</strong>
-                </div>
-              )}
-              {post.reading_time && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>
-                  <BookOpen size={13} /> {post.reading_time} min read
-                </div>
-              )}
-              {post.views > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.45)" }}>
-                  <Eye size={13} /> {post.views.toLocaleString()} views
-                </div>
-              )}
+              {post.author_name && <div style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}>By <strong style={{ color: "rgba(255,255,255,0.75)" }}>{post.author_name}</strong></div>}
+              {post.reading_time && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}><BookOpen size={13} /> {post.reading_time} min read</div>}
+              {post.views > 0 && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "0.78rem", color: "rgba(255,255,255,0.45)" }}><Eye size={13} /> {post.views.toLocaleString()} views</div>}
             </div>
           </div>
         </div>
@@ -526,7 +456,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
             <a href="/news" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.75rem", color: "#0D3320", textDecoration: "none", fontWeight: 600, padding: "0.5rem 0" }}>
               <ArrowLeft size={14} /> All Articles
             </a>
-
             {leftAds.length > 0 ? leftAds.map(ad => (
               <a key={ad.id} href={ad.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-link" style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
                 <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -539,8 +468,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 <p style={{ fontSize: "0.7rem", color: "rgba(0,0,0,0.25)", lineHeight: 1.5 }}>Ad Space<br />Available</p>
               </div>
             )}
-
-            {/* Share box */}
             <div style={{ background: "white", borderRadius: 10, border: "1px solid rgba(0,0,0,0.07)", padding: "1rem", marginTop: "0.5rem" }}>
               <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#888", marginBottom: "0.7rem" }}>Share</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -556,7 +483,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 </button>
               </div>
             </div>
-
             <DocumentDownloadSection documents={documents} />
           </aside>
 
@@ -572,12 +498,9 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
               <div style={{ width: 6, height: 6, background: "#C9A84C", borderRadius: "50%", flexShrink: 0 }} />
               <div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} />
             </div>
-
-            {/* ── Article body — uses renderBody() instead of dangerouslySetInnerHTML ── */}
             <article style={{ background: "white", borderRadius: 14, padding: "clamp(1.5rem, 4vw, 2.8rem)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.06)" }}>
               {renderBody(post.content || post.body || "")}
             </article>
-
             {Array.isArray(post.tags) && post.tags.length > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginTop: "1.5rem" }}>
                 <Tag size={14} color="#888" />
@@ -586,7 +509,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 ))}
               </div>
             )}
-
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.4rem 1.6rem", marginTop: "2rem", display: "flex", alignItems: "center", gap: "1.2rem" }}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(201,168,76,0.2)", border: "2px solid #C9A84C", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain" }} />
@@ -597,7 +519,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 <p style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.45)", marginTop: 2 }}>Surigao del Norte Consumers Organization, Inc.</p>
               </div>
             </div>
-
             <div style={{ marginTop: "2rem", textAlign: "center" }}>
               <a href="/news" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#F0EDE6", border: "1.5px solid rgba(13,51,32,0.15)", color: "#0D3320", padding: "0.75rem 1.8rem", borderRadius: 8, textDecoration: "none", fontSize: "0.82rem", fontWeight: 600 }}>
                 <ArrowLeft size={15} /> Back to All Articles
@@ -638,12 +559,9 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 })}
               </div>
               <div style={{ padding: "0.7rem 1rem", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                <a href="/news" style={{ fontSize: "0.72rem", color: "#C9A84C", textDecoration: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                  View all articles <ChevronRight size={12} />
-                </a>
+                <a href="/news" style={{ fontSize: "0.72rem", color: "#C9A84C", textDecoration: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>View all articles <ChevronRight size={12} /></a>
               </div>
             </div>
-
             {rightAds.map(ad => (
               <a key={ad.id} href={ad.link_url || "#"} target="_blank" rel="noopener noreferrer" className="ad-link" style={{ display: "block", textDecoration: "none", transition: "transform 0.2s, opacity 0.2s" }}>
                 <div style={{ background: "white", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
@@ -652,7 +570,6 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
                 </div>
               </a>
             ))}
-
             <div style={{ background: "#0D3320", borderRadius: 12, padding: "1.2rem 1.3rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "0.7rem" }}>
                 <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt="SUNCO" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "contain" }} />

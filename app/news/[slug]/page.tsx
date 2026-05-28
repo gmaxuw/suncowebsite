@@ -28,7 +28,7 @@ async function getPost(slugOrId: string) {
 
   if (postById) return { post: postById, source: "posts" };
 
-return null;
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -79,7 +79,7 @@ export default async function PostPage({ params }: Props) {
     { data: recentPosts },
     { data: activeAds },
     { data: settings },
-    { data: documents },   // ← new: fetch matching public documents
+    { data: documents },
   ] = await Promise.all([
     supabase
       .from("posts")
@@ -89,7 +89,6 @@ export default async function PostPage({ params }: Props) {
       .order("published_at", { ascending: false })
       .limit(6),
 
-    // ✅ FIXED: was "promotion" (wrong), now "promotions" (matches your actual table)
     supabase
       .from("promotions")
       .select("*")
@@ -100,7 +99,6 @@ export default async function PostPage({ params }: Props) {
       .from("site_settings")
       .select("key, value"),
 
-    // Fetch public documents linked to this post by ID or matching tags
     supabase
       .from("documents")
       .select("id, title, description, file_type, file_size_kb, thumbnail_url, category, tags, download_count")

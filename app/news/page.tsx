@@ -32,10 +32,10 @@ export default async function NewsPage() {
   const settingsMap: Record<string, string> = {};
   (settings || []).forEach((s: any) => { settingsMap[s.key] = s.value; });
 
-  const allPosts   = posts || [];
-  const allAds     = (ads || []).filter(Boolean);
-  const featured   = allPosts.find(p => p.featured) || allPosts[0];
-  const rest       = allPosts.filter(p => p.id !== featured?.id);
+  const allPosts    = posts || [];
+  const allAds      = (ads || []).filter(Boolean);
+  const featured    = allPosts.find(p => p.featured) || allPosts[0];
+  const rest        = allPosts.filter(p => p.id !== featured?.id);
   const shuffledAds = [...allAds].filter(Boolean);
 
   const postsWithAds: any[] = [];
