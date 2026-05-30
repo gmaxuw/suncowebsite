@@ -1,5 +1,6 @@
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/server";
 import NewsClient from "./_components/NewsClient";
+import { cookies } from "next/headers";
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string }> = {
   news:              { label: "News",            color: "#0D3320", bg: "#C9A84C" },
@@ -12,7 +13,8 @@ const CATEGORY_META: Record<string, { label: string; color: string; bg: string }
 };
 
 export default async function NewsPage() {
-  const supabase = createClient();
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
 
   const [{ data: posts }, { data: ads }, { data: settings }] = await Promise.all([
     supabase
