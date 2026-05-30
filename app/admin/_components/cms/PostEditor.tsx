@@ -345,7 +345,7 @@ export default function PostEditor({ supabase, post, currentMemberName, currentR
                           className="pe-textarea"
                           value={aiPrompt}
                           onChange={e => setAiPrompt(e.target.value)}
-                          placeholder="e.g. Focus on senior citizens, mention DTI partnership, include tips for Surigao del Norte members..."
+                          placeholder="e.g. Focus on Retired Teacher updates, mention DepEd partnership, include tips for Surigao City and Norte members..."
                           rows={3}
                         />
                       </div>
