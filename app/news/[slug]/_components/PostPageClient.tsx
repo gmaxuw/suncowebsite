@@ -1,5 +1,7 @@
 "use client";
 import { createClient } from "@/utils/supabase/client";
+import GlobalNav from "@/app/components/GlobalNav";
+import GlobalFooter from "@/app/components/GlobalFooter";
 // PostPageClient.tsx — Updated with inline image + slideshow support
 // Changes from original:
 //   1. Replaced dangerouslySetInnerHTML with renderBody() React renderer
@@ -343,7 +345,7 @@ function NavAuthButton() {
 }
 
 export default function PostPageClient({ post, recentPosts, ads, settings, documents }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  
   const [copied,   setCopied]   = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
@@ -386,37 +388,7 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
 
       <div style={{ background: "#F7F5F0", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* ── Nav ── */}
-        <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 1.5rem", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
-            <img src={settings["hero_logo_url"] || "/images/sunco-logo.png"} alt={orgName} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "contain" }} />
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 700, color: "#C9A84C", letterSpacing: "0.04em" }}>{orgName}</span>
-          </a>
-          <div className="post-nav-links">
-            {["About","Programs","Membership","Officers"].map((label, i) => (
-              <a key={i} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
-            ))}
-            <a href="/news" style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>News</a>
-            {/* ── Auth-aware button: shows name + Sign Out if logged in, Login if not ── */}
-            <NavAuthButton />
-          </div>
-          <button className="post-nav-hamburger" onClick={() => setMenuOpen(o => !o)}>
-            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 3px)" : "none" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "white", transition: "all 0.2s" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px, -3px)" : "none" }} />
-          </button>
-        </nav>
-
-        {/* ── Mobile Drawer ── */}
-        {menuOpen && (
-          <div style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem", position: "sticky", top: 60, zIndex: 99 }}>
-            {["About","Programs","Membership","Officers"].map((label, i) => (
-              <a key={i} href={`/#${label.toLowerCase()}`} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{label}</a>
-            ))}
-            <a href="/news" onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.85rem", fontWeight: 500, padding: "0.3rem 0" }}>News</a>
-            <a href="/login" style={{ background: "#C9A84C", color: "#0D3320", padding: "0.6rem 1rem", borderRadius: 4, fontSize: "0.85rem", fontWeight: 600, textDecoration: "none", textAlign: "center" }}>Login</a>
-          </div>
-        )}
+<GlobalNav settings={settings} />
 
         {/* ── Hero Banner ── */}
         <div style={{ position: "relative", width: "100%", height: "clamp(260px, 38vw, 460px)", overflow: "hidden", background: "#0D3320" }}>
@@ -585,11 +557,8 @@ export default function PostPageClient({ post, recentPosts, ads, settings, docum
           </aside>
         </div>
 
-        <footer style={{ background: "#080f0a", borderTop: "3px solid #C9A84C", padding: "2rem 2.5rem", textAlign: "center" }}>
-          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
-            <span suppressHydrationWarning>© {new Date().getFullYear()}</span> {settings["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
-          </p>
-        </footer>
+        <GlobalFooter settings={settings} />
+
       </div>
     </>
   );

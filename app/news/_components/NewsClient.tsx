@@ -1,5 +1,7 @@
 "use client";
 import { createClient } from "@/utils/supabase/client";
+import GlobalNav from "@/app/components/GlobalNav";
+import GlobalFooter from "@/app/components/GlobalFooter";
 // NewsClient.tsx — Updated: Nav now shows logged-in user name + Sign Out if authenticated
 import { useState, useEffect } from "react";
 
@@ -66,7 +68,7 @@ function NavAuthButton() {
 }
 
 export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featured, settingsMap, orgName, logoUrl }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  
   const [shuffled, setShuffled] = useState(shuffledAds);
 
   useEffect(() => {
@@ -109,48 +111,7 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
 
       <div suppressHydrationWarning style={{ background: "#F7F4EF", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
 
-        {/* Masthead */}
-        <div className="masthead" style={{ background: "#0D3320", borderBottom: "1px solid rgba(201,168,76,0.2)", padding: "0.45rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
-            <span suppressHydrationWarning>{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).toUpperCase()}</span>
-          </p>
-          <p style={{ fontSize: "0.62rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
-            SURIGAO DEL NORTE · EST. {settingsMap["org_established"] || "2011"}
-          </p>
-        </div>
-
-        {/* Nav */}
-        <nav style={{ background: "#0D3320", borderBottom: "3px solid #C9A84C", padding: "0 1.5rem", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
-            <img src={logoUrl} alt={orgName} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "contain" }} />
-            <div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", fontWeight: 900, color: "#C9A84C", lineHeight: 1 }}>{orgName}</div>
-              <div style={{ fontSize: "0.48rem", color: "rgba(255,255,255,0.35)", letterSpacing: "0.12em", textTransform: "uppercase" }}>News & Announcements</div>
-            </div>
-          </a>
-          <div className="news-nav-links">
-            {["About","Programs","Membership","Officers"].map(label => (
-              <a key={label} href={`/#${label.toLowerCase()}`} style={{ color: "rgba(255,255,255,0.6)", textDecoration: "none", fontSize: "0.72rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</a>
-            ))}
-            {/* ── Auth-aware button: shows name + Sign Out if logged in, Login if not ── */}
-            <NavAuthButton />
-          </div>
-          <button className="news-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
-            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px, 3px)" : "none" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "white", transition: "all 0.2s" }} />
-            <span style={{ display: "block", width: 22, height: 2, background: "white", transition: "all 0.2s", transform: menuOpen ? "rotate(-45deg) translate(5px, -3px)" : "none" }} />
-          </button>
-        </nav>
-
-        {/* Mobile Drawer */}
-        {menuOpen && (
-          <div style={{ background: "#0D3320", borderBottom: "2px solid #C9A84C", padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.8rem", position: "sticky", top: 64, zIndex: 99 }}>
-            {["About","Programs","Membership","Officers"].map(label => (
-              <a key={label} href={`/#${label.toLowerCase()}`} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: "0.9rem", fontWeight: 500, padding: "0.4rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{label}</a>
-            ))}
-            <a href="/login" onClick={() => setMenuOpen(false)} style={{ background: "#C9A84C", color: "#0D3320", padding: "0.7rem 1rem", borderRadius: 4, fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", textAlign: "center", marginTop: "0.4rem" }}>Login</a>
-          </div>
-        )}
+        <GlobalNav settings={settingsMap} />
 
         {/* News Ticker */}
         {allPosts.length > 0 && (
@@ -313,11 +274,8 @@ export default function NewsClient({ allPosts, postsWithAds, shuffledAds, featur
           </div>
         </div>
 
-        <footer style={{ background: "#080f0a", borderTop: "3px solid #C9A84C", padding: "2rem 1.5rem", textAlign: "center", marginTop: "4rem" }}>
-          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.25)" }}>
-            <span suppressHydrationWarning>© {new Date().getFullYear()}</span> {settingsMap["org_name"] || "Surigao del Norte Consumers Organization, Inc."}. All rights reserved.
-          </p>
-        </footer>
+        <GlobalFooter settings={settingsMap} />
+
       </div>
     </>
   );
